@@ -14,8 +14,9 @@ if (import.meta.env.DEV) {
     import("./world/world.ts"),
     import("./media/rtc.ts"),
     import("./scene/tvs.ts"),
+    import("./activities/registry.ts"),
   ]).then(
-    ([store, registry, movement, interact, w, media, tvs]) => {
+    ([store, registry, movement, interact, w, media, tvs, acts]) => {
       Object.assign(window, {
         __infinity: {
           store: store.useApp,
@@ -26,6 +27,7 @@ if (import.meta.env.DEV) {
           world: w.world,
           media: { state: media.useMedia, audio: media.subscribedAudio, debug: media.rtcDebug },
           tvs: { tvFor: tvs.tvFor, mesh: tvs.screenMesh },
+          acts: { state: acts.useActs, send: acts.sendAct },
         },
       });
     },

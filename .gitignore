@@ -27,3 +27,6 @@ Thumbs.db
 
 # Dados salvos pelo servidor (mural, plantas, rankings)
 apps/server/data/
+
+# Worktrees dos agentes
+.claude/worktrees/

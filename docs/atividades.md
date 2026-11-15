@@ -1,0 +1,65 @@
+# Atividades: como adicionar coisas interativas
+
+Tudo que é interativo e tem estado compartilhado (gongo, mural, plantas, hockey, fliperamas, quiz) é uma **atividade**. O servidor guarda o estado e confere cada pedido; o cliente desenha e pede. A implementação de referência é o **gongo** (`escritorio/gong`): leia os três arquivos dele antes de começar.
+
+## Onde fica cada coisa
+
+Cada pacote tem uma pasta com o mesmo nome em três lugares. Criar a pasta com um `index` basta: servidor e cliente carregam sozinhos.
+
+| Lado | Pasta | O que vai lá |
+|---|---|---|
+| Regras puras | `packages/world/src/activities/<pacote>/` | Constantes, tipos do estado, física e regras sem efeitos colaterais. Exporte pelo `index.ts` do pacote, com nomes prefixados (`GONG_`, `HOCKEY_`). Testes com vitest ao lado (`*.test.ts`). |
+| Servidor | `apps/server/src/activities/<pacote>/` | `index.ts` com `export default (host) => Activity[]`. Uma classe por atividade. |
+| Cliente | `apps/web/src/activities/<pacote>/` | `index.ts` que chama `registerActivity(...)`. Textos em `strings.ts`, sons em `sounds.json`. |
+
+## Servidor (`apps/server/src/activities/types.ts`)
+
+```ts
+interface Activity {
+  id: string;            // único: "gongo", "hockey-1"
+  kind: string;          // diz ao cliente quem desenha: "gong", "airhockey"
+  snapshot(): unknown;   // estado completo enviado a todos
+  handle(from, op, data) // pedido de uma pessoa; data NÃO é confiável
+  tick?(dt)              // 15 Hz; física mais rápida usa timer próprio (limpe em dispose)
+  join?(id) / leave?(id) / dispose?()
+}
+```
+
+O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(this, ev, data, { to, from })` (acontecimento pontual), `players()`, `playerName`, `playerPos`, `playerZone`, `near(id, ponto, metros)` (perto e sem parede no meio), `emote(id, e)`, `setHeld(id, item)`, `objects(tipo)`, `map`, `nav`, `zones` e `store`.
+
+- **Persistência:** `host.store.get(chave, padrão)` e `host.store.set(chave, valor)`. A chave começa pelo pacote (`"escritorio/gongo"`). Os arquivos JSON vão para `DATA_DIR`, que fica fora do Git.
+- **Limite:** cada pessoa manda no máximo 90 pedidos por segundo para as atividades.
+- **Estado grande ou frequente:** o snapshot vai inteiro a cada mudança. Física a 30 Hz vai por `event` (`"frame"`), só para quem joga ou assiste.
+
+## Cliente (`apps/web/src/activities/registry.ts`)
+
+```ts
+registerActivity({
+  name: "pacote/coisa",
+  kinds: ["gong"],                 // eventos e estado que entende
+  objects: ["gong"],               // assume a interação (E) desses tipos de objeto
+  label: (o) => "Tocar o gongo",   // texto do botão de interação
+  use: (o) => { ... },             // ao apertar E
+  targets: () => [...],            // alvos que não são objetos: robô, outra pessoa, avião no chão
+  onEvent: (e) => { ... },         // { id, kind, ev, data, from }
+  Overlay: Componente,             // UI por cima do mundo (HTML)
+  Scene: Componente,               // coisas no mundo (R3F), nas duas lentes
+});
+```
+
+- **Estado:** `useAct<T>(id)` no React, `actState<T>(id)` fora dele (por exemplo, dentro de `useFrame`). `actsOfKind(kind)` lista todas as atividades de um tipo.
+- **Pedido:** `sendAct(id, op, data)`.
+- **Som:** `sfx(nome, { at, volume, range })` toca `/sfx/<nome>.mp3`. Enquanto o arquivo não existe, toca o sintetizado registrado com `registerSynth(nome, fn)`, ou um "plim". Com `at`, o volume cai com a distância e o som fica abafado atrás de parede. Cada som novo entra em `sounds.json` do pacote (prompt em inglês e duração), para os scripts locais gerarem depois.
+- **Pessoas:** `self`, `sampleRemote(id)` e `remoteIds()` vêm de `world/registry.ts`. Nomes e status ficam em `useApp` (`state/store.ts`). O campo `held` da pessoa é o item na mão; `note` é o status curto.
+
+## Regras da casa
+
+- **Um mundo, duas lentes.** O que a `Scene` desenha aparece no 2D isométrico e no 3D. Teste nas duas.
+- **Movimento sem React.** Nada que mexe a 60 fps passa pelo React: use `useFrame` e refs, sem alocar objetos por quadro.
+- **Leve.** `InstancedMesh` quando houver muitas cópias e poucos draw calls. O escritório precisa rodar em PC fraco.
+- **O servidor confere tudo.** Distância (`host.near`), vez, limites, tipos e textos (corte e limpe).
+- **Presença, não vigilância.** Nenhuma métrica individual de tempo, atividade ou fala. Contador do time e ranking de jogo podem.
+- **Jogos originais.** Nada de recriar jogo existente: nome, personagens, arte ou fases.
+- **Textos em pt-BR, marca da `docs/marca.md`.** Laranja como único destaque por tela; o gradiente da estrela só em momentos especiais. Tokens de cor em `apps/web/src/styles.css`.
+- **UI de ferramenta.** Densa e clara, operável por teclado (Esc fecha, foco visível, `aria-label`), sem padrão de landing page.
+- **Móveis novos.** Tipo em `ObjectType` (`packages/world/src/map/types.ts`), entrada no `CATALOG`, modelo procedural em `apps/web/src/scene/furniture/` registrado no `MODELS` do `index.ts`, e posição no mapa (`map/estacao.ts`). Os testes do mapa (`world.test.ts`) precisam continuar passando.
