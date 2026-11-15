@@ -28,8 +28,8 @@
     "lensHint": "Trocar entre 2D e 3D (L)",
     "goTo": "Ir até",
     "you": "você",
-    "controls": "WASD ou setas para andar · Shift corre · clique para ir · rolagem dá zoom",
-    "controls3d": "WASD para andar · arraste para girar · rolagem dá zoom · clique no chão para ir",
+    "controls": "WASD para andar · Shift corre · clique para ir · E interage · Q/R giram · 1-8 emotes",
+    "controls3d": "WASD para andar · arraste para girar · E interage · clique no chão para ir · 1-8 emotes",
     "recenter": "Centralizar em mim",
     "leave": "Sair"
   },

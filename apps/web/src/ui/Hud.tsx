@@ -1,13 +1,16 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Box, LocateFixed, LogOut, Map as MapIcon, Users } from "lucide-react";
-import type { Lens } from "@infinity/world";
+import { Box, LocateFixed, LogOut, Map as MapIcon, Smile, Users } from "lucide-react";
+import { EMOTES, type Lens } from "@infinity/world";
 import { useApp } from "../state/store.ts";
+import { doEmote, EMOTE_INFO } from "../engine/emotes.ts";
 import { Logo } from "./Logo.tsx";
 import { PeoplePanel } from "./PeoplePanel.tsx";
 import { AvatarFace } from "./AvatarFace.tsx";
+import { Minimap } from "./Minimap.tsx";
+import { InteractPrompt, Toasts } from "./WorldOverlays.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -17,15 +20,18 @@ export function Hud() {
   const lens = useApp((s) => s.lens);
   const peopleOpen = useApp((s) => s.peopleOpen);
   const { setLens, togglePeople, leave } = useApp.getState();
+  const [emotesOpen, setEmotesOpen] = useState(false);
   const list = Object.values(players);
 
   return (
-    <div className="pointer-events-none absolute inset-0 select-none">
+    <div className="pointer-events-none absolute inset-0 z-10 select-none">
       {/* Topo: marca e onde você está. */}
       <div className="glass pointer-events-auto absolute left-3 top-3 flex items-center gap-3 rounded-full py-2 pl-3 pr-4">
         <Logo size="sm" />
         <span className="h-4 w-px bg-offwhite/15" />
-        <span className="max-w-[40vw] truncate text-sm text-offwhite/90" aria-live="polite">{zoneName}</span>
+        <span className="max-w-[40vw] truncate text-sm text-offwhite/90" aria-live="polite">
+          {zoneName}
+        </span>
       </div>
 
       {/* Topo direito: quem está online. */}
@@ -44,6 +50,37 @@ export function Hud() {
       </button>
 
       <AnimatePresence>{peopleOpen && <PeoplePanel />}</AnimatePresence>
+      {!peopleOpen && <Minimap />}
+      <Toasts />
+      <InteractPrompt />
+
+      {/* Barra de emotes, aberta pela doca. */}
+      <AnimatePresence>
+        {emotesOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+64px)] left-1/2 flex -translate-x-1/2 gap-1 rounded-2xl p-1.5"
+            role="toolbar"
+            aria-label="Emotes"
+          >
+            {EMOTES.map((e, i) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => doEmote(e)}
+                title={`${EMOTE_INFO[e].label} (${i + 1})`}
+                className="group flex w-14 flex-col items-center gap-0.5 rounded-xl py-1.5 transition-colors hover:bg-offwhite/10"
+              >
+                <span className="text-xl transition-transform group-hover:scale-125">{EMOTE_INFO[e].emoji}</span>
+                <span className="text-[10px] text-slate">{EMOTE_INFO[e].label}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Doca inferior. */}
       <div
@@ -53,7 +90,10 @@ export function Hud() {
       >
         <LensSwitch lens={lens} onChange={setLens} label={t("hud.lensHint")} />
         <span className="mx-1 h-6 w-px bg-offwhite/12" />
-        <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))} hidden={lens !== "2d"}>
+        <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
+          <Smile className="size-[18px]" />
+        </DockButton>
+        <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
           <LocateFixed className="size-[18px]" />
         </DockButton>
         <DockButton label={t("hud.people")} onClick={() => togglePeople()} active={peopleOpen}>
@@ -64,7 +104,7 @@ export function Hud() {
         </DockButton>
       </div>
 
-      <p className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 hidden max-w-[28ch] text-xs leading-relaxed text-slate/90 lg:block">
+      <p className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 hidden max-w-[30ch] text-xs leading-relaxed text-slate/90 lg:block">
         {lens === "3d" ? t("hud.controls3d") : t("hud.controls")}
       </p>
     </div>
@@ -94,8 +134,7 @@ function LensSwitch({ lens, onChange, label }: { lens: Lens; onChange: (l: Lens)
   );
 }
 
-function DockButton({ label, onClick, active, hidden, children }: { label: string; onClick: () => void; active?: boolean; hidden?: boolean; children: ReactNode }) {
-  if (hidden) return null;
+function DockButton({ label, onClick, active, children }: { label: string; onClick: () => void; active?: boolean; children: ReactNode }) {
   return (
     <button
       type="button"

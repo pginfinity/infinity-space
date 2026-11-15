@@ -1,6 +1,6 @@
 import { AVATAR_RADIUS, NAV_CELL, WALL_THICKNESS } from "./constants.ts";
 import { boundsOf, distToSegment, pointInPolygon, type Vec2 } from "./geometry.ts";
-import { objectFootprint } from "./map/circulo.ts";
+import { objectFootprint } from "./map/footprint.ts";
 import type { MapDef } from "./map/types.ts";
 
 /**

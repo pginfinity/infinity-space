@@ -1,4 +1,29 @@
-import { ANIMS, INTERP_DELAY_MS, angleDelta, type Anim } from "@infinity/world";
+import { ANIMS, INTERP_DELAY_MS, angleDelta, type Anim, type Emote } from "@infinity/world";
+
+/** Emote em andamento por pessoa (id → emote e quando começou, em performance.now()). */
+const emotes = new Map<string, { e: Emote; at: number }>();
+/** Duração de cada emote, em ms. */
+export const EMOTE_MS: Record<Emote, number> = { wave: 2200, dance: 6000, clap: 2400, cheer: 2000, point: 2000, think: 3000, laugh: 2200, heart: 2400 };
+
+export function playEmote(id: string, e: Emote): void {
+  emotes.set(id, { e, at: performance.now() });
+}
+
+export function stopEmote(id: string): void {
+  emotes.delete(id);
+}
+
+/** Emote ativo da pessoa, com o progresso em segundos. */
+export function currentEmote(id: string, now = performance.now()): { e: Emote; t: number } | null {
+  const cur = emotes.get(id);
+  if (!cur) return null;
+  const elapsed = now - cur.at;
+  if (elapsed > EMOTE_MS[cur.e]) {
+    emotes.delete(id);
+    return null;
+  }
+  return { e: cur.e, t: elapsed / 1000 };
+}
 
 /**
  * Posições em tempo real, fora do React: as lentes leem daqui a cada quadro sem causar re-render.

@@ -3,12 +3,15 @@ import { useTranslation } from "react-i18next";
 import { useApp } from "../state/store.ts";
 import { connect, disconnect, sendInfo } from "../net/session.ts";
 import { startMovement, stopMovement } from "../engine/movement.ts";
+import { startInteract, stopInteract } from "../engine/interact.ts";
+import { startEmoteKeys } from "../engine/emotes.ts";
 import { self } from "../world/registry.ts";
 import { placeName } from "../world/zoneLabel.ts";
+import { GamesLayer } from "../games/GamesLayer.tsx";
 import { Hud } from "./Hud.tsx";
 
 // As duas lentes são carregadas sob demanda: a tela de entrada não baixa nenhum motor gráfico.
-const Lens2D = lazy(() => import("../lens2d/Lens2D.tsx").then((m) => ({ default: m.Lens2D })));
+const Lens2D = lazy(() => import("../lens2d/LensIso.tsx"));
 const Lens3D = lazy(() => import("../lens3d/Lens3D.tsx"));
 
 /** O escritório: lente ativa + HUD. Conecta ao entrar e desconecta ao sair. */
@@ -21,7 +24,11 @@ export function WorldView() {
   useEffect(() => {
     connect();
     startMovement();
+    startInteract();
+    const stopEmotes = startEmoteKeys();
     return () => {
+      stopEmotes();
+      stopInteract();
       stopMovement();
       disconnect();
     };
@@ -59,6 +66,7 @@ export function WorldView() {
         {lens === "2d" ? <Lens2D /> : <Lens3D />}
       </Suspense>
       <Hud />
+      <GamesLayer />
       {conn !== "open" && <ConnectionOverlay conn={conn} error={error} />}
     </div>
   );

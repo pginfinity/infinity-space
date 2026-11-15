@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { dirOfYaw } from "@infinity/world";
 import { self } from "../world/registry.ts";
 import { setHeading, walkTo } from "../engine/movement.ts";
-import { seeThrough } from "./seeThrough.ts";
+import { wallUniforms } from "../scene/walls.ts";
 
 const MIN_DIST = 2.6;
 const MAX_DIST = 22;
@@ -75,7 +75,7 @@ export function CameraRig() {
     const keydown = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      if (e.code === "KeyQ" || e.code === "KeyE") s.keys.add(e.code);
+      if (e.code === "KeyQ" || e.code === "KeyR") s.keys.add(e.code);
     };
     const keyup = (e: KeyboardEvent) => s.keys.delete(e.code);
     const blur = () => s.keys.clear();
@@ -107,7 +107,7 @@ export function CameraRig() {
   useFrame((_, dt) => {
     const s = st.current;
     if (s.keys.has("KeyQ")) s.yaw -= dt * 1.8;
-    if (s.keys.has("KeyE")) s.yaw += dt * 1.8;
+    if (s.keys.has("KeyR")) s.yaw += dt * 1.8;
     const k = 1 - Math.exp(-dt * 10);
     s.tx += (self.x - s.tx) * k;
     s.tz += (self.z - s.tz) * k;
@@ -115,8 +115,8 @@ export function CameraRig() {
     const horiz = Math.cos(s.pitch) * s.dist;
     camera.position.set(s.tx - f.x * horiz, 1.3 + Math.sin(s.pitch) * s.dist, s.tz - f.z * horiz);
     camera.lookAt(s.tx, 1.15, s.tz);
-    seeThrough.uCam.value.copy(camera.position);
-    seeThrough.uTarget.value.set(self.x, 1.0, self.z);
+    wallUniforms.uCam.value.copy(camera.position);
+    wallUniforms.uTarget.value.set(self.x, 1.0, self.z);
     setHeading(s.yaw);
   });
 

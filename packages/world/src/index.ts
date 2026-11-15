@@ -1,7 +1,10 @@
 export * from "./geometry.ts";
 export * from "./constants.ts";
 export * from "./map/types.ts";
-export { buildCirculoMap, objectFootprint, polar, WINGS, HUB_RADIUS, wingPoint } from "./map/circulo.ts";
+export * from "./map/catalog.ts";
+export { buildStationMap } from "./map/estacao.ts";
+export { objectFootprint } from "./map/footprint.ts";
 export * from "./nav.ts";
 export * from "./audio.ts";
 export * from "./protocol.ts";
+export * from "./games/index.ts";

@@ -55,10 +55,54 @@ export function setHeading(yaw: number): void {
   headingYaw = yaw;
 }
 
-/** Anda até um ponto do mundo pelo melhor caminho. */
-export function walkTo(target: Vec2): boolean {
+/** Onde a pessoa está sentada (null = em pé). */
+let seated: { point: Vec2; yaw: number; objectId: string } | null = null;
+/** Chamado ao chegar no fim da rota atual. */
+let onArrive: (() => void) | null = null;
+const seatListeners = new Set<() => void>();
+
+export function seatedAt(): Readonly<{ point: Vec2; yaw: number; objectId: string }> | null {
+  return seated;
+}
+
+export function onSeatChange(fn: () => void): () => void {
+  seatListeners.add(fn);
+  return () => seatListeners.delete(fn);
+}
+
+/** Senta no lugar (encaixa posição e direção). */
+export function sitAt(point: Vec2, yaw: number, objectId: string): void {
+  path = null;
+  onArrive = null;
+  seated = { point, yaw, objectId };
+  self.x = point.x;
+  self.z = point.z;
+  self.yaw = yaw;
+  self.anim = "sit";
+  notify();
+  for (const fn of seatListeners) fn();
+}
+
+/** Levanta e volta para um lugar andável perto do assento. */
+export function standUp(): void {
+  if (!seated) return;
+  const free = world().nav.nearestWalkable({ x: self.x, z: self.z }, 2);
+  if (free) {
+    self.x = free.x;
+    self.z = free.z;
+  }
+  seated = null;
+  self.anim = "idle";
+  for (const fn of seatListeners) fn();
+}
+
+/** Anda até um ponto do mundo pelo melhor caminho. `arrive` roda ao chegar. */
+export function walkTo(target: Vec2, arrive?: () => void): boolean {
+  if (seated) standUp();
   const found = world().nav.findPath({ x: self.x, z: self.z }, target);
   path = found && found.length > 0 ? found : null;
+  onArrive = path ? (arrive ?? null) : null;
+  if (!path && arrive && Math.hypot(target.x - self.x, target.z - self.z) < 1.6) arrive();
   notify();
   return path !== null;
 }
@@ -96,6 +140,8 @@ export function stopMovement(): void {
   window.removeEventListener("blur", onBlur);
   keys.clear();
   path = null;
+  onArrive = null;
+  seated = null;
 }
 
 function frame(now: number): void {
@@ -124,9 +170,19 @@ function step(dt: number): void {
   const speed = run ? RUN_SPEED : WALK_SPEED;
   let move: Vec2 | null = null;
 
+  // Sentado: fica parado até alguém mexer no teclado.
+  if (seated) {
+    if (ix === 0 && iz === 0) {
+      self.anim = "sit";
+      return;
+    }
+    standUp();
+  }
+
   if (ix !== 0 || iz !== 0) {
     if (path) {
       path = null;
+      onArrive = null;
       notify();
     }
     // Entrada relativa à câmera: "para cima" = para onde a câmera olha.
@@ -147,7 +203,10 @@ function step(dt: number): void {
       path.shift();
       if (path.length === 0) {
         path = null;
+        const done = onArrive;
+        onArrive = null;
         notify();
+        if (done) queueMicrotask(done);
       }
     } else {
       move = { x: (dx / d) * stepLen, z: (dz / d) * stepLen };
@@ -163,9 +222,13 @@ function step(dt: number): void {
       self.yaw += angleDelta(self.yaw, targetYaw) * Math.min(1, dt * 14);
       anim = run ? "run" : "walk";
     } else if (path) {
-      // Travou no caminho (alguém no meio, quina): desiste da rota.
+      // Travou no caminho (alguém no meio, quina): desiste da rota, mas se já está perto, conta como chegada.
+      const end = path.at(-1);
+      const done = end && Math.hypot(end.x - self.x, end.z - self.z) < 1.2 ? onArrive : null;
       path = null;
+      onArrive = null;
       notify();
+      if (done) queueMicrotask(done);
     }
     self.x = next.x;
     self.z = next.z;

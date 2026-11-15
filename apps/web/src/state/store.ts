@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_LOOK, type AvatarLook, type InfoPatch, type Lens, type PlayerInfo } from "@infinity/world";
+import { DEFAULT_LOOK, type AvatarLook, type GameSnapshot, type InfoPatch, type Lens, type PlayerInfo } from "@infinity/world";
 
 export type Phase = "entry" | "world";
 export type ConnState = "idle" | "connecting" | "open" | "reconnecting" | "error";
@@ -19,8 +19,15 @@ interface AppState {
   players: Record<string, PlayerInfo>;
   zoneName: string;
   peopleOpen: boolean;
+  /** Estado de todas as mesas de jogo, por gameId. */
+  games: Record<string, GameSnapshot>;
+  /** Mesa de jogo aberta na tela (painel do jogo), se houver. */
+  activeGame: string | null;
 
   setProfile(p: Partial<Profile>): void;
+  setGames(list: GameSnapshot[]): void;
+  setGame(g: GameSnapshot): void;
+  openGame(table: string | null): void;
   setLens(l: Lens): void;
   enter(): void;
   leave(): void;
@@ -33,7 +40,7 @@ interface AppState {
   togglePeople(open?: boolean): void;
 }
 
-const STORAGE_KEY = "infinity-space:profile:v1";
+const STORAGE_KEY = "infinity-space:profile:v2";
 
 interface Saved {
   profile: Profile;
@@ -43,7 +50,10 @@ interface Saved {
 function load(): Saved | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Saved) : null;
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Saved;
+    // Visual salvo em versões antigas: completa com o padrão.
+    return { ...s, profile: { ...s.profile, look: { ...DEFAULT_LOOK, ...s.profile.look } } };
   } catch {
     return null;
   }
@@ -86,7 +96,12 @@ export const useApp = create<AppState>((set, get) => ({
   players: {},
   zoneName: "",
   peopleOpen: false,
+  games: {},
+  activeGame: null,
 
+  setGames: (list) => set({ games: Object.fromEntries(list.map((g) => [g.table, g])) }),
+  setGame: (g) => set((s) => ({ games: { ...s.games, [g.table]: g } })),
+  openGame: (activeGame) => set({ activeGame }),
   setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p, look: { ...s.profile.look, ...p.look } } })),
   setLens: (lens) => {
     set({ lens });
@@ -97,7 +112,7 @@ export const useApp = create<AppState>((set, get) => ({
     save({ profile, lens });
     set({ phase: "world" });
   },
-  leave: () => set({ phase: "entry", conn: "idle", selfId: null, players: {}, peopleOpen: false }),
+  leave: () => set({ phase: "entry", conn: "idle", selfId: null, players: {}, peopleOpen: false, games: {}, activeGame: null }),
   setConn: (conn, error = null) => set({ conn, error }),
   welcome: (selfId, players) => set({ selfId, players: Object.fromEntries(players.map((p) => [p.id, p])) }),
   addPlayer: (p) => set((s) => ({ players: { ...s.players, [p.id]: p } })),

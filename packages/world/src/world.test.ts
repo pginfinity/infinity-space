@@ -1,61 +1,80 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { HEARING, hearing, NavGrid, ZoneIndex } from "./index.ts";
-import { buildCirculoMap, wingPoint } from "./map/circulo.ts";
-import type { MapDef } from "./map/types.ts";
-import { dist, type Vec2 } from "./geometry.ts";
+import { HEARING, hearing, NavGrid, ZoneIndex, buildStationMap, dist, type MapDef, type Vec2 } from "./index.ts";
 
 let map: MapDef;
 let nav: NavGrid;
 let zones: ZoneIndex;
 
 beforeAll(() => {
-  map = buildCirculoMap();
+  map = buildStationMap();
   nav = NavGrid.fromMap(map);
   zones = new ZoneIndex(map.zones);
 });
 
 const at = (pos: Vec2) => ({ pos, zone: zones.zoneAt(pos) });
+const zone = (id: string) => map.zones.find((z) => z.id === id)!;
 
-describe("planta Círculo de Evolução", () => {
-  it("tem as sete alas na ordem do método", () => {
-    expect(map.wings.map((w) => w.letter).join("")).toBe("EVOLUIR");
-  });
-
+describe("planta Estação Infinity", () => {
   it("não repete ids de objetos, zonas nem mesas", () => {
     for (const list of [map.objects, map.zones, map.desks]) {
       const ids = list.map((x) => x.id);
-      expect(new Set(ids).size).toBe(ids.length);
+      expect(new Set(ids).size, JSON.stringify(ids.filter((id, i) => ids.indexOf(id) !== i))).toBe(ids.length);
     }
   });
 
-  it("tem mesas suficientes para o time (rotativas incluídas)", () => {
-    expect(map.desks.length).toBeGreaterThanOrEqual(60);
+  it("tem mesas de trabalho suficientes para o time (o dobro do pico de 20 pessoas)", () => {
+    expect(map.desks.length).toBeGreaterThanOrEqual(40);
   });
 
-  it("coloca toda mesa dentro de uma zona", () => {
-    for (const d of map.desks) expect(zones.zoneAt(d.seat), d.id).toBeDefined();
+  it("tem todas as áreas da empresa", () => {
+    const teams = new Set(map.zones.map((z) => z.team).filter(Boolean));
+    for (const t of ["Desenvolvimento", "Produto & Design", "Automação & IA", "Diretoria", "Marketing & Criação", "Comercial", "Gestão & Projetos"]) expect(teams.has(t), t).toBe(true);
+    for (const id of ["atrio", "orbita", "lua", "arcade", "cafe", "auditorio"]) expect(zone(id), id).toBeDefined();
   });
 
-  it("tem TVs para compartilhar tela em todas as salas de reunião", () => {
-    const screens = new Set(map.objects.filter((o) => o.type === "tv").map((o) => o.screenId));
+  it("cada sala listada tem placa e identidade visual", () => {
+    const signed = new Set(map.signs.map((s) => s.zoneId));
+    for (const z of map.zones.filter((z) => z.listed)) {
+      expect(signed.has(z.id), `placa de ${z.name}`).toBe(true);
+      expect(z.theme?.accent, `cor de ${z.name}`).toMatch(/^#[0-9A-F]{6}$/i);
+    }
+  });
+
+  it("toda TV tem tela e toda sala de reunião tem TV", () => {
+    for (const o of map.objects.filter((o) => o.type === "tv")) expect(o.screenId, o.id).toBeTruthy();
+    const screens = new Set(map.objects.map((o) => o.screenId));
     for (const z of map.zones.filter((z) => z.kind === "meeting")) expect(screens.has(z.id), z.id).toBe(true);
-    expect(screens.has("auditorio")).toBe(true);
-    expect(screens.has("lounge")).toBe(true);
+  });
+
+  it("mesas de jogo têm partida e cadeiras ligadas aos lugares", () => {
+    const tables = map.objects.filter((o) => o.type === "chess-table" || o.type === "connect4-table");
+    expect(tables.length).toBeGreaterThanOrEqual(4);
+    for (const t of tables) {
+      expect(t.gameId, t.id).toBeTruthy();
+      const seats = map.objects.filter((o) => o.gameId === t.gameId && o.gameSeat !== undefined).map((o) => o.gameSeat);
+      expect(seats.sort(), t.id).toEqual([0, 1]);
+    }
+  });
+
+  it("objetos ficam dentro da estação", () => {
+    for (const o of map.objects) {
+      expect(Math.abs(o.pos.x), o.id).toBeLessThan(26);
+      expect(o.pos.z, o.id).toBeGreaterThan(-19);
+      expect(o.pos.z, o.id).toBeLessThan(22);
+    }
   });
 });
 
 describe("navegação", () => {
   it("todo ponto de chegada é andável", () => {
-    for (const s of map.spawns) expect(nav.isWalkable(s)).toBe(true);
+    for (const s of map.spawns) expect(nav.isWalkable(s), JSON.stringify(s)).toBe(true);
   });
 
-  it("a escultura central e as paredes bloqueiam", () => {
-    expect(nav.isWalkable({ x: 0, z: 0 })).toBe(false);
-    const wall = map.walls[0]!;
-    expect(nav.isWalkable({ x: (wall.a.x + wall.b.x) / 2, z: (wall.a.z + wall.b.z) / 2 })).toBe(false);
-  });
-
-  it("fora da estação não é andável", () => {
+  it("a escultura, as paredes e o lado de fora bloqueiam", () => {
+    const star = map.objects.find((o) => o.type === "sculpture")!;
+    expect(nav.isWalkable(star.pos)).toBe(false);
+    const w = map.walls[0]!;
+    expect(nav.isWalkable({ x: (w.a.x + w.b.x) / 2, z: (w.a.z + w.b.z) / 2 })).toBe(false);
     expect(nav.isWalkable({ x: 0, z: -40 })).toBe(false);
   });
 
@@ -68,88 +87,74 @@ describe("navegação", () => {
     }
   });
 
-  it("chega perto de todo objeto interativo", () => {
+  it("chega perto de todo lugar de sentar, jogar e usar", () => {
     const start = map.spawns[0]!;
     for (const o of map.objects) {
       if (!o.interact) continue;
-      const path = nav.findPath(start, o.interact.point);
-      expect(path, o.id).not.toBeNull();
-      expect(dist(path!.at(-1)!, o.interact.point), o.id).toBeLessThanOrEqual(o.interact.radius);
+      for (const p of [o.interact.point, ...(o.interact.more ?? [])]) {
+        const path = nav.findPath(start, p);
+        expect(path, o.id).not.toBeNull();
+        expect(dist(path!.at(-1)!, p), `${o.id} (${o.type})`).toBeLessThanOrEqual(o.interact.radius);
+      }
     }
   });
 
-  it("desliza na parede em vez de atravessar", () => {
-    const wing = map.wings[0]!;
-    const near = wingPoint(wing, 24.4, 0);
-    const moved = nav.move(near, { x: (wingPoint(wing, 26, 0).x - near.x), z: (wingPoint(wing, 26, 0).z - near.z) });
-    expect(nav.isWalkable(moved)).toBe(true);
-    expect(dist(moved, { x: 0, z: 0 })).toBeLessThan(25);
+  it("passa por todas as portas (alcança o centro de cada sala)", () => {
+    const start = map.spawns[0]!;
+    for (const z of map.zones.filter((z) => z.listed)) {
+      const c = { x: z.polygon.reduce((s, p) => s + p.x, 0) / z.polygon.length, z: z.polygon.reduce((s, p) => s + p.z, 0) / z.polygon.length };
+      const path = nav.findPath(start, c);
+      expect(path, z.name).not.toBeNull();
+      expect(zones.zoneAt(path!.at(-1)!)?.id, z.name).toBe(z.id);
+    }
   });
 });
 
 describe("audição", () => {
-  const wing = () => map.wings[1]!;
-
-  it("ouve com volume cheio quem está perto", () => {
-    const a = wingPoint(wing(), 16, -1);
-    const b = wingPoint(wing(), 16.8, -1);
-    const h = hearing(map.walls, at(a), at(b));
-    expect(h.mode).toBe("clear");
-    expect(h.gain).toBe(1);
+  it("ouve com volume cheio quem está perto no corredor", () => {
+    const h = hearing(map.walls, at({ x: 0, z: -5.5 }), at({ x: 1, z: -5.5 }));
+    expect(h).toMatchObject({ mode: "clear", gain: 1 });
   });
 
-  it("o volume cai com a distância dentro da conversa", () => {
-    const a = wingPoint(wing(), 13, -1);
-    const b = wingPoint(wing(), 17, -1);
-    const h = hearing(map.walls, at(a), at(b));
-    expect(h.mode).toBe("clear");
-    expect(h.gain).toBeLessThan(1);
-    expect(h.gain).toBeGreaterThanOrEqual(HEARING.edgeGain);
+  it("o volume cai com a distância e, de longe, chega abafado", () => {
+    const mid = hearing(map.walls, at({ x: 0, z: -5.5 }), at({ x: 4, z: -5.5 }));
+    expect(mid.mode).toBe("clear");
+    expect(mid.gain).toBeLessThan(1);
+    expect(mid.gain).toBeGreaterThanOrEqual(HEARING.edgeGain);
+    const far = hearing(map.walls, at({ x: 0, z: -5.5 }), at({ x: 9, z: -5.5 }));
+    expect(far.mode).toBe("ambient");
+    expect(far.muffled).toBe(true);
   });
 
-  it("de longe, chega abafado", () => {
-    const a = wingPoint(wing(), 13, -5);
-    const b = wingPoint(wing(), 21, -1);
-    const h = hearing(map.walls, at(a), at(b));
-    expect(h.mode).toBe("ambient");
-    expect(h.muffled).toBe(true);
-    expect(h.gain).toBeLessThanOrEqual(HEARING.ambientGain);
+  it("na sala de reunião todos se ouvem e quem está fora não ouve nada", () => {
+    const a = { x: -22, z: -1 };
+    const b = { x: -19.5, z: 1.5 };
+    const corridor = { x: -21, z: -5.5 };
+    expect(at(a).zone?.kind).toBe("meeting");
+    expect(hearing(map.walls, at(a), at(b))).toMatchObject({ mode: "clear", gain: 1 });
+    expect(hearing(map.walls, at(corridor), at(a)).mode).toBe("none");
   });
 
-  it("dentro da sala de reunião todos se ouvem e quem está fora não ouve nada", () => {
-    const inA = wingPoint(wing(), 20.5, 3);
-    const inB = wingPoint(wing(), 24, 5.5);
-    const outside = wingPoint(wing(), 20.5, 1.2);
-    expect(at(inA).zone?.kind).toBe("meeting");
-    expect(hearing(map.walls, at(inA), at(inB))).toMatchObject({ mode: "clear", gain: 1 });
-    expect(hearing(map.walls, at(outside), at(inA)).mode).toBe("none");
-    expect(hearing(map.walls, at(inA), at(outside)).mode).toBe("none");
-  });
-
-  it("parede no caminho abafa a conversa", () => {
-    // Um no átrio, encostado na parede; outro do outro lado, na ala.
-    const w = map.wings[0]!;
-    const hubSide = wingPoint(w, 8.3, 3.2);
-    const wingSide = wingPoint(w, 12.6, 3.2);
-    const h = hearing(map.walls, at(hubSide), at(wingSide));
-    expect(h.mode).toBe("ambient");
-    expect(h.muffled).toBe(true);
+  it("cabine de foco é isolada", () => {
+    const inside = { x: 24.5, z: -2.4 };
+    const hall = { x: 20.5, z: -2.4 };
+    expect(at(inside).zone?.kind).toBe("focus");
+    expect(hearing(map.walls, at(hall), at(inside)).mode).toBe("none");
   });
 
   it("quem está no palco é ouvido no auditório inteiro, e ninguém de fora ouve", () => {
-    const rev = map.wings[6]!;
-    const stage = wingPoint(rev, 24, 0);
-    const lastRow = wingPoint(rev, 17.6, 4.5);
-    const outside = wingPoint(rev, 14, 0);
+    const stage = { x: 24.5, z: 17 };
+    const back = { x: 11.6, z: 20 };
+    const corridor = { x: 15, z: 10.5 };
     expect(at(stage).zone?.kind).toBe("stage");
-    expect(hearing(map.walls, at(lastRow), at(stage))).toMatchObject({ mode: "clear", gain: 1 });
-    expect(hearing(map.walls, at(outside), at(stage)).mode).toBe("none");
+    expect(hearing(map.walls, at(back), at(stage))).toMatchObject({ mode: "clear", gain: 1 });
+    expect(hearing(map.walls, at(corridor), at(stage)).mode).toBe("none");
   });
 
-  it("o megafone chega a áreas abertas distantes", () => {
-    const a = wingPoint(map.wings[0]!, 16, 0);
-    const b = wingPoint(map.wings[3]!, 16, 0);
-    expect(hearing(map.walls, at(a), at(b)).mode).toBe("none");
-    expect(hearing(map.walls, at(a), at(b), { megaphone: true }).mode).toBe("clear");
+  it("parede entre salas abertas abafa", () => {
+    // Dev Lab e Produto & Design são vizinhos, separados por parede.
+    const h = hearing(map.walls, at({ x: -12.8, z: -11 }), at({ x: -11.2, z: -11 }));
+    expect(h.mode).toBe("ambient");
+    expect(h.muffled).toBe(true);
   });
 });

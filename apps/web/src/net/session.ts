@@ -1,7 +1,7 @@
 import { Packr } from "msgpackr";
 import { PROTOCOL_VERSION, type ClientMsg, type InfoPatch, type ServerMsg } from "@infinity/world";
 import { useApp } from "../state/store.ts";
-import { clearRemote, pushRemote, removeRemote, self, setSelf } from "../world/registry.ts";
+import { clearRemote, playEmote, pushRemote, removeRemote, self, setSelf } from "../world/registry.ts";
 
 const packr = new Packr({ useRecords: false });
 
@@ -114,10 +114,17 @@ function handle(msg: ServerMsg): void {
         else pushRemote(id, x, z, yaw, anim, now);
       }
       app.welcome(msg.you, msg.players);
+      app.setGames(msg.games ?? []);
       app.setConn("open");
       welcomed = true;
       break;
     }
+    case "emote":
+      playEmote(msg.id, msg.e);
+      break;
+    case "game":
+      app.setGame(msg.game);
+      break;
     case "join":
       app.addPlayer(msg.player);
       pushRemote(msg.player.id, msg.pose[1], msg.pose[2], msg.pose[3], msg.pose[4]);
