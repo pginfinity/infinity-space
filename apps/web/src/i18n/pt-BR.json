@@ -1,0 +1,51 @@
+{
+  "app": {
+    "name": "Infinity Space",
+    "tagline": "O escritório da Infinity, em 2D ou 3D."
+  },
+  "entry": {
+    "title": "Entre no escritório",
+    "name": "Seu nome",
+    "namePlaceholder": "Como o time te chama",
+    "look": "Aparência",
+    "outfit": "Roupa",
+    "skin": "Pele",
+    "hair": "Cabelo",
+    "lens": "Como você quer ver",
+    "lens2d": "2D",
+    "lens2dHint": "Planta vista de cima. Leve, roda em qualquer PC.",
+    "lens3d": "3D",
+    "lens3dHint": "Imersivo. Melhor em PC com placa de vídeo.",
+    "enter": "Entrar",
+    "remember": "Suas escolhas ficam salvas neste dispositivo.",
+    "nameRequired": "Digite seu nome para entrar."
+  },
+  "hud": {
+    "online_one": "{{count}} pessoa online",
+    "online_other": "{{count}} pessoas online",
+    "people": "Pessoas",
+    "lens": "Lente",
+    "lensHint": "Trocar entre 2D e 3D (L)",
+    "goTo": "Ir até",
+    "you": "você",
+    "controls": "WASD ou setas para andar · Shift corre · clique para ir · rolagem dá zoom",
+    "controls3d": "WASD para andar · arraste para girar · rolagem dá zoom · clique no chão para ir",
+    "recenter": "Centralizar em mim",
+    "leave": "Sair"
+  },
+  "status": {
+    "available": "Disponível",
+    "listening": "Ouvindo",
+    "focus": "Foco",
+    "away": "Ausente"
+  },
+  "conn": {
+    "connecting": "Conectando ao escritório…",
+    "reconnecting": "Conexão perdida. Reconectando…",
+    "error": "Não foi possível conectar ao servidor do escritório.",
+    "retry": "Tentar de novo"
+  },
+  "loading": {
+    "world3d": "Montando o escritório em 3D…"
+  }
+}

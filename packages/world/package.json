@@ -1,0 +1,13 @@
+{
+  "name": "@infinity/world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "O mundo do Infinity Space como dados e regras puras: mapa, colisão, rotas, audição e protocolo.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "infinity-space",
+  "private": true,
+  "type": "module",
+  "description": "Infinity Space: escritório virtual interno da AI Infinity, em 2D e 3D no mesmo mundo.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n servidor,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "npm run dev -w @infinity/web",
+    "dev:server": "npm run dev -w @infinity/server",
+    "build": "npm run build -w @infinity/web && npm run build -w @infinity/server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "concurrently": "^10.0.7",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

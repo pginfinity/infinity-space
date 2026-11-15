@@ -1,0 +1,26 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Dependências e builds
+node_modules/
+dist/
+build/
+.turbo/
+.cache/
+coverage/
+test-results/
+playwright-report/
+.tools/
+
+# Material bruto de marca e referência (versões otimizadas vão para os assets do app)
+/ID 2026 INFINITY/
+*.mp4
+*.mov
+*.eps
+
+# Sistema
+.DS_Store
+._*
+Thumbs.db
