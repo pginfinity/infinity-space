@@ -147,6 +147,14 @@ test("Xadrez: lances legais por clique e xeque-mate", async ({ browser }) => {
 
   const sq = (page: Page, s: string) => page.getByRole("dialog", { name: "Xadrez" }).getByRole("gridcell", { name: new RegExp(`^Casa ${s}\\b`) });
 
+  // Tabuleiro na orientação certa: a1 escura e h1 clara para as brancas; virado para as pretas.
+  const bg = (page: Page, s: string) => sq(page, s).evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(await bg(ana, "a1")).toBe("rgb(76, 110, 156)");
+  expect(await bg(ana, "h1")).toBe("rgb(230, 224, 214)");
+  const firstCell = (page: Page) => page.getByRole("dialog", { name: "Xadrez" }).getByRole("gridcell").first().getAttribute("aria-label");
+  expect(await firstCell(ana)).toMatch(/^Casa a8/);
+  expect(await firstCell(bruno)).toMatch(/^Casa h1/);
+
   // Clicar na peça mostra os lances; clicar num destino ilegal não joga.
   await sq(ana, "f2").click();
   await expect(sq(ana, "f2")).toHaveAttribute("aria-selected", "true");

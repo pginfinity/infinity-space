@@ -68,7 +68,7 @@ export function Connect4Board({ t, seat, canMove }: Props) {
       </div>
       )}
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full drop-shadow-[0_14px_30px_rgb(0_0_0/0.55)]" role="img" aria-label={`Lig 4, ${s.moves} fichas`}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full drop-shadow-[0_14px_30px_rgb(0_0_0/0.55)]" role="img" aria-label={S.c4Board(s.moves)}>
         <defs>
           <linearGradient id={`frame-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={C4_FRAME.top} />

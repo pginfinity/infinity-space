@@ -24,6 +24,8 @@ import {
 } from "@infinity/world";
 import { decode, encode } from "./codec.ts";
 import { GamesManager } from "./games/manager.ts";
+import { RTC, rtcToken } from "./rtc.ts";
+import { hearing } from "@infinity/world";
 
 interface Member {
   info: PlayerInfo;
@@ -36,6 +38,8 @@ interface Member {
   lastEmoteAt: number;
   dirty: boolean;
   alive: boolean;
+  /** Última lista "quem pode te ouvir" enviada (para só mandar quando mudar). */
+  audience: string;
 }
 
 const EMOTE_SET: ReadonlySet<string> = new Set(EMOTES);
@@ -133,6 +137,7 @@ export class OfficeRoom {
       lastEmoteAt: 0,
       dirty: false,
       alive: true,
+      audience: "",
     };
     this.members.set(id, member);
 
@@ -168,6 +173,9 @@ export class OfficeRoom {
         break;
       case "emote":
         this.onEmote(m, msg.e);
+        break;
+      case "rtc":
+        void rtcToken(m.info.id, m.info.name).then((token) => this.sendTo(m, { t: "rtc", url: RTC.publicUrl, token }));
         break;
       case "game":
         if (typeof msg.table === "string" && typeof msg.op === "string") this.games.handle(m.info.id, msg.table, msg.op, msg.data);
@@ -223,8 +231,31 @@ export class OfficeRoom {
     this.broadcast({ t: "info", id: m.info.id, patch: clean });
   }
 
+  private tickCount = 0;
+
+  /**
+   * Privacidade no servidor: para cada pessoa, quem pode ouvi-la agora (distância, salas fechadas,
+   * paredes, palco). O cliente libera a própria voz, vídeo e tela só para essa lista no LiveKit.
+   */
+  private updateAudiences(): void {
+    const list = [...this.members.values()];
+    const at = list.map((m) => ({ pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
+    list.forEach((speaker, i) => {
+      const ids: string[] = [];
+      list.forEach((listener, j) => {
+        if (i !== j && hearing(this.map.walls, at[j]!, at[i]!).mode !== "none") ids.push(listener.info.id);
+      });
+      const key = ids.sort().join(",");
+      if (key !== speaker.audience) {
+        speaker.audience = key;
+        this.sendTo(speaker, { t: "audience", ids });
+      }
+    });
+  }
+
   private tick(): void {
     this.games.tick(1 / POSE_HZ);
+    if (++this.tickCount % 3 === 0) this.updateAudiences();
     const list: PoseTuple[] = [];
     for (const m of this.members.values()) {
       if (!m.dirty) continue;

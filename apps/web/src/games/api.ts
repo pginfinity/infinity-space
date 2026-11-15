@@ -72,9 +72,15 @@ export function seatPlayerName(t: Table, seat: number): string | null {
   return useApp.getState().players[id]?.name ?? t.state.names?.[seat] ?? "—";
 }
 
-/** Objeto do mapa da mesa (para posição e tipo). */
+/** Objeto do mapa da mesa (para posição e tipo). Cadeiras da mesa têm o mesmo gameId; a mesa vem primeiro. */
 export function tableObject(table: string): MapObject | undefined {
-  return world()?.map.objects.find((o) => o.gameId === table);
+  const objs = world()?.map.objects.filter((o) => o.gameId === table) ?? [];
+  return objs.find((o) => o.type in GAME_OF_TABLE) ?? objs[0];
+}
+
+/** Cadeira de um lugar da mesa (objeto com o mesmo gameId e `gameSeat`), se a planta tiver. */
+function seatChair(table: string, seat: number): MapObject | undefined {
+  return world()?.map.objects.find((o) => o.gameId === table && o.gameSeat === seat && o.interact);
 }
 
 /** Tipo de jogo de uma mesa, mesmo antes do servidor mandar o estado. */
@@ -85,7 +91,7 @@ export function tableKind(table: string): string | null {
   return o ? ((GAME_OF_TABLE as Record<string, string | undefined>)[o.type] ?? null) : null;
 }
 
-// ---------------------------------------------------------------- sentar
+// ---------------------------------------------------------------- sentar e levantar
 
 /** Alcance para sentar, um pouco abaixo do limite do servidor (3 m) para não ser recusado. */
 const REACH = 2.6;
@@ -95,12 +101,15 @@ interface GamesUi {
   pending: { table: string; seat: number } | null;
   /** Aviso curto para quem pediu o lugar. */
   notice: string | null;
+  /** Pede um lugar: se estiver longe, anda até a cadeira (ou até a mesa), senta o avatar e avisa o servidor. */
   requestSeat(table: string, seat: number): void;
   cancelSeat(): void;
   setNotice(n: string | null): void;
 }
 
 let pendingTimer: number | undefined;
+/** Muda a cada pedido: chegada de um pedido cancelado não senta ninguém. */
+let seatToken = 0;
 
 /** Estado de interface dos jogos que não vem do servidor. */
 export const useGamesUi = create<GamesUi>((set, get) => ({
@@ -108,6 +117,7 @@ export const useGamesUi = create<GamesUi>((set, get) => ({
   notice: null,
   setNotice: (notice) => set({ notice }),
   cancelSeat: () => {
+    seatToken++;
     window.clearInterval(pendingTimer);
     pendingTimer = undefined;
     if (get().pending) set({ pending: null });
@@ -121,35 +131,60 @@ export const useGamesUi = create<GamesUi>((set, get) => ({
       set({ notice: S.busyElsewhere });
       return;
     }
+
     const obj = tableObject(table);
-    const center = obj?.pos;
-    // Sem a mesa no mapa do cliente, deixa o servidor decidir.
-    if (!center || dist(self, center) <= REACH) {
+    const move = moveMod;
+    // Sem a mesa no mapa do cliente (ou sem motor de movimento), deixa o servidor decidir.
+    if (!obj || !move) {
       sendGame(table, "sit", { seat });
       return;
     }
-    const target = approachPoint(obj, seat);
-    const move = moveMod;
-    if (!target || !move?.walkTo(target)) {
+    const chair = seatChair(table, seat);
+    const sitDown = () => {
+      if (chair?.interact) move.sitAt(chair.interact.point, chair.interact.yaw, chair.id);
+      sendGame(table, "sit", { seat });
+    };
+    if (chair?.interact ? dist(self, chair.interact.point) < 0.45 : dist(self, obj.pos) <= REACH) {
+      sitDown();
+      return;
+    }
+
+    const target = chair?.interact?.point ?? approachPoint(obj, seat);
+    const token = seatToken;
+    let arrived = false;
+    const arrive = () => {
+      if (token !== seatToken) return;
+      arrived = true;
+      get().cancelSeat();
+      sitDown();
+    };
+    if (!target || (!move.walkTo(target, arrive) && !arrived)) {
       set({ notice: S.noPath });
       return;
     }
+    if (arrived) return;
     set({ pending: { table, seat } });
     const startedAt = performance.now();
     pendingTimer = window.setInterval(() => {
-      if (dist(self, center) <= REACH) {
-        get().cancelSeat();
-        sendGame(table, "sit", { seat });
-        return;
-      }
-      // Parou longe (rota cancelada, bloqueio) ou demorou demais: desiste com aviso.
+      // Rota interrompida (WASD, outro clique) ou demorou demais: desiste com aviso.
+      if (token !== seatToken) return;
       if (!move.currentPath() || performance.now() - startedAt > 25_000) {
         get().cancelSeat();
         set({ notice: S.tooFar });
       }
-    }, 120);
+    }, 250);
   },
 }));
+
+/** Levanta da mesa: avisa o servidor e, se o avatar estiver numa cadeira desta mesa, fica de pé. */
+export function leaveSeat(table: string): void {
+  sendGame(table, "stand");
+  const move = moveMod;
+  const at = move?.seatedAt();
+  if (!move || !at) return;
+  const chair = world()?.map.objects.find((o) => o.id === at.objectId);
+  if (chair?.gameId === table) move.standUp();
+}
 
 /** Ponto andável ao lado da mesa: lugar 0 na frente, lugar 1 atrás; senão, o mais perto de mim. */
 function approachPoint(o: MapObject, seat: number): Vec2 | null {

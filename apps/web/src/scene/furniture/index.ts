@@ -139,6 +139,41 @@ function hash(s: string): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
+/** Quais campos de variação o modelo de um tipo lê. */
+interface Usage {
+  color: boolean;
+  accent: boolean;
+  variant: boolean;
+}
+
+/** Monta um molde registrando quais campos de variação o modelo leu. */
+function buildMold(fn: ModelFn, o: MapObject, sep: boolean): { mold: Mold; used: Usage } {
+  const b = new Builder();
+  const used: Usage = { color: false, accent: false, variant: false };
+  fn({
+    b,
+    o,
+    separateScreen: sep,
+    get color() {
+      used.color = true;
+      return o.color;
+    },
+    get accent() {
+      used.accent = true;
+      return o.accent;
+    },
+    get variant() {
+      used.variant = true;
+      return o.variant ?? 0;
+    },
+  });
+  return { mold: b.finish(), used };
+}
+
+function moldKey(o: MapObject, sep: boolean, u: Usage): string {
+  return `${o.type}|${u.variant ? (o.variant ?? 0) : "-"}|${u.color ? (o.color ?? "") : "-"}|${u.accent ? (o.accent ?? "") : "-"}|${sep ? 1 : 0}`;
+}
+
 interface Animator {
   spec: AnimSpec;
   meshes: THREE.InstancedMesh[];
@@ -162,25 +197,34 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
   const neons: { mat: THREE.MeshBasicMaterial; seed: number }[] = [];
   let disposed = false;
 
-  // 1. agrupa objetos por molde
-  const groups = new Map<string, { type: ObjectType; objs: MapObject[]; sep: boolean }>();
+  // 1. agrupa objetos por molde. A chave só inclui cor, accent e variante se o modelo do tipo
+  //    os lê (descoberto ao montar o primeiro molde do tipo): cor num rack não cria molde novo.
+  const usage = new Map<ObjectType, Usage>();
+  const probes = new Map<string, Mold>();
+  const groups = new Map<string, { type: ObjectType; objs: MapObject[]; sep: boolean; key: string }>();
   for (const o of objects) {
-    if (!MODELS[o.type]) continue;
+    const fn = MODELS[o.type];
+    if (!fn) continue;
     const sep = o.type === "leaderboard" || (o.type === "tv" && !!o.screenId);
-    const key = `${o.type}|${o.variant ?? 0}|${o.color ?? ""}|${o.accent ?? ""}|${sep ? 1 : 0}`;
+    let u = usage.get(o.type);
+    if (!u) {
+      const probe = buildMold(fn, o, sep);
+      u = probe.used;
+      usage.set(o.type, u);
+      probes.set(moldKey(o, sep, u), probe.mold);
+    }
+    const key = moldKey(o, sep, u);
     const g = groups.get(key);
     if (g) g.objs.push(o);
-    else groups.set(key, { type: o.type, objs: [o], sep });
+    else groups.set(key, { type: o.type, objs: [o], sep, key });
   }
 
   let idleTex: THREE.Texture | null = null;
   let boardTex: THREE.Texture | null = null;
 
-  for (const { type, objs, sep } of groups.values()) {
+  for (const { type, objs, sep, key } of groups.values()) {
     const first = objs[0] as MapObject;
-    const b = new Builder();
-    (MODELS[type] as ModelFn)({ b, o: first, color: first.color, accent: first.accent, variant: first.variant ?? 0, separateScreen: sep });
-    const mold: Mold = b.finish();
+    const mold: Mold = probes.get(key) ?? buildMold(MODELS[type] as ModelFn, first, sep).mold;
     const mats = objs.map((o) => objectMatrix(o));
     const n = objs.length;
 

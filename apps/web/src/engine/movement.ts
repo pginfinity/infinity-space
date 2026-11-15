@@ -55,6 +55,11 @@ export function setHeading(yaw: number): void {
   headingYaw = yaw;
 }
 
+/** Para onde a câmera "olha" no chão (usado no pan estéreo das vozes). */
+export function getHeading(): number {
+  return headingYaw;
+}
+
 /** Onde a pessoa está sentada (null = em pé). */
 let seated: { point: Vec2; yaw: number; objectId: string } | null = null;
 /** Chamado ao chegar no fim da rota atual. */

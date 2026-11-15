@@ -61,7 +61,7 @@ export const chair: ModelFn = ({ b, color, variant }) => {
     [-1, 1],
     [1, 1],
   ];
-  for (const [sx, sz] of legs) b.rod(C.woodLight, 0.02, sx * 0.13, 0.42, sz * 0.12, sx * 0.2, 0, sz * 0.2, { rt: 0.026, seg: 8 });
+  for (const [sx, sz] of legs) b.rod(C.woodLight, 0.024, sx * 0.13, 0.42, sz * 0.12, sx * 0.2, 0, sz * 0.2, { rt: 0.03, seg: 8 });
   b.box(C.woodLight, 0.3, 0.03, 0.03, 0, 0.42, 0, { r: 0.01 });
   b.box(shell, 0.46, 0.06, 0.44, 0, 0.45, 0.01, { r: 0.028 });
   // encosto curvo (setor de anel com espessura), inclinado para trás
@@ -75,7 +75,7 @@ export const stool: ModelFn = ({ b, color }) => {
   const legs = 4;
   for (let i = 0; i < legs; i++) {
     const a = (i / legs) * Math.PI * 2 + Math.PI / 4;
-    b.rod(C.graphite, 0.018, Math.cos(a) * 0.11, 0.66, Math.sin(a) * 0.11, Math.cos(a) * 0.19, 0, Math.sin(a) * 0.19, { rt: 0.02, seg: 8 });
+    b.rod(C.graphite, 0.022, Math.cos(a) * 0.11, 0.66, Math.sin(a) * 0.11, Math.cos(a) * 0.19, 0, Math.sin(a) * 0.19, { rt: 0.02, seg: 8 });
   }
   b.torus(T.steel, 0.15, 0.016, 0, 0.26, 0, { rx: Math.PI / 2, seg: 24, tseg: 6 });
   b.puck(C.woodLight, 0.2, 0.05, 0, 0.64, 0, { bevel: 0.015 });

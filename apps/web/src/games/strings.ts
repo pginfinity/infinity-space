@@ -56,7 +56,8 @@ export const S = {
   youLost: "Você perdeu",
   won: (name: string) => `${name} venceu!`,
   draw: "Empate",
-  lastGame: "Última partida",
+  drawTicTacToe: "Deu velha!",
+  lastMove: "Último lance",
   captured: "Capturadas",
   moves: (n: number) => (n === 1 ? "1 lance" : `${n} lances`),
   promoteTitle: "Promover peão",
@@ -64,6 +65,13 @@ export const S = {
   cell: (n: number) => `Casa ${n}`,
   square: (sq: string) => `Casa ${sq}`,
   noTable: "Esta mesa não está disponível.",
+  gameFallback: "Jogo",
+  seatFallback: (seat: number) => `Lugar ${seat + 1}`,
+  chessBoard: "Tabuleiro de xadrez",
+  c4Board: (n: number) => `Grade do Lig 4, ${n === 1 ? "1 ficha" : `${n} fichas`}`,
+  tttBoard: "Jogo da velha",
+  white: "branco",
+  black: "preto",
 };
 
 /** Explicação curta do fim de jogo. `loser` é o nome de quem perdeu (desistência/abandono). */

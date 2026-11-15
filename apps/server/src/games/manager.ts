@@ -26,6 +26,8 @@ interface Table {
   state: BaseState;
   rematch: boolean[];
   round: number;
+  /** Nomes de quem jogou a partida atual (ou a última). */
+  players: Array<string | null>;
   /** Segundos que cada lugar passou longe da mesa (para liberar lugar esquecido). */
   away: number[];
 }
@@ -62,6 +64,7 @@ export class GamesManager {
         state: rules.create(),
         rematch: new Array<boolean>(rules.seats).fill(false),
         round: 0,
+        players: new Array<string | null>(rules.seats).fill(null),
         away: new Array<number>(rules.seats).fill(0),
       });
     }
@@ -168,6 +171,7 @@ export class GamesManager {
     if (t.seats.every((s) => s === null)) {
       t.phase = "waiting";
       t.state = t.rules.create();
+      t.players.fill(null);
     }
     return true;
   }
@@ -213,6 +217,7 @@ export class GamesManager {
     t.state = t.rules.create();
     t.phase = "playing";
     t.round++;
+    t.players = t.seats.map((id) => (id ? (this.host.playerName(id) ?? null) : null));
     t.rematch.fill(false);
     t.away.fill(0);
   }
@@ -223,6 +228,7 @@ export class GamesManager {
       rematch: t.rematch.slice(),
       round: t.round,
       names: t.seats.map((id) => (id ? (this.host.playerName(id) ?? null) : null)),
+      players: t.players.slice(),
     };
     return { table: t.id, kind: t.kind, seats: t.seats.slice(), phase: t.phase, state };
   }

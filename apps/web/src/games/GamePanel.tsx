@@ -5,7 +5,7 @@ import { Eye, Flag, LoaderCircle, LogOut, X } from "lucide-react";
 import type { ChessState, Connect4State, TicTacToeState } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
-import { closeGame, mySeat, seatPlayerName, sendGame, tableKind, useGamesUi, useTable, type Table } from "./api.ts";
+import { closeGame, leaveSeat, mySeat, seatPlayerName, sendGame, tableKind, useGamesUi, useTable, type Table } from "./api.ts";
 import { ChessBoard, Captured } from "./ChessBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
@@ -21,7 +21,7 @@ export function GamePanel({ table }: { table: string }) {
   // Assina a lista de pessoas para nomes e status ficarem em dia.
   useApp((s) => s.players);
   const kind = t?.kind ?? tableKind(table) ?? "";
-  const title = GAME_TITLE[kind] ?? "Jogo";
+  const title = GAME_TITLE[kind] ?? S.gameFallback;
   const seat = mySeat(t, selfId);
 
   return (
@@ -41,7 +41,7 @@ export function GamePanel({ table }: { table: string }) {
       data-game-panel={table}
     >
       <Header title={title} kind={kind} t={t} seat={seat} />
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-4 pt-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1 sm:pb-4">
         {t ? <Body t={t} kind={kind} seat={seat} /> : <p className="py-10 text-center text-sm text-slate">{S.noTable}</p>}
       </div>
     </motion.aside>
@@ -89,8 +89,21 @@ function StatusLine({ t, seat, kind }: { t: Table; seat: number; kind: string })
     <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[13px]" aria-live="polite">
       {text}
       {s.moves > 0 && <span className="text-slate">· {S.moves(s.moves)}</span>}
+      {kind === "chess" && lastSan(s as unknown as ChessState) && (
+        <span className="text-slate" title={S.lastMove}>
+          · <span className="font-medium text-offwhite/80">{lastSan(s as unknown as ChessState)}</span>
+        </span>
+      )}
     </p>
   );
+}
+
+/** Último lance em notação algébrica com as letras em português (C cavalo, B bispo, T torre, D dama, R rei). */
+function lastSan(s: ChessState): string | null {
+  const san = s.san?.at(-1);
+  if (!san) return null;
+  const PT: Record<string, string> = { K: "R", Q: "D", R: "T", N: "C", B: "B" };
+  return [...san].map((ch) => PT[ch] ?? ch).join("");
 }
 
 function Body({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
@@ -128,7 +141,7 @@ function SeatStrip({ t, kind, seat, me, primary }: { t: Table; kind: string; sea
   const player = useApp((s) => (id ? s.players[id] : undefined));
   const pending = useGamesUi((s) => s.pending);
   const { requestSeat, cancelSeat } = useGamesUi.getState();
-  const seatName = SEAT_NAME[kind]?.[seat] ?? `Lugar ${seat + 1}`;
+  const seatName = SEAT_NAME[kind]?.[seat] ?? S.seatFallback(seat);
   const isMe = me >= 0 && me === seat;
   const active = t.phase === "playing" && t.state.turn === seat;
   const winner = t.phase === "finished" && t.state.winner === seat;
@@ -226,7 +239,7 @@ function Footer({ t, seat }: { t: Table; seat: number }) {
     content = (
       <div className="flex w-full items-center justify-between gap-3">
         <span className="text-xs text-slate">{S.waitingStart}</span>
-        <GhostButton onClick={() => sendGame(t.table, "stand")}>
+        <GhostButton onClick={() => leaveSeat(t.table)}>
           <LogOut className="size-3.5" />
           {S.stand}
         </GhostButton>
@@ -245,12 +258,14 @@ function EndBanner({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
   const s = t.state;
   const winner = s.winner;
   const loser = winner === null ? null : winner === 0 ? 1 : 0;
-  const loserName = loser === null ? null : (seatPlayerName(t, loser) ?? s.names?.[loser] ?? SEAT_NAME[kind]?.[loser] ?? null);
-  const winnerName = winner === null ? null : (seatPlayerName(t, winner) ?? s.names?.[winner] ?? SEAT_NAME[kind]?.[winner] ?? "");
+  // Quem jogou a partida (o servidor guarda o nome mesmo se a pessoa já levantou).
+  const playedBy = (seat: number) => s.players?.[seat] ?? seatPlayerName(t, seat) ?? SEAT_NAME[kind]?.[seat] ?? null;
+  const loserName = loser === null ? null : playedBy(loser);
+  const winnerName = winner === null ? null : playedBy(winner);
   const iWon = seat >= 0 && winner === seat;
   const iLost = seat >= 0 && loser === seat;
   const celebrate = winner !== null && !iLost;
-  const title = s.draw ? S.draw : iWon ? S.youWon : iLost ? S.youLost : S.won(winnerName ?? "");
+  const title = s.draw ? (kind === "tictactoe" ? S.drawTicTacToe : S.draw) : iWon ? S.youWon : iLost ? S.youLost : S.won(winnerName ?? "");
   const reason = endReasonText(s.reason, s.reason === "resign" || s.reason === "left" ? loserName : null);
 
   const other = seat >= 0 ? (seat === 0 ? 1 : 0) : -1;
@@ -308,7 +323,7 @@ function EndBanner({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
           {!otherHere && <span className="mr-auto text-xs text-offwhite/80">{S.waitingOpponent}</span>}
           <button
             type="button"
-            onClick={() => sendGame(t.table, "stand")}
+            onClick={() => leaveSeat(t.table)}
             className={clsx("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors", celebrate ? "bg-space/35 text-offwhite ring-1 ring-offwhite/25 hover:bg-space/55" : "text-offwhite/90 ring-1 ring-offwhite/15 hover:bg-offwhite/8")}
           >
             <LogOut className="size-3.5" />

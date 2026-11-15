@@ -87,13 +87,14 @@ export function ChessBoard({ t, seat, canMove }: Props) {
 
   return (
     <div className="relative aspect-square w-full touch-manipulation select-none overflow-hidden rounded-xl [container-type:inline-size] shadow-[0_12px_40px_-16px_rgb(0_0_0/0.8)] ring-1 ring-offwhite/10">
-      <div className="grid h-full w-full grid-cols-8 grid-rows-8" role="grid" aria-label="Tabuleiro de xadrez">
+      <div className="grid h-full w-full grid-cols-8 grid-rows-8" role="grid" aria-label={S.chessBoard}>
         {squares.map((sq, i) => {
           const col = i % 8;
           const row = Math.floor(i / 8);
           const file = sq.charCodeAt(0) - 97;
           const rank = Number(sq[1]);
-          const light = (file + rank) % 2 === 1;
+          // a1 é casa escura ("branca à direita": h1 é clara).
+          const light = (file + rank) % 2 === 0;
           const piece = pieceAt(sq);
           const target = targets.find((x) => x.to === sq);
           const isLast = s.last && (s.last.from === sq || s.last.to === sq);
@@ -106,7 +107,7 @@ export function ChessBoard({ t, seat, canMove }: Props) {
               key={sq}
               type="button"
               role="gridcell"
-              aria-label={`${S.square(sq)}${piece ? `, ${PIECE_NAME[piece.type]} ${piece.color === "w" ? "branco" : "preto"}` : ""}`}
+              aria-label={`${S.square(sq)}${piece ? `, ${PIECE_NAME[piece.type]} ${piece.color === "w" ? S.white : S.black}` : ""}`}
               aria-selected={isSel}
               onClick={() => onSquare(sq)}
               className={clsx("relative outline-none focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal", (mine || target) && "cursor-pointer", !mine && !target && "cursor-default")}

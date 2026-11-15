@@ -17,7 +17,16 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     launchOptions: {
       // WebGL por software, para rodar igual em qualquer máquina.
-      args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+      args: [
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+        "--ignore-gpu-blocklist",
+        // Microfone e câmera falsos (tom e imagem de teste) para testar voz e vídeo.
+        "--use-fake-ui-for-media-stream",
+        "--use-fake-device-for-media-stream",
+        "--autoplay-policy=no-user-gesture-required",
+      ],
     },
   },
 });

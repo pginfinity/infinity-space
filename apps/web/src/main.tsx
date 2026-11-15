@@ -6,8 +6,15 @@ import { App } from "./App.tsx";
 
 // Gancho de inspeção para testes automatizados, só em desenvolvimento.
 if (import.meta.env.DEV) {
-  void Promise.all([import("./state/store.ts"), import("./world/registry.ts"), import("./engine/movement.ts"), import("./engine/interact.ts"), import("./world/world.ts")]).then(
-    ([store, registry, movement, interact, w]) => {
+  void Promise.all([
+    import("./state/store.ts"),
+    import("./world/registry.ts"),
+    import("./engine/movement.ts"),
+    import("./engine/interact.ts"),
+    import("./world/world.ts"),
+    import("./media/rtc.ts"),
+  ]).then(
+    ([store, registry, movement, interact, w, media]) => {
       Object.assign(window, {
         __infinity: {
           store: store.useApp,
@@ -16,6 +23,7 @@ if (import.meta.env.DEV) {
           walkTo: movement.walkTo,
           interact: interact.useInteract,
           world: w.world,
+          media: { state: media.useMedia, audio: media.subscribedAudio },
         },
       });
     },

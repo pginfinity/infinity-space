@@ -1,7 +1,8 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, MapControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
+import { MapControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { CATALOG, type MapObject, type ObjectType } from "@infinity/world";
 import { PALETTE, toon } from "../materials.ts";
 import { buildFurniture, FURNITURE_TYPES, VARIANTS } from "./index.ts";
@@ -78,7 +79,7 @@ const GROUPS: { id: string; name: string; types: ObjectType[] }[] = [
   { id: "assentos", name: "Assentos", types: ["office-chair", "exec-chair", "chair", "stool", "bench", "sofa", "armchair", "beanbag", "pouf", "stage-seat"] },
   { id: "mesas", name: "Mesas", types: ["meeting-table", "round-table", "oval-table", "high-table", "coffee-table", "bistro-table"] },
   { id: "paredes", name: "Telas e paredes", types: ["tv", "leaderboard", "whiteboard", "kanban-board", "moodboard", "neon-sign", "art-frame", "directory"] },
-  { id: "tecnologia", name: "Tecnologia e estúdio", types: ["server-rack", "holo-table", "robot-arm", "big-button", "ring-light", "camera-tripod", "backdrop"] },
+  { id: "tecnologia", name: "Tecnologia e estúdio", types: ["backdrop", "server-rack", "holo-table", "robot-arm", "big-button", "ring-light", "camera-tripod"] },
   { id: "copa", name: "Copa", types: ["counter", "kitchen-counter", "coffee-machine", "fridge", "water-cooler"] },
   { id: "decoracao", name: "Decoração e palco", types: ["plant", "plant-tall", "plant-small", "bookshelf", "lamp-floor", "rug", "gong", "lectern"] },
   { id: "jogos", name: "Jogos", types: ["airhockey", "pool", "pingpong", "chess-table", "connect4-table", "arcade", "jukebox"] },
@@ -171,7 +172,8 @@ function buildItems(mode: string): Item[] {
   if (mode === "variantes") {
     const rows: { type: ObjectType; extra?: Partial<MapObject>; label: string }[][] = [];
     let cur: { type: ObjectType; extra?: Partial<MapObject>; label: string }[] = [];
-    for (const t of FURNITURE_TYPES) {
+    const order = [...FURNITURE_TYPES].sort((a, b) => Number(CATALOG[b].wallMounted !== undefined) - Number(CATALOG[a].wallMounted !== undefined));
+    for (const t of order) {
       const n = VARIANTS[t] ?? 1;
       if (n < 2) continue;
       for (let v = 0; v < n; v++) cur.push({ type: t, extra: { variant: v }, label: `${NAMES[t]} · v${v}` });
@@ -192,21 +194,25 @@ function buildItems(mode: string): Item[] {
     if (cur.length) rows.push(cur);
     return layoutRows(rows);
   }
-  const groups = GROUPS.filter((g) => mode === "todos" || g.id === mode);
+  const groups = GROUPS.filter((g) => mode === "todos" || g.id === mode).sort((a, b) => (a.id === "paredes" ? -1 : b.id === "paredes" ? 1 : 0));
   const rows = groups.map((g) => g.types.map((t) => ({ type: t, label: NAMES[t] ?? t })));
   // fileiras muito longas viram duas
   const split = rows.flatMap((r) => (r.length > 6 && mode !== "todos" ? [r.slice(0, Math.ceil(r.length / 2)), r.slice(Math.ceil(r.length / 2))] : [r]));
   return layoutRows(split);
 }
 
-/** 600 objetos com combinações realistas (tipos, variantes e cores repetidas por sala). */
+/**
+ * 600 objetos como num escritório de verdade: 12 salas, cada uma com sua cor de tema
+ * aplicada aos estofados, tapetes e letreiros; variantes sorteadas.
+ */
 function stressItems(): Item[] {
   const items: Item[] = [];
-  const colors = [undefined, PALETTE.orange, PALETTE.sky, PALETTE.green];
-  const weights: [ObjectType, number][] = FURNITURE_TYPES.map((t) => [t, t === "office-chair" || t === "desk" || t === "chair" || t === "plant" ? 8 : t.includes("table") || t === "desk-dual" ? 3 : 1]);
+  const themes: (string | undefined)[] = [undefined, PALETTE.orange, PALETTE.sky, PALETTE.green, PALETTE.cream, undefined, PALETTE.gold, undefined, PALETTE.signal, undefined, PALETTE.pink, undefined];
+  const themed = new Set<ObjectType>(["office-chair", "sofa", "armchair", "beanbag", "pouf", "rug", "stool", "chair", "stage-seat", "bench"]);
+  const weights: [ObjectType, number][] = FURNITURE_TYPES.map((t) => [t, t === "office-chair" || t === "desk" || t === "desk-dual" ? 10 : t === "chair" || t === "plant" || t === "plant-small" ? 6 : t.includes("table") || t === "sofa" || t === "tv" ? 3 : 1]);
   const total = weights.reduce((s, [, w]) => s + w, 0);
   let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const cols = 25;
   for (let i = 0; i < 600; i++) {
     let r = rnd() * total;
@@ -220,9 +226,15 @@ function stressItems(): Item[] {
     }
     const x = (i % cols) * 3.4 - (cols * 3.4) / 2;
     const z = Math.floor(i / cols) * 3.4 - 40;
+    const room = Math.floor(((i % cols) / cols) * 4) + Math.floor(i / 150) * 4;
     const nv = VARIANTS[type] ?? 1;
     items.push({
-      obj: makeObj(type, x, z, { variant: Math.floor(rnd() * nv), color: rnd() < 0.3 ? colors[Math.floor(rnd() * colors.length)] : undefined, rot: Math.floor(rnd() * 4) * (Math.PI / 2) }),
+      obj: makeObj(type, x, z, {
+        variant: Math.floor(rnd() * nv),
+        color: themed.has(type) ? themes[room % themes.length] : undefined,
+        ...(type === "neon-sign" ? { accent: themes[room % themes.length] ?? PALETTE.signal, text: "Sala " + (room + 1) } : {}),
+        rot: Math.floor(rnd() * 4) * (Math.PI / 2),
+      }),
       label: "",
       wall: false,
     });
@@ -243,7 +255,7 @@ function bounds(items: Item[]): Fit {
     const c = CATALOG[it.obj.type];
     const hw = c.w / 2 + 0.3;
     const hd = c.d / 2 + (it.wall ? 0.8 : 0.4);
-    const top = it.wall ? 2.9 : c.h + 0.1;
+    const top = it.wall ? (c.wallMounted ?? 1.5) + c.h / 2 + 0.3 : c.h + 0.1;
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, top]) {
       const p = new THREE.Vector3(it.obj.pos.x + sx * hw, y, it.obj.pos.z + sz * hd);
       pts.push(p);
@@ -307,23 +319,30 @@ function Stage({ items, floor }: { items: Item[]; floor: FloorKey }) {
       const c = CATALOG[it.obj.type];
       const { x, z } = it.obj.pos;
       if (it.wall) {
-        const g = new THREE.BoxGeometry(c.w + 0.7, 2.9, 0.12);
-        g.translate(x, 1.45, z - c.d / 2 - 0.06);
+        const top = (c.wallMounted ?? 1.5) + c.h / 2 + 0.3;
+        const g = new THREE.BoxGeometry(c.w + 0.5, top, 0.12);
+        g.translate(x, top / 2, z - c.d / 2 - 0.06);
         walls.push(g);
       }
       if (it.label) {
-        const g = new THREE.BoxGeometry(c.w + 0.5, 0.03, c.d + (it.wall ? 0.9 : 0.5));
-        g.translate(x, 0.015, z + (it.wall ? 0.2 : 0));
+        // tablado logo abaixo do chão dos móveis (topo em y = 0)
+        const g = new THREE.BoxGeometry(c.w + 0.5, 0.02, c.d + (it.wall ? 0.9 : 0.5));
+        g.translate(x, -0.01, z + (it.wall ? 0.2 : 0));
         plinths.push(g);
       }
     }
-    return { plinths, walls };
+    const merge = (list: THREE.BufferGeometry[]) => {
+      const m = list.length ? mergeGeometries(list, false) : null;
+      list.forEach((g) => g.dispose());
+      return m ? [m] : [];
+    };
+    return { plinths: merge(plinths), walls: merge(walls) };
   }, [items]);
   useEffect(() => () => [...meshes.plinths, ...meshes.walls].forEach((g) => g.dispose()), [meshes]);
   const f = FLOORS[floor];
   return (
     <group>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.001} receiveShadow material={toon(f.floor)}>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.025} receiveShadow material={toon(f.floor)}>
         <planeGeometry args={[400, 400]} />
       </mesh>
       {meshes.plinths.map((g, i) => (
@@ -336,79 +355,100 @@ function Stage({ items, floor }: { items: Item[]; floor: FloorKey }) {
   );
 }
 
-const Labels = memo(function Labels({ items }: { items: Item[] }) {
-  return (
-    <>
-      {items
-        .filter((i) => i.label)
-        .map((it) => {
-          const c = CATALOG[it.obj.type];
-          return (
-            <Html key={it.obj.id} position={[it.obj.pos.x + 0.2, 0.05, it.obj.pos.z + c.d / 2 + (it.wall ? 0.7 : 0.35)]} center zIndexRange={[10, 0]}>
-              <div className="pointer-events-none whitespace-nowrap rounded-full bg-[#00112A]/85 px-2 py-0.5 text-[11px] font-medium text-[#F2F0EF] shadow">{it.label}</div>
-            </Html>
-          );
-        })}
-    </>
-  );
+/**
+ * Nomes dos itens: divs comuns sobre o canvas, projetadas a cada quadro
+ * (mais leve e previsível que um Html do drei por item).
+ */
+const LabelLayer = memo(function LabelLayer({ items, container }: { items: Item[]; container: HTMLDivElement | null }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const entries = useMemo(() => {
+    if (!container) return [];
+    return items
+      .filter((i) => i.label)
+      .map((it) => {
+        const c = CATALOG[it.obj.type];
+        const el = document.createElement("div");
+        el.className = "absolute left-0 top-0 whitespace-nowrap rounded-full bg-[#00112A]/85 px-2 py-0.5 text-[11px] font-medium text-[#F2F0EF] shadow";
+        el.textContent = it.label;
+        container.appendChild(el);
+        return { el, pos: new THREE.Vector3(it.obj.pos.x, 0.05, it.obj.pos.z + c.d / 2 + (it.wall ? 0.75 : 0.4)) };
+      });
+  }, [items, container]);
+  useEffect(() => () => entries.forEach((e) => e.el.remove()), [entries]);
+  const v = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    for (const e of entries) {
+      v.copy(e.pos).project(camera);
+      const x = (v.x * 0.5 + 0.5) * size.width;
+      const y = (-v.y * 0.5 + 0.5) * size.height;
+      e.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+    }
+  });
+  return null;
 });
 
 const ISO_YAW = Math.PI / 4;
 const ISO_PITCH = (30 * Math.PI) / 180;
 
+/** Enquadramento: centro e zoom pela silhueta projetada dos itens. */
+function frame(mode: "iso" | "persp", fit: Fit, size: { width: number; height: number }, zoomMul: number) {
+  const center = fit.box.getCenter(new THREE.Vector3());
+  center.y = 0.6;
+  if (mode === "iso") {
+    const dir = new THREE.Vector3(Math.sin(ISO_YAW) * Math.cos(ISO_PITCH), Math.sin(ISO_PITCH), Math.cos(ISO_YAW) * Math.cos(ISO_PITCH));
+    const cam = new THREE.OrthographicCamera();
+    cam.position.copy(center).addScaledVector(dir, 120);
+    cam.lookAt(center);
+    cam.updateMatrixWorld();
+    const pb = new THREE.Box3();
+    for (const p of fit.pts) pb.expandByPoint(p.clone().applyMatrix4(cam.matrixWorldInverse));
+    const mid = pb.getCenter(new THREE.Vector3()).applyMatrix4(cam.matrixWorld);
+    center.copy(mid);
+    const zoom = Math.min(size.width / (pb.max.x - pb.min.x), size.height / (pb.max.y - pb.min.y)) * 0.95 * zoomMul;
+    return { center, position: center.clone().addScaledVector(dir, 120), zoom };
+  }
+  // 3/4 perspectiva: aproxima até a silhueta caber no quadro (algumas iterações)
+  const yaw = (35 * Math.PI) / 180;
+  const pitch = (34 * Math.PI) / 180;
+  const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  const cam = new THREE.PerspectiveCamera(35, size.width / Math.max(1, size.height), 0.1, 2000);
+  let dist = fit.box.getSize(new THREE.Vector3()).length();
+  const v = new THREE.Vector3();
+  for (let i = 0; i < 6; i++) {
+    cam.position.copy(center).addScaledVector(dir, dist);
+    cam.lookAt(center);
+    cam.updateMatrixWorld();
+    let m = 0;
+    for (const p of fit.pts) {
+      v.copy(p).project(cam);
+      m = Math.max(m, Math.abs(v.x), Math.abs(v.y));
+    }
+    dist *= 0.35 + 0.65 * (m / 0.92);
+  }
+  dist /= zoomMul;
+  return { center, position: center.clone().addScaledVector(dir, dist), zoom: 1 };
+}
+
 function Cameras({ mode, fit, zoomMul }: { mode: "iso" | "persp"; fit: Fit; zoomMul: number }) {
-  const box = fit.box;
   const size = useThree((s) => s.size);
-  const controls = useRef<React.ComponentRef<typeof MapControls>>(null);
   const ortho = useRef<THREE.OrthographicCamera>(null);
   const persp = useRef<THREE.PerspectiveCamera>(null);
+  const f = useMemo(() => frame(mode, fit, size, zoomMul), [mode, fit, size, zoomMul]);
   useLayoutEffect(() => {
-    const center = box.getCenter(new THREE.Vector3());
-    center.y = 0.6;
-    if (mode === "iso" && ortho.current) {
-      const dir = new THREE.Vector3(Math.sin(ISO_YAW) * Math.cos(ISO_PITCH), Math.sin(ISO_PITCH), Math.cos(ISO_YAW) * Math.cos(ISO_PITCH));
-      const cam = ortho.current;
-      cam.position.copy(center).addScaledVector(dir, 120);
-      cam.up.set(0, 1, 0);
-      cam.lookAt(center);
-      cam.updateMatrixWorld();
-      // mede a caixa no espaço da câmera para enquadrar
-      const inv = cam.matrixWorldInverse;
-      const pb = new THREE.Box3();
-      for (const p of fit.pts) pb.expandByPoint(p.clone().applyMatrix4(inv));
-      const w = pb.max.x - pb.min.x;
-      const h = pb.max.y - pb.min.y;
-      // centraliza pela silhueta projetada
-      const mid = new THREE.Vector3((pb.max.x + pb.min.x) / 2, (pb.max.y + pb.min.y) / 2, (pb.max.z + pb.min.z) / 2).applyMatrix4(cam.matrixWorld);
-      const shift = mid.sub(center);
-      cam.position.add(shift);
-      center.add(shift);
-      cam.zoom = Math.min(size.width / w, size.height / h) * 0.95 * zoomMul;
-      cam.near = 0.1;
-      cam.far = 600;
-      cam.updateProjectionMatrix();
-    } else if (persp.current) {
-      const cam = persp.current;
-      const r = box.getSize(new THREE.Vector3()).length() / 2;
-      const yaw = (35 * Math.PI) / 180;
-      const pitch = (34 * Math.PI) / 180;
-      const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-      const dist = (r / Math.sin(((cam.fov / 2) * Math.PI) / 180)) * 0.82 / zoomMul;
-      cam.position.copy(center).addScaledVector(dir, dist);
-      cam.lookAt(center);
-      cam.near = 0.1;
-      cam.far = dist * 4;
-      cam.updateProjectionMatrix();
-    }
-    if (controls.current) {
-      controls.current.target.copy(center);
-      controls.current.update();
-    }
-  }, [mode, fit, size, zoomMul]);
+    const cam = mode === "iso" ? ortho.current : persp.current;
+    if (!cam) return;
+    cam.position.copy(f.position);
+    cam.lookAt(f.center);
+    cam.zoom = f.zoom;
+    cam.near = 0.1;
+    cam.far = 800;
+    cam.updateProjectionMatrix();
+  }, [mode, f]);
   return (
     <>
       {mode === "iso" ? <OrthographicCamera ref={ortho} makeDefault /> : <PerspectiveCamera ref={persp} makeDefault fov={35} />}
-      <MapControls ref={controls} enableRotate={mode === "persp"} screenSpacePanning makeDefault />
+      <MapControls target={[f.center.x, f.center.y, f.center.z]} enableRotate={mode === "persp"} screenSpacePanning makeDefault />
     </>
   );
 }
@@ -472,6 +512,7 @@ export default function Gallery() {
   const items = useMemo(() => buildItems(mode), [mode]);
   const fit = useMemo(() => bounds(items), [items]);
   const isPixel = pixel && cam === "iso";
+  const [labelBox, setLabelBox] = useState<HTMLDivElement | null>(null);
 
   const btn = (active: boolean) =>
     `rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-[#00B7FF] text-[#00112A]" : "bg-white/8 text-[#F2F0EF] hover:bg-white/15"}`;
@@ -493,8 +534,9 @@ export default function Gallery() {
         <Lights box={fit.box} />
         <Stage items={items} floor={floor} />
         <Furniture items={items} />
-        {mode !== "teste" && <Labels items={items} />}
+        {mode !== "teste" && <LabelLayer items={items} container={labelBox} />}
       </Canvas>
+      <div ref={setLabelBox} className="pointer-events-none absolute inset-0 overflow-hidden" />
 
       <div className="pointer-events-auto absolute left-3 top-3 flex max-w-[min(92vw,760px)] flex-col gap-2 rounded-xl bg-[#00112A]/90 p-3 text-[#F2F0EF] shadow-lg">
         <div className="flex items-baseline gap-3">

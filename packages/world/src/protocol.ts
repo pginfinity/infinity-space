@@ -67,6 +67,8 @@ export type ClientMsg =
   | { t: "emote"; e: Emote }
   /** Mensagem para um jogo: `table` é o gameId do objeto; `op` e `data` são definidos por cada jogo. */
   | { t: "game"; table: string; op: string; data?: unknown }
+  /** Pede o token da sala de áudio e vídeo (LiveKit). */
+  | { t: "rtc" }
   | { t: "ping"; at: number };
 
 export type ServerMsg =
@@ -78,6 +80,10 @@ export type ServerMsg =
   | { t: "emote"; id: string; e: Emote }
   /** Estado atual de uma mesa de jogo (enviado a todos, para quem joga e para quem assiste). */
   | { t: "game"; game: GameSnapshot }
+  /** Credenciais da sala de áudio e vídeo. */
+  | { t: "rtc"; url: string; token: string }
+  /** Quem pode ouvir você agora (decidido no servidor): só essas pessoas recebem sua voz, vídeo e tela. */
+  | { t: "audience"; ids: string[] }
   | { t: "pong"; at: number; serverTime: number }
   /** O servidor recusou uma pose (lugar não andável ou velocidade impossível) e devolve a última válida. */
   | { t: "correct"; x: number; z: number }

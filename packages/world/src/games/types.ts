@@ -52,6 +52,8 @@ export interface TableMeta {
   round: number;
   /** Nome de quem está em cada lugar (null = vago). */
   names: Array<string | null>;
+  /** Nome de quem jogou a partida atual (ou a última), por lugar. Fica mesmo depois que a pessoa levanta. */
+  players: Array<string | null>;
 }
 
 /** O que vai em `GameSnapshot.state`. */

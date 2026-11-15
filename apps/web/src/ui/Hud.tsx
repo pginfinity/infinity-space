@@ -11,6 +11,7 @@ import { PeoplePanel } from "./PeoplePanel.tsx";
 import { AvatarFace } from "./AvatarFace.tsx";
 import { Minimap } from "./Minimap.tsx";
 import { InteractPrompt, Toasts } from "./WorldOverlays.tsx";
+import { MediaControls } from "./MediaControls.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -88,6 +89,8 @@ export function Hud() {
         role="toolbar"
         aria-label="Controles"
       >
+        <MediaControls />
+        <span className="mx-1 h-6 w-px bg-offwhite/12" />
         <LensSwitch lens={lens} onChange={setLens} label={t("hud.lensHint")} />
         <span className="mx-1 h-6 w-px bg-offwhite/12" />
         <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>

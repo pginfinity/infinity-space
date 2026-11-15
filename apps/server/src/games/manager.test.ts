@@ -190,6 +190,9 @@ describe("GamesManager", () => {
     expect(c4()).toMatchObject({ seats: [null, "bruno"], phase: "finished" });
     expect(c4State()).toMatchObject({ winner: 1, reason: "left" });
     expect(host.last("lig4")?.seats).toEqual([null, "bruno"]);
+    // O nome de quem saiu continua no resultado ("Ana saiu da mesa").
+    expect(c4State().players).toEqual(["Ana", "Bruno"]);
+    expect(c4State().names).toEqual([null, "Bruno"]);
     // Bruno levanta: a mesa vazia volta a esperar, com o tabuleiro limpo.
     games.handle("bruno", "lig4", "stand", undefined);
     expect(c4()).toMatchObject({ seats: [null, null], phase: "waiting" });

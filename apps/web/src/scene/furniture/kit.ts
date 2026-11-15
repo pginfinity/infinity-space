@@ -92,8 +92,8 @@ export function deskLamp(b: Builder, x: number, y: number, z: number, o: { ry?: 
   const col = o.color ?? C.graphite;
   b.at(x, y, z, { ry: o.ry ?? 0 }, () => {
     b.puck(col, 0.08, 0.025, 0, 0, 0, { seg: 14 });
-    b.cyl(col, 0.014, 0.34, 0, 0.18, 0.04, { rx: 0.25, seg: 8 });
-    b.cyl(col, 0.014, 0.26, 0, 0.36, 0.17, { rx: 1.25, seg: 8 });
+    b.cyl(col, 0.018, 0.34, 0, 0.18, 0.04, { rx: 0.25, seg: 8 });
+    b.cyl(col, 0.018, 0.26, 0, 0.36, 0.17, { rx: 1.25, seg: 8 });
     b.sph(C.orange, 0.024, 0, 0.33, 0.085, { seg: 10 });
     b.cyl(col, 0.05, 0.1, 0, 0.37, 0.3, { rt: 0.025, rx: 0.5, seg: 12 });
     b.cyl(lit(T.warm), 0.045, 0.01, 0, 0.33, 0.33, { rx: 0.5, seg: 12 });

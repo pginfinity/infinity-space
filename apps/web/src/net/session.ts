@@ -2,6 +2,10 @@ import { Packr } from "msgpackr";
 import { PROTOCOL_VERSION, type ClientMsg, type InfoPatch, type ServerMsg } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { clearRemote, playEmote, pushRemote, removeRemote, self, setSelf } from "../world/registry.ts";
+import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
+
+// Mic e câmera ligados/desligados viram status visível para todos.
+onMediaInfo((patch) => sendInfo(patch));
 
 const packr = new Packr({ useRecords: false });
 
@@ -49,6 +53,7 @@ export function disconnect(): void {
   window.clearTimeout(retryTimer);
   window.clearInterval(pingTimer);
   socket?.close(1000, "leave");
+  void leaveRtc();
   socket = null;
   clearRemote();
 }
@@ -117,10 +122,18 @@ function handle(msg: ServerMsg): void {
       app.setGames(msg.games ?? []);
       app.setConn("open");
       welcomed = true;
+      // Depois de entrar no mundo, entra na sala de áudio e vídeo (nova sessão a cada reconexão).
+      void leaveRtc().then(() => send({ t: "rtc" }));
       break;
     }
     case "emote":
       playEmote(msg.id, msg.e);
+      break;
+    case "rtc":
+      void joinRtc(msg.url, msg.token);
+      break;
+    case "audience":
+      setAudience(msg.ids);
       break;
     case "game":
       app.setGame(msg.game);
