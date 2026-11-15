@@ -1,9 +1,10 @@
+import type { ActSnapshot } from "./activities/types.ts";
 /**
  * Protocolo entre cliente e servidor do mundo. Mensagens codificadas em msgpack.
  * Poses vão compactadas em tuplas porque são as mensagens mais frequentes.
  */
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export type Lens = "2d" | "3d";
 export type Status = "available" | "listening" | "focus" | "away";
@@ -54,9 +55,18 @@ export interface PlayerInfo {
   screen: boolean;
   /** A janela compartilhada foi minimizada: quem assiste vê um aviso em vez de imagem congelada. */
   screenPaused?: boolean;
+  /** Status curto escrito pela pessoa ("almoço", "em call"), mostrado num balão. Até NOTE_MAX caracteres. */
+  note?: string;
+  /** O que a pessoa segura na mão (id de HELD_ITEMS), ou ausente. */
+  held?: string;
 }
 
-export type InfoPatch = Partial<Pick<PlayerInfo, "name" | "look" | "status" | "lens" | "mic" | "cam" | "screen" | "screenPaused">>;
+export const NOTE_MAX = 40;
+/** Itens que um avatar pode segurar. Cada pacote de atividades pode usar estes ids. */
+export const HELD_ITEMS = ["coffee", "tea", "water", "juice", "popcorn", "paper", "microphone", "trophy", "flower", "watering-can"] as const;
+export type HeldItem = (typeof HELD_ITEMS)[number];
+
+export type InfoPatch = Partial<Pick<PlayerInfo, "name" | "look" | "status" | "lens" | "mic" | "cam" | "screen" | "screenPaused" | "note" | "held">>;
 
 /** [id, x, z, yaw, índice da animação] */
 export type PoseTuple = [id: string, x: number, z: number, yaw: number, anim: number];
@@ -71,10 +81,12 @@ export type ClientMsg =
   | { t: "game"; table: string; op: string; data?: unknown }
   /** Pede o token da sala de áudio e vídeo (LiveKit). */
   | { t: "rtc" }
+  /** Pedido a uma atividade (gongo, mural, hockey...). O servidor valida tudo. */
+  | { t: "act"; id: string; op: string; data?: unknown }
   | { t: "ping"; at: number };
 
 export type ServerMsg =
-  | { t: "welcome"; you: string; map: { id: string; version: number }; players: PlayerInfo[]; poses: PoseTuple[]; serverTime: number; games: GameSnapshot[] }
+  | { t: "welcome"; you: string; map: { id: string; version: number }; players: PlayerInfo[]; poses: PoseTuple[]; serverTime: number; games: GameSnapshot[]; acts: ActSnapshot[] }
   | { t: "join"; player: PlayerInfo; pose: PoseTuple }
   | { t: "leave"; id: string }
   | { t: "poses"; at: number; list: PoseTuple[] }
@@ -86,6 +98,10 @@ export type ServerMsg =
   | { t: "rtc"; url: string; token: string }
   /** Quem pode ouvir você agora (decidido no servidor): só essas pessoas recebem sua voz, vídeo e tela. */
   | { t: "audience"; ids: string[] }
+  /** Estado novo (completo) de uma atividade. */
+  | { t: "act"; act: ActSnapshot }
+  /** Acontecimento pontual de uma atividade (o gongo tocou, um avião foi lançado, quadro de física). */
+  | { t: "actev"; id: string; ev: string; data?: unknown; from?: string }
   | { t: "pong"; at: number; serverTime: number }
   /** O servidor recusou uma pose (lugar não andável ou velocidade impossível) e devolve a última válida. */
   | { t: "correct"; x: number; z: number }

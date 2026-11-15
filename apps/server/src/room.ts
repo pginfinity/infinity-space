@@ -4,6 +4,8 @@ import {
   ANIMS,
   DEFAULT_LOOK,
   EMOTES,
+  HELD_ITEMS,
+  NOTE_MAX,
   NavGrid,
   POSE_HZ,
   PROTOCOL_VERSION,
@@ -11,7 +13,9 @@ import {
   ZoneIndex,
   buildStationMap,
   dist,
+  wallBetween,
   type Emote,
+  type HeldItem,
   type AvatarLook,
   type ClientMsg,
   type InfoPatch,
@@ -25,6 +29,8 @@ import {
 import { decode, encode } from "./codec.ts";
 import { GamesManager } from "./games/manager.ts";
 import { RTC, rtcToken } from "./rtc.ts";
+import { ActivitiesManager } from "./activities/manager.ts";
+import { DATA_DIR, Store } from "./store.ts";
 import { hearing } from "@infinity/world";
 
 interface Member {
@@ -47,6 +53,7 @@ const EMOTE_SET: ReadonlySet<string> = new Set(EMOTES);
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const STATUSES: ReadonlySet<Status> = new Set(["available", "listening", "focus", "away"]);
 const SIT = ANIMS.indexOf("sit");
+const HELD_SET: ReadonlySet<string> = new Set(HELD_ITEMS);
 
 /** A sala única do escritório. Guarda quem está onde e retransmite as poses. */
 export class OfficeRoom {
@@ -62,9 +69,61 @@ export class OfficeRoom {
       return m ? { x: m.x, z: m.z } : undefined;
     },
   });
+  readonly store = new Store(DATA_DIR);
+  readonly acts = new ActivitiesManager(
+    {
+      map: this.map,
+      nav: this.nav,
+      zones: this.zones,
+      store: this.store,
+      event: (act, ev, data, opts) => {
+        const msg: ServerMsg = { t: "actev", id: act.id, ev, ...(data === undefined ? {} : { data }), ...(opts?.from ? { from: opts.from } : {}) };
+        if (!opts?.to) return this.broadcast(msg);
+        const enc = encode(msg);
+        for (const id of opts.to) {
+          const m = this.members.get(id);
+          if (m && m.socket.readyState === m.socket.OPEN) m.socket.send(enc);
+        }
+      },
+      players: () => [...this.members.keys()],
+      playerName: (id) => this.members.get(id)?.info.name,
+      playerPos: (id) => {
+        const m = this.members.get(id);
+        return m ? { x: m.x, z: m.z } : undefined;
+      },
+      playerZone: (id) => {
+        const m = this.members.get(id);
+        return m ? this.zones.zoneAt({ x: m.x, z: m.z }) : undefined;
+      },
+      emote: (id, e) => {
+        if (this.members.has(id) && EMOTE_SET.has(e)) this.broadcast({ t: "emote", id, e });
+      },
+      setHeld: (id, item) => {
+        const m = this.members.get(id);
+        if (!m) return;
+        const held = item && HELD_SET.has(item) ? item : undefined;
+        if (m.info.held === held) return;
+        m.info.held = held;
+        this.broadcast({ t: "info", id, patch: { held } });
+      },
+      objects: (type) => this.map.objects.filter((o) => o.type === type),
+      near: (id, p, range) => {
+        const m = this.members.get(id);
+        if (!m) return false;
+        const at = { x: m.x, z: m.z };
+        return dist(at, p) <= range && !wallBetween(this.map.walls, at, p);
+      },
+    },
+    (act) => this.broadcast({ t: "act", act }),
+  );
   private readonly seatPoints: Vec2[] = this.map.objects.filter((o) => o.interact?.action === "sit").map((o) => o.interact!.point);
   private tickTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
+
+  /** Carrega os pacotes de atividades. Chame antes de `start`. */
+  async init(): Promise<void> {
+    await this.acts.load();
+  }
 
   start(): void {
     this.tickTimer = setInterval(() => this.tick(), 1000 / POSE_HZ);
@@ -74,6 +133,8 @@ export class OfficeRoom {
   stop(): void {
     clearInterval(this.tickTimer);
     clearInterval(this.heartbeatTimer);
+    this.acts.dispose();
+    this.store.flush();
     for (const m of this.members.values()) m.socket.close(1001, "server shutdown");
   }
 
@@ -150,8 +211,10 @@ export class OfficeRoom {
       poses: [...this.members.values()].map(pose),
       serverTime: Date.now(),
       games: this.games.snapshots(),
+      acts: this.acts.snapshots(),
     });
     this.broadcast({ t: "join", player: member.info, pose: pose(member) }, member);
+    this.acts.join(id);
     console.log(`[sala] entrou ${member.info.name} (${id}) · ${this.members.size} online · ${others.length} já estavam`);
     return member;
   }
@@ -159,6 +222,7 @@ export class OfficeRoom {
   private leave(member: Member): void {
     if (!this.members.delete(member.info.id)) return;
     this.games.leave(member.info.id);
+    this.acts.leave(member.info.id);
     this.broadcast({ t: "leave", id: member.info.id });
     console.log(`[sala] saiu ${member.info.name} (${member.info.id}) · ${this.members.size} online`);
   }
@@ -179,6 +243,9 @@ export class OfficeRoom {
         break;
       case "game":
         if (typeof msg.table === "string" && typeof msg.op === "string") this.games.handle(m.info.id, msg.table, msg.op, msg.data);
+        break;
+      case "act":
+        if (typeof msg.id === "string" && typeof msg.op === "string") this.acts.handle(m.info.id, msg.id, msg.op, msg.data);
         break;
       case "ping":
         this.sendTo(m, { t: "pong", at: msg.at, serverTime: Date.now() });
@@ -226,6 +293,10 @@ export class OfficeRoom {
     if (patch.status && STATUSES.has(patch.status)) clean.status = patch.status;
     if (patch.lens === "2d" || patch.lens === "3d") clean.lens = patch.lens;
     for (const k of ["mic", "cam", "screen", "screenPaused"] as const) if (typeof patch[k] === "boolean") clean[k] = patch[k];
+    // Status curto: texto livre e pequeno; vazio apaga.
+    if (typeof patch.note === "string") clean.note = patch.note.replace(/[ -]/g, "").trim().slice(0, NOTE_MAX);
+    // Item na mão: só da lista conhecida (as atividades também podem colocar pelo servidor).
+    if ("held" in patch) clean.held = typeof patch.held === "string" && HELD_SET.has(patch.held) ? (patch.held as HeldItem) : undefined;
     if (Object.keys(clean).length === 0) return;
     Object.assign(m.info, clean);
     this.broadcast({ t: "info", id: m.info.id, patch: clean });
@@ -255,6 +326,7 @@ export class OfficeRoom {
 
   private tick(): void {
     this.games.tick(1 / POSE_HZ);
+    this.acts.tick(1 / POSE_HZ);
     if (++this.tickCount % 3 === 0) this.updateAudiences();
     const list: PoseTuple[] = [];
     for (const m of this.members.values()) {

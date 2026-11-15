@@ -24,3 +24,6 @@ playwright-report/
 .DS_Store
 ._*
 Thumbs.db
+
+# Dados salvos pelo servidor (mural, plantas, rankings)
+apps/server/data/

@@ -8,6 +8,7 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 const startedAt = Date.now();
 
 const room = new OfficeRoom();
+await room.init();
 room.start();
 
 const app = new Hono();

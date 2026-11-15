@@ -13,6 +13,7 @@ import { Minimap } from "./Minimap.tsx";
 import { InteractPrompt, Toasts } from "./WorldOverlays.tsx";
 import { MediaControls } from "./MediaControls.tsx";
 import { ScreenShares } from "./ScreenShares.tsx";
+import { ActivitiesOverlay } from "../activities/index.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -55,6 +56,7 @@ export function Hud() {
       {!peopleOpen && <Minimap />}
       <Toasts />
       <ScreenShares />
+      <ActivitiesOverlay />
       <InteractPrompt />
 
       {/* Barra de emotes, aberta pela doca. */}

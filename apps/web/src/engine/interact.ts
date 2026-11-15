@@ -7,6 +7,7 @@ import { seatedAt, sitAt, walkTo } from "./movement.ts";
 import { doEmote } from "./emotes.ts";
 import { toast } from "../ui/toasts.ts";
 import { openGame, useGamesUi } from "../games/api.ts";
+import { activityClients, clientForObject, type DynamicTarget } from "../activities/registry.ts";
 
 /**
  * Interação com o mundo: acha o objeto mais próximo que dá para usar, mostra o botão
@@ -14,9 +15,12 @@ import { openGame, useGamesUi } from "../games/api.ts";
  */
 
 export interface InteractTarget {
-  object: MapObject;
+  /** Objeto do mapa (ausente em alvos dinâmicos das atividades: robô, pessoa, avião no chão). */
+  object?: MapObject;
   point: Vec2;
-  action: InteractAction;
+  action: InteractAction | "dynamic";
+  /** Ação de um alvo dinâmico. */
+  run?: () => void;
   label: string;
   /** Muda quando o alvo muda (para a UI animar). */
   key: string;
@@ -61,6 +65,8 @@ function occupied(p: Vec2): boolean {
 
 function labelFor(o: MapObject): string {
   if (o.gameId && o.interact?.action === "sit") return "Sentar e jogar";
+  const custom = o.interact?.action !== "sit" ? clientForObject(o.type)?.label?.(o) : undefined;
+  if (custom) return custom;
   return o.interact?.label ?? "Usar";
 }
 
@@ -80,21 +86,55 @@ function scan(): void {
     best = c;
     bestD = d;
   }
+  // Alvos dinâmicos das atividades (ganham de objetos quando estão mais perto).
+  let dyn: DynamicTarget | null = null;
+  for (const client of activityClients()) {
+    if (!client.targets) continue;
+    let list: DynamicTarget[] = [];
+    try {
+      list = client.targets();
+    } catch (e) {
+      console.error(`[atividades] ${client.name} falhou em targets():`, e);
+    }
+    for (const t of list) {
+      const d = Math.hypot(t.point.x - self.x, t.point.z - self.z);
+      if (d > t.radius || d >= bestD || wallBetween(walls, self, t.point)) continue;
+      dyn = t;
+      bestD = d;
+    }
+  }
   const cur = useInteract.getState().target;
+  if (dyn) {
+    const key = `dyn:${dyn.key}`;
+    if (cur?.key === key && cur.label === dyn.label) return;
+    useInteract.setState({ target: { point: dyn.point, action: "dynamic", run: dyn.run, label: dyn.label, key } });
+    return;
+  }
   if (!best) {
     if (cur) useInteract.setState({ target: null });
     return;
   }
   const key = `${best.object.id}:${best.point.x}:${best.point.z}`;
-  if (cur?.key === key) return;
-  useInteract.setState({ target: { object: best.object, point: best.point, action: best.object.interact!.action, label: labelFor(best.object), key } });
+  const label = labelFor(best.object);
+  if (cur?.key === key && cur.label === label) return;
+  useInteract.setState({ target: { object: best.object, point: best.point, action: best.object.interact!.action, label, key } });
 }
 
 /** Executa a ação do alvo atual. */
 export function activate(target = useInteract.getState().target): void {
   if (!target) return;
+  if (target.action === "dynamic" || !target.object) {
+    target.run?.();
+    return;
+  }
   const o = target.object;
   const it = o.interact!;
+  // Uma atividade registrada para este tipo de objeto assume a interação (menos sentar).
+  const client = target.action !== "sit" ? clientForObject(o.type) : undefined;
+  if (client?.use) {
+    client.use(o);
+    return;
+  }
   switch (target.action) {
     case "sit": {
       const yaw = it.point === target.point ? it.yaw : it.yaw;
@@ -124,10 +164,6 @@ export function activate(target = useInteract.getState().target): void {
 
 function use(o: MapObject): void {
   switch (o.type) {
-    case "gong":
-      doEmote("cheer");
-      toast("GONG! Venda fechada? O time inteiro ouviu.");
-      break;
     case "big-button":
       doEmote("cheer");
       toast("Deploy disparado. Boa sorte em produção!");

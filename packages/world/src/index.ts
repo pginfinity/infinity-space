@@ -8,3 +8,4 @@ export * from "./nav.ts";
 export * from "./audio.ts";
 export * from "./protocol.ts";
 export * from "./games/index.ts";
+export * from "./activities/index.ts";

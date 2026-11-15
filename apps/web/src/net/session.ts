@@ -3,6 +3,7 @@ import { PROTOCOL_VERSION, type ClientMsg, type InfoPatch, type ServerMsg } from
 import { useApp } from "../state/store.ts";
 import { clearRemote, playEmote, pushRemote, removeRemote, self, setSelf } from "../world/registry.ts";
 import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
+import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
 
 // Mic e câmera ligados/desligados viram status visível para todos.
 onMediaInfo((patch) => sendInfo(patch));
@@ -120,6 +121,7 @@ function handle(msg: ServerMsg): void {
       }
       app.welcome(msg.you, msg.players);
       app.setGames(msg.games ?? []);
+      setActs(msg.acts ?? []);
       app.setConn("open");
       welcomed = true;
       // Depois de entrar no mundo, entra na sala de áudio e vídeo (nova sessão a cada reconexão).
@@ -137,6 +139,12 @@ function handle(msg: ServerMsg): void {
       break;
     case "game":
       app.setGame(msg.game);
+      break;
+    case "act":
+      setAct(msg.act);
+      break;
+    case "actev":
+      dispatchActEvent(msg.id, msg.ev, msg.data, msg.from);
       break;
     case "join":
       app.addPlayer(msg.player);
