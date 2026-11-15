@@ -30,3 +30,6 @@ apps/server/data/
 
 # Worktrees dos agentes
 .claude/worktrees/
+
+# Worktrees dos agentes paralelos
+.agentes/
