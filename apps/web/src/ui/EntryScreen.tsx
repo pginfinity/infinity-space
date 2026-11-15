@@ -7,6 +7,7 @@ import { CLOTH_COLORS, HAIR_COLORS, SKIN_TONES, type AvatarLook, type Lens } fro
 import { useApp } from "../state/store.ts";
 import { ACC_GROUP, ACCESSORIES, BOTTOM_STYLES, BROW_STYLES, EYE_STYLES, FACIAL_STYLES, HAIR_STYLES, MOUTH_STYLES, SHOE_STYLES, TOP_STYLES } from "../avatar/catalog.ts";
 import { Logo } from "./Logo.tsx";
+import { InstallApp } from "./install.tsx";
 
 const AvatarStudio = lazy(() => import("./AvatarStudio.tsx"));
 
@@ -81,6 +82,7 @@ export function EntryScreen() {
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col">
           <Logo size="lg" />
           <p className="mt-5 max-w-md text-balance text-lg leading-relaxed text-offwhite/80">{t("app.tagline")}</p>
+          <InstallApp className="mt-4 self-start" />
           <div className="relative mt-6 aspect-square w-full max-w-[440px] self-center lg:self-start">
             <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(closest-side,rgb(0_183_255/0.22),transparent)]" />
             <Suspense fallback={<div className="grid h-full place-items-center text-sm text-slate">Preparando seu avatar…</div>}>
