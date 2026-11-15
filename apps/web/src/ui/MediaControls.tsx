@@ -47,7 +47,14 @@ export function MediaControls() {
         )}
       >
         {mic ? <Mic className="size-[18px]" /> : <MicOff className="size-[18px]" />}
-        {mic && <span className="text-xs font-medium tabular-nums">{audience === 0 ? "ninguém ouve" : audience === 1 ? "1 ouve" : `${audience} ouvem`}</span>}
+        {mic && (
+          <>
+            <span className="hidden text-xs font-medium tabular-nums sm:inline">{audience === 0 ? "ninguém ouve" : audience === 1 ? "1 ouve" : `${audience} ouvem`}</span>
+            <span className="text-xs font-semibold tabular-nums sm:hidden" aria-hidden>
+              {audience}
+            </span>
+          </>
+        )}
       </button>
       <button
         type="button"
@@ -60,10 +67,13 @@ export function MediaControls() {
       >
         {cam ? <Video className="size-[18px]" /> : <VideoOff className="size-[18px]" />}
       </button>
-      <ShareButton ready={ready} />
+      {CAN_SHARE && <ShareButton ready={ready} />}
     </div>
   );
 }
+
+/** Celular e alguns tablets não compartilham tela pelo navegador: o botão nem aparece. */
+const CAN_SHARE = typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function";
 
 /** Compartilhar tela: antes de abrir o seletor do navegador, a pessoa diz o que vai mostrar. */
 function ShareButton({ ready }: { ready: boolean }) {

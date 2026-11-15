@@ -35,7 +35,7 @@ export default function LensIso() {
         orthographic
         dpr={1 / PIXEL}
         gl={{ antialias: false, powerPreference: "high-performance" }}
-        camera={{ zoom: 64, near: -400, far: 1200, position: [30, 30, 30] }}
+        camera={{ zoom: initialZoom(), near: -400, far: 1200, position: [30, 30, 30] }}
         style={{ imageRendering: "pixelated" }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -47,6 +47,11 @@ export default function LensIso() {
       </Canvas>
     </div>
   );
+}
+
+/** Zoom inicial: 64 px por metro no computador; mais afastado em telas pequenas, para ver a sala. */
+function initialZoom(): number {
+  return THREE.MathUtils.clamp(Math.min(window.innerWidth, window.innerHeight * 1.4) / 18, 34, 64);
 }
 
 /** Câmera isométrica que segue você, gira de 90 em 90° (Q/E) e encaixa na grade de pixels. */

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Box, LocateFixed, LogOut, Map as MapIcon, Settings2, Smile, Users } from "lucide-react";
+import { Box, LocateFixed, LogOut, Map as MapIcon, MoreHorizontal, Settings2, Smile, Users } from "lucide-react";
 import { EMOTES, type Lens } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { doEmote, EMOTE_INFO } from "../engine/emotes.ts";
@@ -102,14 +102,19 @@ export function Hud() {
       >
         <MediaControls />
         <span className="mx-1 h-6 w-px bg-offwhite/12" />
-        <LensSwitch lens={lens} onChange={setLens} label={t("hud.lensHint")} />
-        <span className="mx-1 h-6 w-px bg-offwhite/12" />
+        {/* No celular o escritório é 2D: a troca de lente fica no menu "Mais" das telas maiores. */}
+        <div className="hidden items-center sm:flex">
+          <LensSwitch lens={lens} onChange={setLens} label={t("hud.lensHint")} />
+          <span className="mx-1 h-6 w-px bg-offwhite/12" />
+        </div>
         <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
           <Smile className="size-[18px]" />
         </DockButton>
-        <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
-          <LocateFixed className="size-[18px]" />
-        </DockButton>
+        <div className="hidden sm:contents">
+          <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
+            <LocateFixed className="size-[18px]" />
+          </DockButton>
+        </div>
         <DockButton
           label={t("hud.people")}
           onClick={() => {
@@ -120,12 +125,22 @@ export function Hud() {
         >
           <Users className="size-[18px]" />
         </DockButton>
-        <DockButton label="Áudio e vídeo" onClick={() => openSettings(!settingsOpen)} active={settingsOpen}>
-          <Settings2 className="size-[18px]" />
-        </DockButton>
-        <DockButton label={t("hud.leave")} onClick={leave}>
-          <LogOut className="size-[18px]" />
-        </DockButton>
+        <div className="hidden sm:contents">
+          <DockButton label="Áudio e vídeo" onClick={() => openSettings(!settingsOpen)} active={settingsOpen}>
+            <Settings2 className="size-[18px]" />
+          </DockButton>
+          <DockButton label={t("hud.leave")} onClick={leave}>
+            <LogOut className="size-[18px]" />
+          </DockButton>
+        </div>
+        <MoreMenu
+          items={[
+            { label: lens === "3d" ? "Ver em 2D" : "Ver em 3D", icon: lens === "3d" ? <MapIcon className="size-4" /> : <Box className="size-4" />, run: () => setLens(lens === "3d" ? "2d" : "3d") },
+            { label: t("hud.recenter"), icon: <LocateFixed className="size-4" />, run: () => window.dispatchEvent(new Event("infinity:recenter")) },
+            { label: "Áudio e vídeo", icon: <Settings2 className="size-4" />, run: () => openSettings(true) },
+            { label: t("hud.leave"), icon: <LogOut className="size-4" />, run: leave },
+          ]}
+        />
       </div>
 
       <p className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 hidden max-w-[30ch] text-xs leading-relaxed text-slate/90 lg:block">
@@ -170,5 +185,36 @@ function DockButton({ label, onClick, active, children }: { label: string; onCli
     >
       {children}
     </button>
+  );
+}
+
+/** Menu "Mais" da doca em telas estreitas (celular). */
+function MoreMenu({ items }: { items: { label: string; icon: ReactNode; run: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative sm:hidden">
+      <DockButton label="Mais opções" onClick={() => setOpen((v) => !v)} active={open}>
+        <MoreHorizontal className="size-[18px]" />
+      </DockButton>
+      {open && (
+        <div role="menu" className="absolute bottom-12 right-0 w-52 rounded-2xl border border-offwhite/10 bg-space p-1.5 shadow-2xl">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                it.run();
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-offwhite/8"
+            >
+              <span className="text-slate">{it.icon}</span>
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
