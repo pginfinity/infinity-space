@@ -2,6 +2,7 @@ import type { Lens } from "@infinity/world";
 import { Station } from "./Station.tsx";
 import { Avatars } from "./Avatars.tsx";
 import { Space } from "./Space.tsx";
+import { ScreenTVs } from "./ScreenTVs.tsx";
 
 /** O mundo: luzes, espaço, estação e pessoas. A lente só muda a câmera e o tratamento da imagem. */
 export function WorldScene({ lens }: { lens: Lens }) {
@@ -14,6 +15,7 @@ export function WorldScene({ lens }: { lens: Lens }) {
       <Space />
       <Station lens={lens} />
       <Avatars />
+      <ScreenTVs />
     </>
   );
 }

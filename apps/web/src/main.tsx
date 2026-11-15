@@ -13,8 +13,9 @@ if (import.meta.env.DEV) {
     import("./engine/interact.ts"),
     import("./world/world.ts"),
     import("./media/rtc.ts"),
+    import("./scene/tvs.ts"),
   ]).then(
-    ([store, registry, movement, interact, w, media]) => {
+    ([store, registry, movement, interact, w, media, tvs]) => {
       Object.assign(window, {
         __infinity: {
           store: store.useApp,
@@ -23,7 +24,8 @@ if (import.meta.env.DEV) {
           walkTo: movement.walkTo,
           interact: interact.useInteract,
           world: w.world,
-          media: { state: media.useMedia, audio: media.subscribedAudio },
+          media: { state: media.useMedia, audio: media.subscribedAudio, debug: media.rtcDebug },
+          tvs: { tvFor: tvs.tvFor, mesh: tvs.screenMesh },
         },
       });
     },

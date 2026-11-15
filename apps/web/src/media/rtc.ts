@@ -4,6 +4,7 @@ import {
   RemoteAudioTrack,
   Room,
   RoomEvent,
+  ScreenSharePresets,
   Track,
   VideoPresets,
   type LocalTrackPublication,
@@ -34,15 +35,27 @@ export interface MediaState {
   /** Quantas pessoas te ouvem agora. */
   audience: number;
   error: string | null;
+  /** Você está compartilhando a tela. */
+  screen: boolean;
+  /** Telas compartilhadas que chegam até você (e a sua, como prévia), por id de quem compartilha. */
+  screens: Record<string, HTMLVideoElement>;
 }
 
-export const useMedia = create<MediaState>(() => ({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, error: null }));
+export const useMedia = create<MediaState>(() => ({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, error: null, screen: false, screens: {} }));
 
 let room: Room | null = null;
 let ctx: AudioContext | null = null;
 let loop: number | undefined;
 let audienceIds: string[] = [];
-let pendingInfo: ((p: { mic?: boolean; cam?: boolean }) => void) | null = null;
+let pendingInfo: ((p: { mic?: boolean; cam?: boolean; screen?: boolean; screenPaused?: boolean }) => void) | null = null;
+const screenAudio = new Map<string, HTMLMediaElement>();
+let shareZone: string | null = null;
+let onShareNotice: ((text: string) => void) | null = null;
+
+/** Quem mostra avisos sobre o compartilhamento (a UI registra). */
+export function onScreenNotice(fn: (text: string) => void): void {
+  onShareNotice = fn;
+}
 const chains = new Map<string, { track: RemoteAudioTrack; lowpass: BiquadFilterNode; pan: StereoPannerNode; el: HTMLMediaElement }>();
 /** Volume por pessoa escolhido pelo usuário (0 a 1.5). */
 export const personVolume = new Map<string, number>();
@@ -59,7 +72,7 @@ function audioContext(): AudioContext {
 }
 
 /** Quem avisa os outros sobre mic e câmera (a sessão do mundo registra). */
-export function onMediaInfo(fn: (p: { mic?: boolean; cam?: boolean }) => void): void {
+export function onMediaInfo(fn: (p: { mic?: boolean; cam?: boolean; screen?: boolean; screenPaused?: boolean }) => void): void {
   pendingInfo = fn;
 }
 
@@ -106,7 +119,10 @@ export async function leaveRtc(): Promise<void> {
   const r = room;
   room = null;
   await r?.disconnect();
-  useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0 });
+  for (const el of screenAudio.values()) el.remove();
+  screenAudio.clear();
+  shareZone = null;
+  useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, screen: false, screens: {} });
 }
 
 /** Lista do servidor: quem pode ouvir você agora. */
@@ -146,6 +162,78 @@ export async function setCam(on: boolean): Promise<void> {
   }
 }
 
+export type ShareIntent = "document" | "video";
+
+/**
+ * Compartilha a tela. "document" prioriza nitidez (texto, código, planilha); "video" prioriza fluidez.
+ * A imagem vai direto do navegador para quem assiste, sem passar por canvas.
+ */
+export async function startShare(intent: ShareIntent, withAudio: boolean): Promise<void> {
+  if (!room) return;
+  try {
+    const pub = await room.localParticipant.setScreenShareEnabled(
+      true,
+      {
+        audio: withAudio,
+        contentHint: intent === "document" ? "detail" : "motion",
+        resolution: intent === "document" ? ScreenSharePresets.h1080fps15.resolution : ScreenSharePresets.h1080fps30.resolution,
+        selfBrowserSurface: "exclude",
+        surfaceSwitching: "include",
+        systemAudio: withAudio ? "include" : "exclude",
+      },
+      {
+        videoCodec: "vp9",
+        screenShareEncoding: intent === "document" ? ScreenSharePresets.h1080fps15.encoding : ScreenSharePresets.h1080fps30.encoding,
+        degradationPreference: intent === "document" ? "maintain-resolution" : "maintain-framerate",
+      },
+    );
+    if (!pub?.track) return;
+    const media = pub.track.mediaStreamTrack;
+    // Janela compartilhada minimizada: o navegador para de mandar quadros e a faixa fica "muda".
+    media.addEventListener("mute", () => {
+      pendingInfo?.({ screenPaused: true });
+      onShareNotice?.("Sua janela compartilhada está minimizada. Quem assiste vê um aviso. Dica: compartilhe a tela inteira.");
+    });
+    media.addEventListener("unmute", () => pendingInfo?.({ screenPaused: false }));
+    media.addEventListener("ended", () => void stopShare());
+    const el = pub.track.attach() as HTMLVideoElement;
+    el.muted = true;
+    setScreen(room.localParticipant.identity, el);
+    const { zones } = world();
+    shareZone = zones.zoneAt({ x: self.x, z: self.z })?.id ?? null;
+    useMedia.setState({ screen: true });
+    pendingInfo?.({ screen: true, screenPaused: false });
+  } catch (e) {
+    const name = e instanceof DOMException ? e.name : "";
+    if (name !== "NotAllowedError" && name !== "AbortError") useMedia.setState({ error: "Não foi possível compartilhar a tela." });
+  }
+}
+
+export async function stopShare(): Promise<void> {
+  if (!room) return;
+  shareZone = null;
+  await room.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+  setScreen(room.localParticipant.identity, null);
+  useMedia.setState({ screen: false });
+  pendingInfo?.({ screen: false, screenPaused: false });
+}
+
+function setScreen(id: string, el: HTMLVideoElement | null): void {
+  const old = useMedia.getState().screens[id];
+  if (old && old !== el) old.remove();
+  if (el) {
+    el.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+    document.body.appendChild(el);
+    void el.play().catch(() => undefined);
+  }
+  useMedia.setState((s) => {
+    const screens = { ...s.screens };
+    if (el) screens[id] = el;
+    else delete screens[id];
+    return { screens };
+  });
+}
+
 function deviceError(e: unknown, what: string): string {
   const name = e instanceof DOMException ? e.name : "";
   if (name === "NotAllowedError") return `O navegador bloqueou o ${what}. Libere o acesso no cadeado ao lado do endereço.`;
@@ -173,6 +261,20 @@ function setVideo(id: string, el: HTMLVideoElement | null): void {
 }
 
 function onSubscribed(track: RemoteTrack, _pub: RemoteTrackPublication, p: RemoteParticipant): void {
+  if (track.source === Track.Source.ScreenShare) {
+    const el = track.attach() as HTMLVideoElement;
+    el.playsInline = true;
+    el.muted = true;
+    setScreen(p.identity, el);
+    return;
+  }
+  if (track.source === Track.Source.ScreenShareAudio) {
+    const el = track.attach();
+    el.style.display = "none";
+    document.body.appendChild(el);
+    screenAudio.set(p.identity, el);
+    return;
+  }
   if (track.kind === Track.Kind.Audio && track instanceof RemoteAudioTrack) {
     const c = audioContext();
     const lowpass = c.createBiquadFilter();
@@ -193,6 +295,16 @@ function onSubscribed(track: RemoteTrack, _pub: RemoteTrackPublication, p: Remot
 }
 
 function onUnsubscribed(track: RemoteTrack, _pub: RemoteTrackPublication, p: RemoteParticipant): void {
+  if (track.source === Track.Source.ScreenShare) {
+    track.detach();
+    setScreen(p.identity, null);
+    return;
+  }
+  if (track.source === Track.Source.ScreenShareAudio) {
+    track.detach().forEach((el) => el.remove());
+    screenAudio.delete(p.identity);
+    return;
+  }
   if (track.kind === Track.Kind.Audio) {
     const c = chains.get(p.identity);
     if (c) {
@@ -212,6 +324,19 @@ function dropParticipant(id: string): void {
     chains.delete(id);
   }
   setVideo(id, null);
+  setScreen(id, null);
+  screenAudio.get(id)?.remove();
+  screenAudio.delete(id);
+}
+
+/** Estado das faixas remotas (diagnóstico e testes). */
+export function rtcDebug(): { id: string; hearing: string; tracks: { source: string; subscribed: boolean; status: string; permission: string }[] }[] {
+  if (!room) return [];
+  return [...room.remoteParticipants.values()].map((p) => ({
+    id: p.identity,
+    hearing: hearingOf(p.identity)?.mode ?? "?",
+    tracks: [...p.trackPublications.values()].map((t) => ({ source: t.source, subscribed: t.isSubscribed, status: t.subscriptionStatus, permission: t.permissionStatus })),
+  }));
 }
 
 /** Ids das pessoas cuja voz está chegando agora (para diagnóstico e testes). */
@@ -234,12 +359,20 @@ function updateSpatial(): void {
   const c = audioContext();
   const f = dirOfYaw(getHeading());
   const right = { x: -f.z, z: f.x };
+  if (shareZone && useMedia.getState().screen) {
+    const now = world().zones.zoneAt({ x: self.x, z: self.z })?.id ?? null;
+    if (now !== shareZone) {
+      onShareNotice?.("Você saiu da sala, então o compartilhamento de tela parou.");
+      void stopShare();
+    }
+  }
   for (const p of room.remoteParticipants.values()) {
     const h = hearingOf(p.identity);
     const audible = !!h && h.mode !== "none";
     const seeVideo = !!h && h.mode === "clear" && h.gain >= 0.4;
     for (const pub of p.trackPublications.values()) {
-      const want = pub.kind === Track.Kind.Audio ? audible : pub.source === Track.Source.Camera ? seeVideo : false;
+      const want =
+        pub.source === Track.Source.Camera ? seeVideo : pub.source === Track.Source.ScreenShare || pub.source === Track.Source.ScreenShareAudio ? audible : pub.kind === Track.Kind.Audio ? audible : false;
       if (pub.isSubscribed !== want) pub.setSubscribed(want);
     }
     const chain = chains.get(p.identity);

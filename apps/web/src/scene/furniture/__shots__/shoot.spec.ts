@@ -14,7 +14,7 @@ for (const shot of list) {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errors.push(m.text()); });
-    await page.goto(`${process.env.PAGE ?? "/src/scene/furniture/__shots__/galeria.html"}?galeria=1&${shot.query}`);
+    await page.goto(`${process.env.PAGE ?? "/"}?galeria=1&${shot.query}`);
     try {
       await page.waitForFunction(() => (window as unknown as { __galeria?: { ready?: boolean } }).__galeria?.ready === true, null, { timeout: Number(process.env.TIMEOUT ?? 120_000) });
     } catch {

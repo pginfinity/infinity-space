@@ -52,9 +52,11 @@ export interface PlayerInfo {
   mic: boolean;
   cam: boolean;
   screen: boolean;
+  /** A janela compartilhada foi minimizada: quem assiste vê um aviso em vez de imagem congelada. */
+  screenPaused?: boolean;
 }
 
-export type InfoPatch = Partial<Pick<PlayerInfo, "name" | "look" | "status" | "lens" | "mic" | "cam" | "screen">>;
+export type InfoPatch = Partial<Pick<PlayerInfo, "name" | "look" | "status" | "lens" | "mic" | "cam" | "screen" | "screenPaused">>;
 
 /** [id, x, z, yaw, índice da animação] */
 export type PoseTuple = [id: string, x: number, z: number, yaw: number, anim: number];

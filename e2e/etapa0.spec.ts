@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./setup.ts";
 
 /**
  * Aceite da Etapa 0: duas pessoas, uma no 2D e outra no 3D, se veem andar no lugar certo.

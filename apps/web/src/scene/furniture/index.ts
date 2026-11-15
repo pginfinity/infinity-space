@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CATALOG, type MapObject, type ObjectType } from "@infinity/world";
 import { glow } from "../materials.ts";
-import { Builder, type AnimSpec, type ModelFn, type Mold } from "./core.ts";
+import { Builder, SLOT_ACCENT, SLOT_COLOR, type AnimSpec, type ModelFn, type Mold } from "./core.ts";
 import { leaderboardTexture, neonTexture, screenTexture } from "./textures.ts";
 import * as work from "./work.ts";
 import * as seating from "./seating.ts";
@@ -15,11 +15,16 @@ import * as games from "./games.ts";
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
  *
- * Instancing: cada combinação (tipo, variante, cor, accent) vira um "molde" com as peças fundidas
- * por material (1 a 3 geometrias); cada geometria vira um InstancedMesh com todas as cópias.
- * Ficam fora do instancing só as telas (recebem vídeo), o texto dos neons e nada mais: as peças
- * animadas também são instanciadas (um InstancedMesh por peça, com matriz/cor atualizadas).
+ * Instancing: cada combinação (tipo, variante) vira um "molde" com as peças fundidas por material
+ * (quase sempre 1 geometria: opaco + partes acesas; translúcidos à parte). Cada geometria vira um
+ * InstancedMesh com todas as cópias. Cor e accent de cada objeto vão em atributos por instância
+ * (ver core.ts), então salas de cores diferentes não multiplicam moldes nem draw calls.
+ * Ficam fora do instancing só as telas (recebem vídeo) e o texto dos neons; as peças animadas
+ * também são instanciadas (um InstancedMesh por peça, com matriz/cor atualizadas).
  */
+
+/** Para o pipeline: chame dentro de um onBeforeCompile próprio se substituir o dos móveis. */
+export { furnitureShaderPatch } from "./core.ts";
 
 export interface FurnitureBuild {
   /** Tudo pronto para adicionar à cena. */
@@ -146,8 +151,12 @@ interface Usage {
   variant: boolean;
 }
 
-/** Monta um molde registrando quais campos de variação o modelo leu. */
-function buildMold(fn: ModelFn, o: MapObject, sep: boolean): { mold: Mold; used: Usage } {
+/**
+ * Monta um molde registrando quais campos de variação o modelo leu.
+ * colors: "real" usa as cores do objeto; "padrao" deixa color/accent vazios (cores padrão do
+ * modelo); "fichas" entrega SLOT_COLOR/SLOT_ACCENT para descobrir quais vértices seguem a cor.
+ */
+function buildMold(fn: ModelFn, o: MapObject, sep: boolean, colors: "real" | "padrao" | "fichas" = "real"): { mold: Mold; used: Usage } {
   const b = new Builder();
   const used: Usage = { color: false, accent: false, variant: false };
   fn({
@@ -156,11 +165,11 @@ function buildMold(fn: ModelFn, o: MapObject, sep: boolean): { mold: Mold; used:
     separateScreen: sep,
     get color() {
       used.color = true;
-      return o.color;
+      return colors === "real" ? o.color : colors === "fichas" ? SLOT_COLOR : undefined;
     },
     get accent() {
       used.accent = true;
-      return o.accent;
+      return colors === "real" ? o.accent : colors === "fichas" ? SLOT_ACCENT : undefined;
     },
     get variant() {
       used.variant = true;
@@ -170,8 +179,71 @@ function buildMold(fn: ModelFn, o: MapObject, sep: boolean): { mold: Mold; used:
   return { mold: b.finish(), used };
 }
 
-function moldKey(o: MapObject, sep: boolean, u: Usage): string {
-  return `${o.type}|${u.variant ? (o.variant ?? 0) : "-"}|${u.color ? (o.color ?? "") : "-"}|${u.accent ? (o.accent ?? "") : "-"}|${sep ? 1 : 0}`;
+function moldGeometries(m: Mold): THREE.BufferGeometry[] {
+  return [...m.parts.map((p) => p.geometry), ...m.anims.flatMap((a) => a.meshes.map((p) => p.geometry))];
+}
+
+/**
+ * Molde com cor por instância: geometria e cores padrão da montagem "padrao", mais os atributos
+ * aSlot/aTarget da montagem "fichas". Devolve null se as duas montagens não baterem
+ * (modelo que muda de forma conforme a cor): aí a cor volta a fazer parte da chave do molde.
+ */
+function buildSlotMold(fn: ModelFn, o: MapObject, sep: boolean): Mold | null {
+  const base = buildMold(fn, o, sep, "padrao").mold;
+  const slots = buildMold(fn, o, sep, "fichas").mold;
+  const pairs: [THREE.BufferGeometry, THREE.BufferGeometry][] = [];
+  const collect = (a: Mold["parts"], b: Mold["parts"]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const pa = a[i] as Mold["parts"][number];
+      const pb = b[i] as Mold["parts"][number];
+      if (pa.bucket !== pb.bucket || pa.geometry.attributes.position!.count !== pb.geometry.attributes.position!.count) return false;
+      pairs.push([pa.geometry, pb.geometry]);
+    }
+    return true;
+  };
+  let ok = collect(base.parts, slots.parts) && base.anims.length === slots.anims.length;
+  for (let i = 0; ok && i < base.anims.length; i++) ok = collect((base.anims[i] as AnimSpec).meshes, (slots.anims[i] as AnimSpec).meshes);
+  if (ok)
+    for (const [ga, gb] of pairs) {
+      ga.setAttribute("aSlot", gb.getAttribute("aSlot"));
+      ga.setAttribute("aTarget", gb.getAttribute("aTarget"));
+    }
+  moldGeometries(slots).forEach((g) => g.dispose());
+  if (!ok) {
+    moldGeometries(base).forEach((g) => g.dispose());
+    return null;
+  }
+  return base;
+}
+
+function moldKey(o: MapObject, sep: boolean, u: Usage, slots: boolean): string {
+  const head = `${o.type}|${u.variant ? (o.variant ?? 0) : "-"}|${sep ? 1 : 0}`;
+  if (slots || (!u.color && !u.accent)) return head;
+  return `${head}|${u.color ? (o.color ?? "") : "-"}|${u.accent ? (o.accent ?? "") : "-"}`;
+}
+
+const _ic = new THREE.Color();
+/** Cor por instância (linear) + flag "tem cor própria". */
+function writeTint(arr: Float32Array, i: number, hex: string | undefined): void {
+  if (!hex) return;
+  _ic.set(hex);
+  arr.set([_ic.r, _ic.g, _ic.b, 1], i * 4);
+}
+
+/** Anexa iColor/iAccent (por instância) a uma geometria de molde com slots. */
+function attachTints(geo: THREE.BufferGeometry, objs: readonly MapObject[], copies: number): void {
+  const n = objs.length * copies;
+  const ic = new Float32Array(n * 4);
+  const ia = new Float32Array(n * 4);
+  objs.forEach((o, i) => {
+    for (let k = 0; k < copies; k++) {
+      writeTint(ic, i * copies + k, o.color);
+      writeTint(ia, i * copies + k, o.accent);
+    }
+  });
+  geo.setAttribute("iColor", new THREE.InstancedBufferAttribute(ic, 4));
+  geo.setAttribute("iAccent", new THREE.InstancedBufferAttribute(ia, 4));
 }
 
 interface Animator {
@@ -197,10 +269,11 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
   const neons: { mat: THREE.MeshBasicMaterial; seed: number }[] = [];
   let disposed = false;
 
-  // 1. agrupa objetos por molde. A chave só inclui cor, accent e variante se o modelo do tipo
-  //    os lê (descoberto ao montar o primeiro molde do tipo): cor num rack não cria molde novo.
+  // 1. agrupa objetos por molde. A chave só inclui a variante se o modelo a lê; cor e accent
+  //    viram atributos por instância (slots), então não criam moldes novos.
   const usage = new Map<ObjectType, Usage>();
-  const probes = new Map<string, Mold>();
+  const ready = new Map<string, { mold: Mold; slots: boolean }>();
+  const slotOk = new Map<string, boolean>();
   const groups = new Map<string, { type: ObjectType; objs: MapObject[]; sep: boolean; key: string }>();
   for (const o of objects) {
     const fn = MODELS[o.type];
@@ -211,9 +284,22 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
       const probe = buildMold(fn, o, sep);
       u = probe.used;
       usage.set(o.type, u);
-      probes.set(moldKey(o, sep, u), probe.mold);
+      if (!u.color && !u.accent) ready.set(moldKey(o, sep, u, false), { mold: probe.mold, slots: false });
+      else moldGeometries(probe.mold).forEach((g) => g.dispose());
     }
-    const key = moldKey(o, sep, u);
+    let slots = false;
+    if (u.color || u.accent) {
+      const head = moldKey(o, sep, u, true);
+      let st = slotOk.get(head);
+      if (st === undefined) {
+        const m = buildSlotMold(fn, o, sep);
+        st = !!m;
+        slotOk.set(head, st);
+        if (m) ready.set(head, { mold: m, slots: true });
+      }
+      slots = st;
+    }
+    const key = moldKey(o, sep, u, slots);
     const g = groups.get(key);
     if (g) g.objs.push(o);
     else groups.set(key, { type: o.type, objs: [o], sep, key });
@@ -224,13 +310,16 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
 
   for (const { type, objs, sep, key } of groups.values()) {
     const first = objs[0] as MapObject;
-    const mold: Mold = probes.get(key) ?? buildMold(MODELS[type] as ModelFn, first, sep).mold;
+    const pre = ready.get(key);
+    const mold: Mold = pre?.mold ?? buildMold(MODELS[type] as ModelFn, first, sep).mold;
+    const tinted = pre?.slots ?? false;
     const mats = objs.map((o) => objectMatrix(o));
     const n = objs.length;
 
     // 2. peças estáticas: um InstancedMesh por material do molde
     for (const part of mold.parts) {
       geometries.push(part.geometry);
+      if (tinted) attachTints(part.geometry, objs, 1);
       const mesh = new THREE.InstancedMesh(part.geometry, part.material, n);
       mats.forEach((m, i) => mesh.setMatrixAt(i, m));
       mesh.instanceMatrix.needsUpdate = true;
@@ -249,6 +338,7 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
       const am: THREE.InstancedMesh[] = [];
       for (const part of spec.meshes) {
         geometries.push(part.geometry);
+        if (tinted) attachTints(part.geometry, objs, spec.copies.length);
         const mesh = new THREE.InstancedMesh(part.geometry, part.material, count);
         mesh.frustumCulled = false;
         mesh.castShadow = part.bucket === "t1";
@@ -340,6 +430,14 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
       if (spec.tint && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
   }
+
+  group.userData.stats = {
+    moldes: groups.size,
+    instanciados: meshes.length - animators.reduce((n, a) => n + a.meshes.length, 0),
+    animados: animators.reduce((n, a) => n + a.meshes.length, 0),
+    telas: ownMaterials.length - neons.length,
+    neons: neons.length,
+  };
 
   return {
     group,

@@ -159,18 +159,18 @@ export const chessTable: ModelFn = ({ b, color }) => {
       [0.016, 0.022],
     ];
     if (kind === "p") {
-      b.lathe(c, [...base, [0.011, 0.04], [0, 0.04]], x, yb, z, { seg: 10 });
+      b.lathe(c, [...base, [0.011, 0.04], [0, 0.04]], x, yb, z, { seg: 8 });
       b.sph(c, 0.016, x, yb + 0.048, z, { seg: 10 });
     } else if (kind === "r") {
-      b.lathe(c, [...base, [0.016, 0.05], [0.021, 0.052], [0.021, 0.068], [0, 0.068]], x, yb, z, { seg: 10 });
+      b.lathe(c, [...base, [0.016, 0.05], [0.021, 0.052], [0.021, 0.068], [0, 0.068]], x, yb, z, { seg: 8 });
     } else if (kind === "n") {
-      b.lathe(c, [...base, [0.015, 0.03], [0, 0.03]], x, yb, z, { seg: 10 });
+      b.lathe(c, [...base, [0.015, 0.03], [0, 0.03]], x, yb, z, { seg: 8 });
       b.box(c, 0.022, 0.05, 0.034, x, yb + 0.05, z + (white ? -0.004 : 0.004), { rx: white ? 0.35 : -0.35, r: 0.008 });
     } else if (kind === "b") {
-      b.lathe(c, [...base, [0.011, 0.05], [0.016, 0.062], [0.006, 0.08], [0, 0.082]], x, yb, z, { seg: 10 });
+      b.lathe(c, [...base, [0.011, 0.05], [0.016, 0.062], [0.006, 0.08], [0, 0.082]], x, yb, z, { seg: 8 });
     } else {
       const tall = kind === "k" ? 0.09 : 0.082;
-      b.lathe(c, [...base, [0.012, tall - 0.025], [0.02, tall - 0.012], [0.017, tall], [0, tall]], x, yb, z, { seg: 12 });
+      b.lathe(c, [...base, [0.012, tall - 0.025], [0.02, tall - 0.012], [0.017, tall], [0, tall]], x, yb, z, { seg: 8 });
       if (kind === "k") b.box(c, 0.012, 0.03, 0.012, x, yb + tall + 0.012, z, { r: 0.003 });
       else b.sph(c, 0.011, x, yb + tall + 0.006, z, { seg: 8 });
     }
@@ -254,7 +254,8 @@ export const arcade: ModelFn = ({ b, color, accent, variant }) => {
     b.box(art[0] as string, 0.008, 0.12, 0.12, s * 0.403, 1.36, -0.16, { rx: Math.PI / 4, r: 0.02 });
     b.box(art[2] as string, 0.008, 0.07, 0.07, s * 0.403, 1.2, -0.02, { rx: Math.PI / 4, r: 0.012 });
   }
-  b.box(C.ink, 0.7, 1.78, 0.72, 0, 0.9, -0.04, { r: 0.02 });
+  // miolo acompanha o perfil (a tela fica no plano inclinado, recuada)
+  b.side(C.ink, profile, 0.7, 0, 0, -0.005);
   // porta de fichas
   b.box(C.graphite, 0.7, 0.78, 0.02, 0, 0.42, 0.35, { r: 0.01 });
   b.box(T.steelDark, 0.26, 0.3, 0.02, 0, 0.45, 0.365, { r: 0.015 });
@@ -268,7 +269,7 @@ export const arcade: ModelFn = ({ b, color, accent, variant }) => {
   [C.signal, C.gold, C.green, C.orange].forEach((c, i) => b.cyl(c, 0.022, 0.02, 0.02 + (i % 2) * 0.07 + Math.floor(i / 2) * 0.1, 0.035, (i % 2) * 0.05 - 0.02, { seg: 10 }));
   b.pop();
   // tela inclinada com jogo
-  b.push(0, 1.26, 0.2, { rx: -0.2 });
+  b.push(0, 1.26, 0.21, { rx: -0.2 });
   b.box(C.graphite, 0.64, 0.5, 0.03, 0, 0, -0.02, { r: 0.02 });
   b.box(lit(C.navyDeep), 0.56, 0.42, 0.008, 0, 0, 0.0, { r: 0 });
   b.box(lit(C.signal), 0.08, 0.03, 0.006, 0, -0.17, 0.006, { r: 0 });
@@ -320,7 +321,9 @@ export const jukebox: ModelFn = ({ b, color }) => {
   b.box(C.offwhite, 0.6, 0.12, 0.04, 0, 0.84, D / 2 - 0.0, { rx: -0.4, r: 0.012 });
   for (let i = 0; i < 6; i++) b.box(i === 2 ? C.orange : C.slate, 0.05, 0.03, 0.02, -0.19 + i * 0.076, 0.83, D / 2 + 0.03, { rx: -0.4, r: 0.006 });
   const glass = roundRect(0.56, 0.36, 0.1);
-  b.front(clear(C.navyDeep, 0.75), glass, 0.01, 0, 1.17, D / 2 - 0.04);
+  // vitrine iluminada por dentro: o disco preto aparece em silhueta
+  b.box(lit(mix(T.warm, C.orange, 0.25)), 0.5, 0.3, 0.02, 0, 1.16, D / 2 - 0.12, { r: 0.02 });
+  b.front(clear(C.offwhite, 0.18), glass, 0.01, 0, 1.17, D / 2 - 0.04);
   b.anim(
     (s) => {
       s.cyl(C.ink, 0.13, 0.012, 0, 0, 0, { rx: Math.PI / 2, seg: 22 });

@@ -8,6 +8,7 @@ import { buildFurniture } from "./furniture/index.ts";
 import { buildFloors } from "./floors.ts";
 import { buildWalls } from "./walls.ts";
 import { buildSigns } from "./signs.ts";
+import { registerScreens } from "./tvs.ts";
 import { Sculpture } from "../lens3d/Sculpture.tsx";
 
 /** A estação inteira: pisos, paredes, móveis, placas e a estrela. Igual nas duas lentes. */
@@ -23,6 +24,9 @@ export function Station({ lens }: { lens: Lens }) {
     group.add(floors, walls, signs, furniture.group);
     return { group, signs, furniture, owned: [floors, walls, signs] };
   }, [map]);
+
+  // Registra as TVs só depois de montar: no StrictMode o useMemo roda duas vezes e uma cópia é descartada.
+  useEffect(() => registerScreens(built.furniture.screens), [built]);
 
   useEffect(
     () => () => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./setup.ts";
 
 /** Interação: andar até uma cadeira, ver "E · Sentar", sentar, e quem está longe vê a pessoa sentada. */
 

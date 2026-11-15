@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { CATALOG, type MapObject, type ObjectType } from "@infinity/world";
 import { PALETTE, toon } from "../materials.ts";
-import { buildFurniture, FURNITURE_TYPES, VARIANTS } from "./index.ts";
+import { buildFurniture, FURNITURE_TYPES, VARIANTS, type FurnitureBuild } from "./index.ts";
 
 /**
  * Galeria de móveis (desenvolvimento): http://localhost:5173/?galeria=1
@@ -87,6 +87,8 @@ const GROUPS: { id: string; name: string; types: ObjectType[] }[] = [
 
 /** Variações de cor para a seção "variantes". */
 const COLOR_SAMPLES: { type: ObjectType; color?: string; accent?: string; text?: string }[] = [
+  { type: "neon-sign", text: "Bora codar", accent: PALETTE.orange },
+  { type: "neon-sign", text: "evolução", accent: PALETTE.pink },
   { type: "office-chair", color: PALETTE.orange },
   { type: "office-chair", color: PALETTE.sky },
   { type: "sofa", color: PALETTE.cream, accent: PALETTE.signal },
@@ -94,8 +96,6 @@ const COLOR_SAMPLES: { type: ObjectType; color?: string; accent?: string; text?:
   { type: "beanbag", color: PALETTE.signal },
   { type: "pouf", color: PALETTE.gold, accent: PALETTE.navy },
   { type: "rug", color: PALETTE.cream, accent: PALETTE.orange },
-  { type: "neon-sign", text: "Bora codar", accent: PALETTE.orange },
-  { type: "neon-sign", text: "evolução", accent: PALETTE.pink },
   { type: "desk", color: PALETTE.woodLight, accent: PALETTE.signal },
 ];
 
@@ -291,13 +291,20 @@ function Stats({ count }: { count: number }) {
 }
 
 const Furniture = memo(function Furniture({ items }: { items: Item[] }) {
-  const build = useMemo(() => buildFurniture(items.map((i) => i.obj)), [items]);
-  useEffect(() => () => build.dispose(), [build]);
+  // monta no efeito (seguro com StrictMode: cada montagem tem o seu dispose)
+  const [build, setBuild] = useState<{ b: FurnitureBuild; ms: number } | null>(null);
+  useEffect(() => {
+    const t0 = performance.now();
+    const b = buildFurniture(items.map((i) => i.obj));
+    setBuild({ b, ms: Math.round(performance.now() - t0) });
+    return () => b.dispose();
+  }, [items]);
   const gl = useThree((s) => s.gl);
   const acc = useRef(0);
   const frames = useRef(0);
   useFrame((state, dt) => {
-    build.update(dt, state.clock.elapsedTime);
+    if (!build) return;
+    build.b.update(dt, state.clock.elapsedTime);
     acc.current += dt;
     frames.current++;
     if (acc.current > 0.5) {
@@ -305,10 +312,10 @@ const Furniture = memo(function Furniture({ items }: { items: Item[] }) {
       const stats = { calls: gl.info.render.calls, tris: gl.info.render.triangles };
       statsStore.set(stats);
       const w = window as unknown as { __galeria?: Record<string, unknown> };
-      w.__galeria = { ...stats, frames: frames.current, ready: frames.current > 3, screens: build.screens.size };
+      w.__galeria = { ...stats, frames: frames.current, ready: frames.current > 3, screens: build.b.screens.size, buildMs: build.ms, build: build.b.group.userData.stats };
     }
   });
-  return <primitive object={build.group} />;
+  return build ? <primitive object={build.b.group} /> : null;
 });
 
 function Stage({ items, floor }: { items: Item[]; floor: FloorKey }) {

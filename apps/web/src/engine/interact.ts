@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ANIMS, type InteractAction, type MapObject, type Vec2 } from "@infinity/world";
+import { ANIMS, wallBetween, type InteractAction, type MapObject, type Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 import { remoteIds, sampleRemote, self } from "../world/registry.ts";
 import { useApp } from "../state/store.ts";
@@ -67,12 +67,15 @@ function labelFor(o: MapObject): string {
 function scan(): void {
   if (useApp.getState().conn !== "open") return;
   const seat = seatedAt();
+  const walls = world().map.walls;
   let best: Candidate | null = null;
   let bestD = Infinity;
   for (const c of all()) {
     const it = c.object.interact!;
     const d = Math.hypot(c.point.x - self.x, c.point.z - self.z);
     if (d > it.radius || d >= bestD) continue;
+    // Nada de interagir através de parede (a TV da sala ao lado, por exemplo).
+    if (wallBetween(walls, self, c.point)) continue;
     if (it.action === "sit" && (seat?.objectId === c.object.id || occupied(c.point))) continue;
     best = c;
     bestD = d;

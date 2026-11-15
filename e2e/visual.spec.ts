@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./setup.ts";
 
 /** Screenshots de revisão visual (entrada, 2D isométrico, 3D). Não falha por estética: serve para olhar. */
 

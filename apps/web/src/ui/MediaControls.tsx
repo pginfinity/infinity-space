@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { setCam, setMic, useMedia } from "../media/rtc.ts";
+import { FileText, Film, Mic, MicOff, MonitorUp, Video, VideoOff } from "lucide-react";
+import { setCam, setMic, startShare, stopShare, useMedia, type ShareIntent } from "../media/rtc.ts";
 import { toast } from "./toasts.ts";
 
 /** Microfone e câmera na doca, com o contador de quem te ouve. Atalhos: M e V. */
@@ -60,6 +60,72 @@ export function MediaControls() {
       >
         {cam ? <Video className="size-[18px]" /> : <VideoOff className="size-[18px]" />}
       </button>
+      <ShareButton ready={ready} />
     </div>
+  );
+}
+
+/** Compartilhar tela: antes de abrir o seletor do navegador, a pessoa diz o que vai mostrar. */
+function ShareButton({ ready }: { ready: boolean }) {
+  const screen = useMedia((s) => s.screen);
+  const [open, setOpen] = useState(false);
+  const [audio, setAudio] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const go = (intent: ShareIntent) => {
+    setOpen(false);
+    void startShare(intent, audio);
+  };
+
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        disabled={!ready}
+        onClick={() => (screen ? void stopShare() : setOpen((o) => !o))}
+        aria-pressed={screen}
+        aria-expanded={open}
+        aria-label={screen ? "Parar de compartilhar a tela" : "Compartilhar a tela"}
+        title={screen ? "Parar de compartilhar a tela" : "Compartilhar a tela"}
+        className={clsx("grid size-10 place-items-center rounded-xl transition-colors disabled:opacity-40", screen ? "bg-signal/20 text-signal hover:bg-signal/30" : "text-offwhite/70 hover:bg-offwhite/8 hover:text-offwhite")}
+      >
+        <MonitorUp className="size-[18px]" />
+      </button>
+      {open && (
+        <div role="menu" className="absolute bottom-12 left-1/2 w-72 -translate-x-1/2 rounded-2xl border border-offwhite/10 bg-space p-2 shadow-2xl">
+          <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate">O que você vai mostrar?</p>
+          <ShareOption icon={<FileText className="size-4" />} title="Documento" hint="Código, planilha, texto. Prioriza nitidez." onClick={() => go("document")} />
+          <ShareOption icon={<Film className="size-4" />} title="Vídeo ou animação" hint="Vídeo, protótipo, 3D. Prioriza fluidez." onClick={() => go("video")} />
+          <label className="mt-1 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-offwhite/85 hover:bg-offwhite/6">
+            <input type="checkbox" checked={audio} onChange={(e) => setAudio(e.target.checked)} className="size-3.5 accent-[var(--color-signal)]" />
+            Incluir o som da aba ou do sistema
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ShareOption({ icon, title, hint, onClick }: { icon: React.ReactNode; title: string; hint: string; onClick: () => void }) {
+  return (
+    <button type="button" role="menuitem" onClick={onClick} className="flex w-full items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-offwhite/8">
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-offwhite/8 text-offwhite">{icon}</span>
+      <span>
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block text-xs text-slate">{hint}</span>
+      </span>
+    </button>
   );
 }

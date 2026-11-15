@@ -9,6 +9,8 @@ export default defineConfig({
   outputDir: "test-results/playwright",
   timeout: 60_000,
   fullyParallel: false,
+  // Todos os testes entram no mesmo escritório ao vivo: um de cada vez, senão um vê as pessoas do outro.
+  workers: 1,
   reporter: [["list"]],
   use: {
     channel: "chrome",

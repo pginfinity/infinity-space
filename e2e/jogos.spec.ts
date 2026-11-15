@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "./setup.ts";
 
 /**
  * Jogos: duas pessoas abrem a mesma mesa, sentam, jogam até alguém vencer, e o painel mostra o resultado.

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./setup.ts";
 
 /**
  * Voz por proximidade com privacidade aplicada no servidor:

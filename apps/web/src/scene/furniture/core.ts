@@ -8,19 +8,60 @@ import { glow, toon, PALETTE } from "../materials.ts";
  * Núcleo dos móveis procedurais.
  *
  * Cada modelo é montado por um Builder com primitivas arredondadas. As peças são pintadas com
- * cor por vértice e fundidas por "balde" de material: um balde opaco (toon), um que brilha (glow)
- * e, se houver, baldes translúcidos. Assim um molde inteiro vira 1 a 3 geometrias, e cada uma
- * vira um único InstancedMesh com todas as cópias do mundo.
+ * cor por vértice e fundidas por "balde" de material: um balde opaco e, se houver, baldes
+ * translúcidos. Assim um molde inteiro vira quase sempre UMA geometria, e ela vira um único
+ * InstancedMesh com todas as cópias do mundo.
  *
- * Os materiais por vértice são clones de toon()/glow() (mesma rampa de 4 tons, mesmo visual),
- * criados uma vez e compartilhados: não descartar.
+ * O balde opaco usa um clone de toon() (mesma rampa de 4 tons) com um ajuste: vértices marcados
+ * como "aceso" (atributo aLit = 1) saem com a cor pura, sem luz nem tone mapping, exatamente como
+ * glow(). Assim telas, LEDs e neon entram no mesmo draw call do móvel. Os translúcidos que brilham
+ * usam um clone de glow(). Todos são criados uma vez e compartilhados: não descartar.
+ *
+ * Cor e accent por instância: o molde é montado duas vezes, uma com as cores padrão e outra com
+ * "fichas" no lugar de color/accent (ver SLOT_COLOR). mix() propaga as fichas, então cada vértice
+ * sabe se a cor dele vem do color/accent do objeto e com que mistura (atributos aSlot/aTarget).
+ * No shader, se a instância tem cor própria (iColor/iAccent), o vértice é recolorido. Assim salas
+ * de cores diferentes usam o MESMO molde (e o mesmo draw call).
  */
 
 export const C = PALETTE;
 
-/** Mistura duas cores (tons derivados da paleta, sem inventar cor nova). */
+/** Fichas que os modelos recebem no lugar de color/accent na montagem com "slots". */
+export const SLOT_COLOR = "@c";
+export const SLOT_ACCENT = "@a";
+
+interface SlotRef {
+  slot: 1 | 2;
+  /** Cor para onde a cor da instância é puxada, e quanto (0 = cor pura). */
+  target: string;
+  t: number;
+}
+
+/** Lê uma ficha "@c" / "@c|#rrggbb|0.3" (cor da instância misturada com #rrggbb a 30%). */
+export function parseSlot(c: string): SlotRef | null {
+  if (c[0] !== "@") return null;
+  const [head, target, t] = c.split("|");
+  return { slot: head === SLOT_ACCENT ? 2 : 1, target: target ?? "#000000", t: t ? Number(t) : 0 };
+}
+
+const _ma = new THREE.Color();
+const _mb = new THREE.Color();
+
+/** Mistura duas cores (tons derivados da paleta, sem inventar cor nova). Aceita fichas de slot. */
 export function mix(a: string, b: string, t: number): string {
-  return `#${new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString()}`;
+  const sa = parseSlot(a);
+  const sb = parseSlot(b);
+  if (!sa && !sb) return `#${_ma.set(a).lerp(_mb.set(b), t).getHexString()}`;
+  if (sa && sb) return a;
+  if (!sa && sb) return mix(b, a, 1 - t);
+  // mix(mix(s, X, t1), Y, t2) = mix(s, Z, T), com T = 1-(1-t1)(1-t2) e Z ponderado
+  const r = sa as SlotRef;
+  const T = 1 - (1 - r.t) * (1 - t);
+  if (T <= 1e-6) return a;
+  const wX = (r.t * (1 - t)) / T;
+  const Z = _ma.set(r.target).multiplyScalar(wX).add(_mb.set(b).multiplyScalar(1 - wX));
+  const head = r.slot === 2 ? SLOT_ACCENT : SLOT_COLOR;
+  return `${head}|#${Z.getHexString()}|${T.toFixed(4)}`;
 }
 
 /** Tons derivados usados em vários móveis. */
@@ -51,25 +92,67 @@ export const clear = (c: string, o: number): Paint => ({ k: "t", c, o });
 export const litClear = (c: string, o: number): Paint => ({ k: "g", c, o });
 
 function bucketOf(p: Paint): string {
-  return typeof p === "string" ? "t1" : `${p.k}${p.o}`;
+  if (typeof p === "string") return "t1";
+  // brilho opaco vai para o balde opaco, com aLit = 1
+  if (p.o >= 1) return "t1";
+  // translúcidos: um balde por tipo; a opacidade de cada peça vai no alfa do vértice
+  return p.k === "g" ? "ga" : "ta";
+}
+function alphaOf(p: Paint): number {
+  return typeof p === "string" ? 1 : Math.min(1, p.o);
+}
+function isLit(p: Paint): boolean {
+  return typeof p !== "string" && p.k === "g";
 }
 function hexOf(p: Paint): string {
   return typeof p === "string" ? p : p.c;
 }
 
 const vcMats = new Map<string, THREE.Material>();
-/** Material compartilhado de um balde ("t1" opaco, "g1" brilho, "t0.5"/"g0.3" translúcidos). */
+/** Material compartilhado de um balde: "t1" opaco (com partes acesas), "ta" toon translúcido, "ga" brilho translúcido. */
 export function bucketMaterial(key: string): THREE.Material {
   let m = vcMats.get(key);
   if (!m) {
-    const kind = key[0];
-    const op = Number(key.slice(1));
-    m = (kind === "g" ? glow("#FFFFFF", op) : toon("#FFFFFF", { opacity: op })).clone();
+    if (key === "t1") {
+      m = toon("#FFFFFF").clone();
+    } else {
+      // translúcido com alfa por vértice (cor RGBA)
+      m = (key === "ga" ? glow("#FFFFFF", 0.99) : toon("#FFFFFF", { opacity: 0.99 })).clone();
+      m.opacity = 1;
+      m.transparent = true;
+      m.depthWrite = false;
+    }
     m.vertexColors = true;
     m.name = `mobilia:${key}`;
+    patchLit(m);
     vcMats.set(key, m);
   }
   return m;
+}
+
+/**
+ * Vértices com aLit = 1 ignoram luz, sombra e tone mapping (iguais a glow()).
+ * Se o pipeline precisar do próprio onBeforeCompile, chame furnitureShaderPatch() dentro dele.
+ */
+export function furnitureShaderPatch(shader: { vertexShader: string; fragmentShader: string }): void {
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      "#include <common>",
+      "#include <common>\nattribute float aLit;\nvarying float vLit;\nattribute vec2 aSlot;\nattribute vec3 aTarget;\nattribute vec4 iColor;\nattribute vec4 iAccent;",
+    )
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLit = aLit;")
+    .replace(
+      "#include <color_vertex>",
+      "#include <color_vertex>\nif (aSlot.x > 0.5) { vec4 src = aSlot.x > 1.5 ? iAccent : iColor; if (src.w > 0.5) vColor.rgb = mix(src.rgb, aTarget, aSlot.y); }",
+    );
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", "#include <common>\nvarying float vLit;")
+    .replace("#include <colorspace_fragment>", "gl_FragColor.rgb = mix(gl_FragColor.rgb, vColor.rgb, vLit);\n#include <colorspace_fragment>");
+}
+
+function patchLit(m: THREE.Material): void {
+  m.onBeforeCompile = (shader) => furnitureShaderPatch(shader);
+  m.customProgramCacheKey = () => "mobilia-v2";
 }
 
 // ---------------------------------------------------------------- matrizes
@@ -239,10 +322,26 @@ export class Builder {
     if (!g.attributes.normal) g.computeVertexNormals();
     g.applyMatrix4(local ? this.top().clone().multiply(local) : this.top());
     const n = g.attributes.position!.count;
-    const col = new Float32Array(n * 3);
-    _color.set(hexOf(p));
-    for (let i = 0; i < n; i++) col.set([_color.r, _color.g, _color.b], i * 3);
-    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    const col = new Float32Array(n * 4);
+    const hex = hexOf(p);
+    const slot = parseSlot(hex);
+    _color.set(slot ? slot.target : hex);
+    const a = alphaOf(p);
+    for (let i = 0; i < n; i++) col.set([_color.r, _color.g, _color.b, a], i * 4);
+    g.setAttribute("color", new THREE.BufferAttribute(col, 4));
+    // slot de cor (só preenchido na montagem com fichas)
+    const aSlot = new Float32Array(n * 2);
+    const aTarget = new Float32Array(n * 3);
+    if (slot) {
+      _color.set(slot.target);
+      for (let i = 0; i < n; i++) {
+        aSlot.set([slot.slot, slot.t], i * 2);
+        aTarget.set([_color.r, _color.g, _color.b], i * 3);
+      }
+    }
+    g.setAttribute("aSlot", new THREE.BufferAttribute(aSlot, 2));
+    g.setAttribute("aTarget", new THREE.BufferAttribute(aTarget, 3));
+    g.setAttribute("aLit", new THREE.BufferAttribute(new Float32Array(n).fill(isLit(p) ? 1 : 0), 1));
     g.morphAttributes = {};
     g.clearGroups();
     const key = bucketOf(p);
@@ -256,7 +355,8 @@ export class Builder {
   box(p: Paint, w: number, h: number, d: number, x: number, y: number, z: number, o: Rot & { r?: number } = {}): this {
     const min = Math.min(w, h, d);
     const r = Math.min(o.r ?? Math.min(0.03, min * 0.22), min / 2 - 0.0005);
-    const geo = r >= 0.004 ? new RoundedBoxGeometry(w, h, d, r >= 0.02 ? 2 : 1, r) : new THREE.BoxGeometry(w, h, d);
+    // cantos de 1 segmento (chanfro) bastam para bordas pequenas; almofadas usam 2
+    const geo = r >= 0.004 ? roundedBox(w, h, d, r, r >= 0.04 ? 2 : 1) : new THREE.BoxGeometry(w, h, d);
     return this.add(p, geo, trs(x, y, z, o));
   }
 
@@ -280,8 +380,8 @@ export class Builder {
 
   /** Esfera centrada em (x, y, z); sx/sy/sz achatam. */
   sph(p: Paint, r: number, x: number, y: number, z: number, o: Rot & { sx?: number; sy?: number; sz?: number; seg?: number } = {}): this {
-    const seg = o.seg ?? Math.max(8, Math.min(20, Math.round(8 + r * 40)));
-    const geo = new THREE.SphereGeometry(r, seg, Math.max(6, Math.round(seg * 0.7)));
+    const seg = o.seg ?? Math.max(7, Math.min(18, Math.round(6 + r * 40)));
+    const geo = new THREE.SphereGeometry(r, seg, Math.max(5, Math.round(seg * 0.65)));
     return this.add(p, geo, trs(x, y, z, o, o.sx ?? 1, o.sy ?? 1, o.sz ?? 1));
   }
 
@@ -359,8 +459,56 @@ export class Builder {
   }
 }
 
+/**
+ * Caixa arredondada rápida: um molde indexado por nº de segmentos (sinal de cada vértice + normal),
+ * e cada caixa nova é só posição = sinal * (meia medida - raio) + normal * raio.
+ * Mesmo resultado do RoundedBoxGeometry, sem refazer a malha nem fundir vértices a cada caixa.
+ */
+const boxTemplates = new Map<number, { sign: Float32Array; normal: Float32Array; index: THREE.BufferAttribute }>();
+function roundedBox(w: number, h: number, d: number, r: number, seg: number): THREE.BufferGeometry {
+  let t = boxTemplates.get(seg);
+  if (!t) {
+    const r0 = 0.25;
+    const base = new RoundedBoxGeometry(1, 1, 1, seg, r0);
+    base.deleteAttribute("uv");
+    const g = mergeVertices(base, 1e-6);
+    base.dispose();
+    const pos = g.attributes.position!.array as Float32Array;
+    const nor = g.attributes.normal!.array as Float32Array;
+    const sign = new Float32Array(pos.length);
+    for (let i = 0; i < pos.length; i++) sign[i] = Math.sign((pos[i] as number) - (nor[i] as number) * r0) || 1;
+    // a grade interna das faces colapsa nos cantos: descarta os triângulos degenerados
+    const src = (g.index as THREE.BufferAttribute).array;
+    const kept: number[] = [];
+    for (let i = 0; i < src.length; i += 3) {
+      const a = src[i] as number;
+      const b = src[i + 1] as number;
+      const c = src[i + 2] as number;
+      if (a !== b && b !== c && a !== c) kept.push(a, b, c);
+    }
+    t = { sign, normal: new Float32Array(nor), index: new THREE.BufferAttribute(new Uint16Array(kept), 1) };
+    boxTemplates.set(seg, t);
+  }
+  const hx = w / 2 - r;
+  const hy = h / 2 - r;
+  const hz = d / 2 - r;
+  const n = t.sign.length;
+  const pos = new Float32Array(n);
+  for (let i = 0; i < n; i += 3) {
+    pos[i] = (t.sign[i] as number) * hx + (t.normal[i] as number) * r;
+    pos[i + 1] = (t.sign[i + 1] as number) * hy + (t.normal[i + 1] as number) * r;
+    pos[i + 2] = (t.sign[i + 2] as number) * hz + (t.normal[i + 2] as number) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(t.normal.slice(), 3));
+  geo.setIndex(t.index.clone());
+  return geo;
+}
+
+/** Segmentos de cilindros/tornos pelo raio: peças pequenas facetadas (somem em pixel art mesmo). */
 function segs(r: number): number {
-  return Math.max(8, Math.min(32, Math.round(8 + r * 50)));
+  return Math.max(6, Math.min(28, Math.round(6 + r * 44)));
 }
 
 function extrude(shape: THREE.Shape, depth: number, bevel: number, curve = 10): THREE.BufferGeometry {

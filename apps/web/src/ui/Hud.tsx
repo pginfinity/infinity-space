@@ -12,6 +12,7 @@ import { AvatarFace } from "./AvatarFace.tsx";
 import { Minimap } from "./Minimap.tsx";
 import { InteractPrompt, Toasts } from "./WorldOverlays.tsx";
 import { MediaControls } from "./MediaControls.tsx";
+import { ScreenShares } from "./ScreenShares.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -53,6 +54,7 @@ export function Hud() {
       <AnimatePresence>{peopleOpen && <PeoplePanel />}</AnimatePresence>
       {!peopleOpen && <Minimap />}
       <Toasts />
+      <ScreenShares />
       <InteractPrompt />
 
       {/* Barra de emotes, aberta pela doca. */}

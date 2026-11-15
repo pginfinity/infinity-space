@@ -182,11 +182,11 @@ export function bookRow(b: Builder, x0: number, y: number, z: number, w: number,
     const col = pick(r, palette);
     const lean = r() < 0.12 && x + bw + 0.06 < end;
     if (lean) {
-      b.box(col, bw, bh, 0.22, x + bh * 0.18 + bw / 2, y + bh / 2 - 0.01, z, { rz: -0.35, r: 0.006 });
+      b.box(col, bw, bh, 0.22, x + bh * 0.18 + bw / 2, y + bh / 2 - 0.01, z, { rz: -0.35, r: 0 });
       x += bh * 0.4 + bw;
       continue;
     }
-    b.box(col, bw, bh, 0.22, x + bw / 2, y + bh / 2, z, { r: 0.006 });
+    b.box(col, bw, bh, 0.22, x + bw / 2, y + bh / 2, z, { r: 0 });
     if (r() < 0.45) b.box(mix(col, C.offwhite, 0.6), bw + 0.002, 0.025, 0.222, x + bw / 2, y + bh * 0.78, z, { r: 0 });
     x += bw + 0.004;
     if (r() < 0.1) x += 0.05;

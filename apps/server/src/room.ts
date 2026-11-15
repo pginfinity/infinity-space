@@ -225,7 +225,7 @@ export class OfficeRoom {
     if (patch.look) clean.look = cleanLook(patch.look);
     if (patch.status && STATUSES.has(patch.status)) clean.status = patch.status;
     if (patch.lens === "2d" || patch.lens === "3d") clean.lens = patch.lens;
-    for (const k of ["mic", "cam", "screen"] as const) if (typeof patch[k] === "boolean") clean[k] = patch[k];
+    for (const k of ["mic", "cam", "screen", "screenPaused"] as const) if (typeof patch[k] === "boolean") clean[k] = patch[k];
     if (Object.keys(clean).length === 0) return;
     Object.assign(m.info, clean);
     this.broadcast({ t: "info", id: m.info.id, patch: clean });
