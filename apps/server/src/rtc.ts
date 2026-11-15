@@ -1,4 +1,5 @@
 import { AccessToken } from "livekit-server-sdk";
+import { recIdentity } from "@infinity/world";
 
 /**
  * Integração com o LiveKit (áudio, vídeo e tela).
@@ -8,6 +9,8 @@ import { AccessToken } from "livekit-server-sdk";
 export const RTC = {
   /** Endereço que o navegador usa para conectar. */
   publicUrl: process.env.LIVEKIT_PUBLIC_URL ?? "ws://localhost:7880",
+  /** Endereço que o próprio servidor usa (o gravador). Na VPS, o LiveKit local. */
+  internalUrl: process.env.LIVEKIT_INTERNAL_URL ?? process.env.LIVEKIT_PUBLIC_URL ?? "ws://localhost:7880",
   apiKey: process.env.LIVEKIT_API_KEY ?? "devkey",
   apiSecret: process.env.LIVEKIT_API_SECRET ?? "secret",
   room: process.env.LIVEKIT_ROOM ?? "infinity-space",
@@ -24,5 +27,12 @@ export async function rtcToken(identity: string, name: string): Promise<string> 
     canPublishData: false,
     canUpdateOwnMetadata: false,
   });
+  return at.toJwt();
+}
+
+/** Token do gravador de uma sala: oculto, só escuta, nada publica. */
+export async function recorderToken(group: string): Promise<string> {
+  const at = new AccessToken(RTC.apiKey, RTC.apiSecret, { identity: recIdentity(group), name: "Gravador", ttl: "5h" });
+  at.addGrant({ room: RTC.room, roomJoin: true, canPublish: false, canSubscribe: true, canPublishData: false, hidden: true, recorder: true });
   return at.toJwt();
 }

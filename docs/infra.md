@@ -59,6 +59,22 @@ O login é por convite com link mágico, então o servidor precisa mandar e-mail
 - Atualizações de segurança automáticas do Ubuntu (`unattended-upgrades`).
 - Monitoramento simples de disponibilidade (ex.: UptimeRobot grátis) em `https://space.ai-infinity.io/health`.
 
+## 7. Gravação das reuniões no Google Drive
+
+As reuniões gravadas dentro do Infinity Space (salas de reunião, diretoria e auditório) viram um arquivo de áudio Opus (`.ogg`, cerca de 20 MB por hora) que o servidor envia para uma pasta de um Drive compartilhado do Workspace (Business Standard tem Drive compartilhado). Enquanto isto não estiver configurado, as gravações ficam salvas na VPS (`DATA_DIR/gravacoes`) e são enviadas sozinhas quando a configuração existir.
+
+1. No [Google Cloud Console](https://console.cloud.google.com), criar (ou usar) um projeto da empresa e **ativar a Google Drive API**.
+2. Em *IAM e administrador → Contas de serviço*, criar a conta `infinity-space-gravacoes` (sem papéis no projeto) e gerar uma **chave JSON**.
+3. No Google Drive, criar o **Drive compartilhado** (ex.: "Gravações Infinity Space"), ou escolher um existente, e adicionar o e-mail da conta de serviço como **Administrador de conteúdo**. Criar a pasta de destino e copiar o id dela (o trecho depois de `/folders/` na URL).
+4. Na VPS, guardar o JSON fora do repositório (ex.: `/etc/infinity/google.json`, permissão 600) e pôr no `.env` de produção:
+   - `GOOGLE_APPLICATION_CREDENTIALS=/etc/infinity/google.json`
+   - `DRIVE_FOLDER_ID=<id da pasta>`
+   - `LIVEKIT_INTERNAL_URL=ws://livekit:7880` (endereço do LiveKit visto de dentro da VPS)
+   - `TZ_DISPLAY=America/Sao_Paulo` (fuso usado no nome dos arquivos)
+5. O servidor precisa do `ffmpeg`: ele entra na imagem Docker do servidor quando o deploy for montado. Fora do Docker: `apt install ffmpeg` e `FFMPEG_PATH=/usr/bin/ffmpeg`.
+
+Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração, os participantes e quem iniciou. A transcrição fica com o time de IA, lendo dessa pasta.
+
 ## O que eu preciso receber
 
 1. IP e especificações da VPS.
@@ -66,3 +82,4 @@ O login é por convite com link mágico, então o servidor precisa mandar e-mail
 3. Origin Certificate da Cloudflare (certificado e chave).
 4. Credenciais de e-mail (SMTP ou serviço transacional).
 5. Acesso ao repositório GitHub privado.
+6. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).

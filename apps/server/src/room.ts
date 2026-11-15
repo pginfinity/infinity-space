@@ -14,6 +14,8 @@ import {
   buildStationMap,
   dist,
   wallBetween,
+  recGroup,
+  recIdentity,
   type Emote,
   type HeldItem,
   type AvatarLook,
@@ -31,6 +33,7 @@ import { GamesManager } from "./games/manager.ts";
 import { RTC, rtcToken } from "./rtc.ts";
 import { ActivitiesManager } from "./activities/manager.ts";
 import { DATA_DIR, Store } from "./store.ts";
+import { RecordingActivity } from "./recording/manager.ts";
 import { hearing } from "@infinity/world";
 
 interface Member {
@@ -116,6 +119,7 @@ export class OfficeRoom {
     },
     (act) => this.broadcast({ t: "act", act }),
   );
+  private recording: RecordingActivity | null = null;
   private readonly seatPoints: Vec2[] = this.map.objects.filter((o) => o.interact?.action === "sit").map((o) => o.interact!.point);
   private tickTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
@@ -123,6 +127,19 @@ export class OfficeRoom {
   /** Carrega os pacotes de atividades. Chame antes de `start`. */
   async init(): Promise<void> {
     await this.acts.load();
+    // Gravação de reuniões: precisa da sala (quem está em cada grupo de salas e as listas de áudio).
+    const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
+    this.recording = rec as RecordingActivity;
+  }
+
+  /** Ids de quem está num grupo de salas (ex.: "aud" = auditório + palco). */
+  membersIn(group: string): string[] {
+    const ids: string[] = [];
+    for (const m of this.members.values()) {
+      const z = this.zones.zoneAt({ x: m.x, z: m.z });
+      if (z && recGroup(z) === group) ids.push(m.info.id);
+    }
+    return ids;
   }
 
   start(): void {
@@ -316,6 +333,9 @@ export class OfficeRoom {
       list.forEach((listener, j) => {
         if (i !== j && hearing(this.map.walls, at[j]!, at[i]!).mode !== "none") ids.push(listener.info.id);
       });
+      // Sala sendo gravada: a voz de quem está nela também vai para o gravador (oculto, só escuta).
+      const zone = at[i]!.zone;
+      if (zone && this.recording?.isRecording(recGroup(zone))) ids.push(recIdentity(recGroup(zone)));
       const key = ids.sort().join(",");
       if (key !== speaker.audience) {
         speaker.audience = key;

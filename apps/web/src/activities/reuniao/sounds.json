@@ -1,0 +1,4 @@
+{
+  "gravacao-inicio": { "prompt": "Two short soft ascending interface tones signalling that recording has started, clean, discreet, professional", "seconds": 1 },
+  "gravacao-fim": { "prompt": "Two short soft descending interface tones signalling that recording has stopped, clean, discreet, professional", "seconds": 1 }
+}

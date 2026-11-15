@@ -133,7 +133,8 @@ export async function leaveRtc(): Promise<void> {
 /** Lista do servidor: quem pode ouvir você agora. */
 export function setAudience(ids: string[]): void {
   audienceIds = ids;
-  useMedia.setState({ audience: ids.length });
+  // O gravador de reunião não conta como "pessoa que te ouve" (a sala já mostra o aviso de gravação).
+  useMedia.setState({ audience: ids.filter((id) => !id.startsWith("gravador-")).length });
   applyAudience();
 }
 
