@@ -1,6 +1,7 @@
 import { spatial, type Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 import { self } from "../world/registry.ts";
+import { useMediaSettings } from "../media/settings.ts";
 
 /**
  * Efeitos sonoros. `sfx("gong")` toca `/sfx/gong.mp3` (gerado pelos scripts locais de áudio a partir
@@ -14,11 +15,25 @@ let ctx: AudioContext | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 const synths = new Map<string, (c: AudioContext, out: AudioNode) => void>();
 
+type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> };
+
 function context(): AudioContext {
-  ctx ??= new AudioContext();
+  if (!ctx) {
+    ctx = new AudioContext();
+    applySink(useMediaSettings.getState().speakerId);
+  }
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
 }
+
+/** Os efeitos saem pelo mesmo alto-falante escolhido para as vozes. */
+function applySink(id: string | null): void {
+  const c = ctx as SinkContext | null;
+  if (c?.setSinkId) void c.setSinkId(id ?? "").catch(() => undefined);
+}
+useMediaSettings.subscribe((s, prev) => {
+  if (s.speakerId !== prev.speakerId) applySink(s.speakerId);
+});
 
 function load(name: string): Promise<AudioBuffer | null> {
   let p = buffers.get(name);

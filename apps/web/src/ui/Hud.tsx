@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Box, LocateFixed, LogOut, Map as MapIcon, Smile, Users } from "lucide-react";
+import { Box, LocateFixed, LogOut, Map as MapIcon, Settings2, Smile, Users } from "lucide-react";
 import { EMOTES, type Lens } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { doEmote, EMOTE_INFO } from "../engine/emotes.ts";
@@ -14,6 +14,7 @@ import { InteractPrompt, Toasts } from "./WorldOverlays.tsx";
 import { MediaControls } from "./MediaControls.tsx";
 import { ScreenShares } from "./ScreenShares.tsx";
 import { ActivitiesOverlay } from "../activities/index.tsx";
+import { SettingsPanel } from "./SettingsPanel.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -24,6 +25,11 @@ export function Hud() {
   const peopleOpen = useApp((s) => s.peopleOpen);
   const { setLens, togglePeople, leave } = useApp.getState();
   const [emotesOpen, setEmotesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = (v: boolean) => {
+    setSettingsOpen(v);
+    if (v) togglePeople(false);
+  };
   const list = Object.values(players);
 
   return (
@@ -52,8 +58,9 @@ export function Hud() {
         <span className="text-sm text-offwhite/90">{t("hud.online", { count: list.length })}</span>
       </button>
 
-      <AnimatePresence>{peopleOpen && <PeoplePanel />}</AnimatePresence>
-      {!peopleOpen && <Minimap />}
+      <AnimatePresence>{peopleOpen && !settingsOpen && <PeoplePanel />}</AnimatePresence>
+      <AnimatePresence>{settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}</AnimatePresence>
+      {!peopleOpen && !settingsOpen && <Minimap />}
       <Toasts />
       <ScreenShares />
       <ActivitiesOverlay />
@@ -103,8 +110,18 @@ export function Hud() {
         <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
           <LocateFixed className="size-[18px]" />
         </DockButton>
-        <DockButton label={t("hud.people")} onClick={() => togglePeople()} active={peopleOpen}>
+        <DockButton
+          label={t("hud.people")}
+          onClick={() => {
+            setSettingsOpen(false);
+            togglePeople();
+          }}
+          active={peopleOpen && !settingsOpen}
+        >
           <Users className="size-[18px]" />
+        </DockButton>
+        <DockButton label="Áudio e vídeo" onClick={() => openSettings(!settingsOpen)} active={settingsOpen}>
+          <Settings2 className="size-[18px]" />
         </DockButton>
         <DockButton label={t("hud.leave")} onClick={leave}>
           <LogOut className="size-[18px]" />

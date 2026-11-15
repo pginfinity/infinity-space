@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { Footprints, X } from "lucide-react";
+import { Footprints, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { clsx } from "clsx";
+import { setPersonVolume, useMediaSettings } from "../media/settings.ts";
 import { useApp } from "../state/store.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { placeName } from "../world/zoneLabel.ts";
@@ -16,6 +18,8 @@ export function PeoplePanel() {
   const selfId = useApp((s) => s.selfId);
   const close = () => useApp.getState().togglePeople(false);
   const [, tick] = useState(0);
+  const [volumeOf, setVolumeOf] = useState<string | null>(null);
+  const volumes = useMediaSettings((s) => s.people);
 
   // Atualiza os lugares uma vez por segundo.
   useEffect(() => {
@@ -47,8 +51,11 @@ export function PeoplePanel() {
         {list.map((p) => {
           const isSelf = p.id === selfId;
           const pos = isSelf ? self : sampleRemote(p.id);
+          const vol = volumes[p.name.trim().toLowerCase()] ?? 1;
+          const VolIcon = vol === 0 ? VolumeX : vol < 1 ? Volume1 : Volume2;
           return (
-            <li key={p.id} className="group flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-offwhite/5">
+            <li key={p.id} className="group rounded-xl px-3 py-2.5 hover:bg-offwhite/5">
+              <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <AvatarFace look={p.look} size={36} className="rounded-full" />
                 <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-space" style={{ background: STATUS_COLOR[p.status] }} />
@@ -71,6 +78,34 @@ export function PeoplePanel() {
                   <Footprints className="size-3.5" />
                   {t("hud.goTo")}
                 </button>
+              )}
+              {!isSelf && (
+                <button
+                  type="button"
+                  onClick={() => setVolumeOf((v) => (v === p.id ? null : p.id))}
+                  aria-expanded={volumeOf === p.id}
+                  aria-label={`Volume de ${p.name}`}
+                  title={`Volume de ${p.name}`}
+                  className={clsx("shrink-0 rounded-lg p-1.5 transition-colors hover:bg-offwhite/8", vol !== 1 ? "text-signal" : "text-slate hover:text-offwhite")}
+                >
+                  <VolIcon className="size-4" />
+                </button>
+              )}
+              </div>
+              {volumeOf === p.id && (
+                <div className="mt-2 flex items-center gap-3 pl-12">
+                  <input
+                    type="range"
+                    min={0}
+                    max={150}
+                    step={5}
+                    value={Math.round(vol * 100)}
+                    onChange={(e) => setPersonVolume(p.name, Number(e.target.value) / 100)}
+                    aria-label={`Volume de ${p.name}`}
+                    className="flex-1 accent-[var(--color-signal)]"
+                  />
+                  <span className="w-10 text-right text-xs tabular-nums text-slate">{Math.round(vol * 100)}%</span>
+                </div>
               )}
             </li>
           );

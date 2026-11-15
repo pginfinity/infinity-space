@@ -7,6 +7,7 @@ import {
   ScreenSharePresets,
   Track,
   VideoPresets,
+  type LocalAudioTrack,
   type LocalTrackPublication,
   type RemoteParticipant,
   type RemoteTrack,
@@ -16,6 +17,9 @@ import { dirOfYaw, hearing, type Hearing } from "@infinity/world";
 import { world } from "../world/world.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { getHeading } from "../engine/movement.ts";
+import { useApp } from "../state/store.ts";
+import { personVolumeOf, useMediaSettings, VIDEO_RES, type MediaSettings } from "./settings.ts";
+import { noiseProcessor } from "./noise.ts";
 
 /**
  * Áudio e vídeo por proximidade (LiveKit).
@@ -57,12 +61,10 @@ export function onScreenNotice(fn: (text: string) => void): void {
   onShareNotice = fn;
 }
 const chains = new Map<string, { track: RemoteAudioTrack; lowpass: BiquadFilterNode; pan: StereoPannerNode; el: HTMLMediaElement }>();
-/** Volume por pessoa escolhido pelo usuário (0 a 1.5). */
-export const personVolume = new Map<string, number>();
-
-function audioContext(): AudioContext {
+/** O contexto de áudio do escritório (vozes, supressão de ruído, medidores). 48 kHz: o RNNoise exige. */
+export function audioContext(): AudioContext {
   if (!ctx) {
-    ctx = new AudioContext({ latencyHint: "interactive" });
+    ctx = new AudioContext({ latencyHint: "interactive", sampleRate: 48000 });
     // O navegador só libera áudio depois de um gesto da pessoa.
     const resume = () => void ctx?.resume();
     window.addEventListener("pointerdown", resume);
@@ -104,6 +106,9 @@ export async function joinRtc(url: string, token: string): Promise<void> {
   try {
     await r.connect(url, token, { autoSubscribe: false });
     applyAudience();
+    const speaker = useMediaSettings.getState().speakerId;
+    if (speaker) void r.switchActiveDevice("audiooutput", speaker).catch(() => undefined);
+    noiseApplied = null;
     useMedia.setState({ status: "on" });
     window.clearInterval(loop);
     loop = window.setInterval(updateSpatial, 80);
@@ -143,7 +148,8 @@ function applyAudience(): void {
 export async function setMic(on: boolean): Promise<void> {
   if (!room) return;
   try {
-    await room.localParticipant.setMicrophoneEnabled(on);
+    await room.localParticipant.setMicrophoneEnabled(on, micCapture());
+    if (on) await applyNoise();
     useMedia.setState({ mic: on });
     pendingInfo?.({ mic: on });
   } catch (e) {
@@ -154,11 +160,83 @@ export async function setMic(on: boolean): Promise<void> {
 export async function setCam(on: boolean): Promise<void> {
   if (!room) return;
   try {
-    await room.localParticipant.setCameraEnabled(on);
+    await room.localParticipant.setCameraEnabled(on, camCapture());
     useMedia.setState({ cam: on });
     pendingInfo?.({ cam: on });
   } catch (e) {
     useMedia.setState({ error: deviceError(e, "câmera") });
+  }
+}
+
+// ---- preferências de dispositivo e supressão de ruído -----------------------------------------
+
+function micCapture(s: MediaSettings = useMediaSettings.getState()) {
+  return {
+    deviceId: s.micId ?? undefined,
+    echoCancellation: s.echo,
+    autoGainControl: s.autoGain,
+    // Com RNNoise/GTCRN, o filtro do navegador fica desligado (os dois juntos deixam a voz metálica).
+    noiseSuppression: s.noise === "browser",
+    channelCount: 1,
+  };
+}
+
+function camCapture(s: MediaSettings = useMediaSettings.getState()) {
+  const r = VIDEO_RES[s.video];
+  return { deviceId: s.camId ?? undefined, resolution: { width: r.width, height: r.height, frameRate: r.frameRate } };
+}
+
+function micTrack(): LocalAudioTrack | undefined {
+  return room?.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalAudioTrack | undefined;
+}
+
+let noiseApplied: string | null = null;
+
+/** Liga, troca ou desliga o filtro de ruído forte na faixa do microfone. */
+async function applyNoise(): Promise<void> {
+  const track = micTrack();
+  if (!track) return;
+  const mode = useMediaSettings.getState().noise;
+  const want = mode === "strong" || mode === "max" ? mode : null;
+  if (want === noiseApplied && (want === null || track.getProcessor())) return;
+  try {
+    if (want) await track.setProcessor(noiseProcessor(want));
+    else if (track.getProcessor()) await track.stopProcessor();
+    noiseApplied = want;
+  } catch (e) {
+    noiseApplied = null;
+    console.warn("[mídia] supressão de ruído indisponível:", e);
+    useMedia.setState({ error: "Não deu para ligar a supressão de ruído forte neste navegador. Usando a do navegador." });
+  }
+}
+
+let lastSettings = useMediaSettings.getState();
+useMediaSettings.subscribe((s) => {
+  const prev = lastSettings;
+  lastSettings = s;
+  void applySettings(s, prev);
+});
+
+/** Aplica na hora o que mudou nas preferências (sem sair da chamada). */
+async function applySettings(s: MediaSettings, prev: MediaSettings): Promise<void> {
+  if (!room || room.state !== ConnectionState.Connected) return;
+  const lp = room.localParticipant;
+  try {
+    const track = micTrack();
+    if (track && (s.micId !== prev.micId || s.echo !== prev.echo || s.autoGain !== prev.autoGain || (s.noise === "browser") !== (prev.noise === "browser"))) {
+      await track.restartTrack(micCapture(s));
+    }
+    if (s.noise !== prev.noise || s.micId !== prev.micId) await applyNoise();
+    if (s.camId !== prev.camId || s.video !== prev.video) {
+      const cam = lp.getTrackPublication(Track.Source.Camera)?.track;
+      if (cam) await cam.restartTrack(camCapture(s));
+    }
+    if (s.speakerId !== prev.speakerId && s.speakerId) {
+      await room.switchActiveDevice("audiooutput", s.speakerId);
+      for (const el of screenAudio.values()) void (el as HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }).setSinkId?.(s.speakerId);
+    }
+  } catch (e) {
+    useMedia.setState({ error: deviceError(e, "dispositivo") });
   }
 }
 
@@ -329,6 +407,11 @@ function dropParticipant(id: string): void {
   screenAudio.delete(id);
 }
 
+/** Nome do filtro ativo no microfone (diagnóstico e testes). */
+export function micProcessorName(): string | null {
+  return micTrack()?.getProcessor()?.name ?? null;
+}
+
 /** Estado das faixas remotas (diagnóstico e testes). */
 export function rtcDebug(): { id: string; hearing: string; tracks: { source: string; subscribed: boolean; status: string; permission: string }[] }[] {
   if (!room) return [];
@@ -377,7 +460,8 @@ function updateSpatial(): void {
     }
     const chain = chains.get(p.identity);
     if (!chain || !h) continue;
-    const vol = (personVolume.get(p.identity) ?? 1) * h.gain;
+    const prefs = useMediaSettings.getState();
+    const vol = personVolumeOf(useApp.getState().players[p.identity]?.name) * prefs.master * h.gain;
     chain.track.setVolume(vol);
     chain.lowpass.frequency.setTargetAtTime(h.muffled ? 900 : 18000, c.currentTime, 0.12);
     const r = sampleRemote(p.identity);
