@@ -36,7 +36,8 @@ import { ActivitiesManager } from "./activities/manager.ts";
 import type { Activity } from "./activities/types.ts";
 import { DATA_DIR, Store } from "./store.ts";
 import { RecordingActivity } from "./recording/manager.ts";
-import { hearing } from "@infinity/world";
+import { PORTAS_ID, audienceOf, type AudiencePerson, type Zone } from "@infinity/world";
+import type { PrivacySource } from "./activities/portas/index.ts";
 
 interface Member {
   info: PlayerInfo;
@@ -53,6 +54,8 @@ interface Member {
   alive: boolean;
   /** Última lista "quem pode te ouvir" enviada (para só mandar quando mudar). */
   audience: string;
+  /** Última lista "quem pode te ver" enviada durante um sussurro ("" = igual à de ouvir). */
+  sight: string;
 }
 
 const EMOTE_SET: ReadonlySet<string> = new Set(EMOTES);
@@ -127,6 +130,8 @@ export class OfficeRoom {
     (act) => this.broadcast({ t: "act", act }),
   );
   private recording: RecordingActivity | null = null;
+  /** Privacidade de conversa (pacote portas): portas fechadas, rodas e sussurros. */
+  private privacy: PrivacySource | null = null;
   private readonly seatPoints: Vec2[] = this.map.objects.filter((o) => o.interact?.action === "sit").map((o) => o.interact!.point);
   private tickTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
@@ -137,6 +142,17 @@ export class OfficeRoom {
     // Gravação de reuniões: precisa da sala (quem está em cada grupo de salas e as listas de áudio).
     const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
     this.recording = rec as RecordingActivity;
+    // Portas, roda fechada e sussurro: entram na audição e na validação de pose.
+    const portas = this.acts.get(PORTAS_ID) as Partial<PrivacySource> | undefined;
+    if (portas?.privacy && portas.mayStand && portas.exitOf && portas.onPrivacyChange) {
+      this.privacy = portas as PrivacySource;
+      this.privacy.onPrivacyChange(() => this.updateAudiences());
+    }
+  }
+
+  /** A pessoa pode estar aqui? (sala de porta fechada ou trancada só para quem foi admitido) */
+  private mayStand(id: string, p: Vec2): boolean {
+    return !this.privacy || this.privacy.mayStand(id, this.zones.zoneAt(p));
   }
 
   /**
@@ -234,7 +250,11 @@ export class OfficeRoom {
   private join(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>, auth?: { email: string; name: string }): Member {
     const id = randomUUID().slice(0, 8);
     const back = hello.at && Number.isFinite(hello.at.x) && Number.isFinite(hello.at.z) ? { x: hello.at.x, z: hello.at.z } : null;
-    const spawn = back && this.nav.isWalkable(back) ? back : this.freeSpawn();
+    // Voltando de uma reconexão: no mesmo lugar se for andável. Sala de porta fechada não: o id é novo,
+    // então a pessoa volta do lado de fora da porta e bate de novo.
+    const barred = back && !this.mayStand(id, back) ? this.zones.zoneAt(back) : undefined;
+    const door = barred ? this.privacy?.exitOf(barred.id) : undefined;
+    const spawn = back && !barred && this.nav.isWalkable(back) ? back : ((door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn());
     const member: Member = {
       info: {
         id,
@@ -258,6 +278,7 @@ export class OfficeRoom {
       dirty: false,
       alive: true,
       audience: "",
+      sight: "",
     };
     this.members.set(id, member);
 
@@ -333,7 +354,8 @@ export class OfficeRoom {
     const seated = anim === SIT && this.seatPoints.some((s) => dist(s, target) < 0.9);
     // Folga para jitter de rede: 1,6x a velocidade de corrida + meio metro.
     const tooFast = moved > RUN_SPEED * 1.6 * dt + 0.5;
-    if (tooFast || (!seated && !this.nav.isWalkable(target))) {
+    // Porta fechada ou trancada: quem não foi admitido volta para o último lugar válido (do lado de fora).
+    if (tooFast || (!seated && !this.nav.isWalkable(target)) || !this.mayStand(m.info.id, target)) {
       this.sendTo(m, { t: "correct", x: m.x, z: m.z });
       return;
     }
@@ -365,25 +387,47 @@ export class OfficeRoom {
 
   /**
    * Privacidade no servidor: para cada pessoa, quem pode ouvi-la agora (distância, salas fechadas,
-   * paredes, palco). O cliente libera a própria voz, vídeo e tela só para essa lista no LiveKit.
+   * paredes, palco, portas, roda fechada, sussurro). O cliente libera a própria voz, vídeo e tela só
+   * para essa lista no LiveKit. A sala gravada inclui o gravador (menos sussurros).
    */
   private updateAudiences(): void {
     const list = [...this.members.values()];
-    const at = list.map((m) => ({ pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
+    // Ninguém fica numa sala de porta fechada sem ter sido admitido (reconexão, teleporte): volta para fora.
+    for (const m of list) {
+      const zone = this.zones.zoneAt({ x: m.x, z: m.z });
+      if (zone && !this.mayStand(m.info.id, { x: m.x, z: m.z })) this.putOutside(m, zone);
+    }
+    const people: AudiencePerson[] = list.map((m) => ({ id: m.info.id, pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
+    const opts = {
+      privacy: this.privacy?.privacy(),
+      recorderFor: (z: Zone) => (this.recording?.isRecording(recGroup(z)) ? recIdentity(recGroup(z)) : null),
+    };
     list.forEach((speaker, i) => {
-      const ids: string[] = [];
-      list.forEach((listener, j) => {
-        if (i !== j && hearing(this.map.walls, at[j]!, at[i]!).mode !== "none") ids.push(listener.info.id);
-      });
-      // Sala sendo gravada: a voz de quem está nela também vai para o gravador (oculto, só escuta).
-      const zone = at[i]!.zone;
-      if (zone && this.recording?.isRecording(recGroup(zone))) ids.push(recIdentity(recGroup(zone)));
-      const key = ids.sort().join(",");
+      const { voice, sight } = audienceOf(this.map.walls, people, people[i]!, opts);
+      // Sussurro: a voz vai só para uma pessoa, mas o vídeo e a tela continuam para quem já via.
+      // Vai antes da lista de voz, para o vídeo dos outros não piscar na troca.
+      const sightKey = sight === voice ? "" : sight.join(",");
+      if (sightKey !== speaker.sight) {
+        speaker.sight = sightKey;
+        this.sendTo(speaker, { t: "actev", id: PORTAS_ID, ev: "vista", data: { ids: sightKey ? sight : null } });
+      }
+      const key = voice.join(",");
       if (key !== speaker.audience) {
         speaker.audience = key;
-        this.sendTo(speaker, { t: "audience", ids });
+        this.sendTo(speaker, { t: "audience", ids: voice });
       }
     });
+  }
+
+  /** Devolve a pessoa para o lado de fora da porta da sala. */
+  private putOutside(m: Member, zone: Zone): void {
+    const door = this.privacy?.exitOf(zone.id);
+    const spot = (door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn();
+    m.x = spot.x;
+    m.z = spot.z;
+    m.lastPoseAt = Date.now();
+    m.dirty = true;
+    this.sendTo(m, { t: "correct", x: m.x, z: m.z });
   }
 
   private tick(): void {

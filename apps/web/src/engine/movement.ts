@@ -101,9 +101,32 @@ export function standUp(): void {
   for (const fn of seatListeners) fn();
 }
 
+/**
+ * Lugares onde a pessoa não pode entrar agora (pacote portas: sala de porta fechada sem ter sido
+ * admitida). O servidor também recusa; aqui é para nem tentar atravessar.
+ */
+export interface MoveGuard {
+  blocks(p: Vec2): boolean;
+  /** Para onde ir no lugar de um destino bloqueado (a porta, para bater). */
+  redirect(target: Vec2): Vec2 | null;
+}
+let guard: MoveGuard | null = null;
+
+export function setMoveGuard(g: MoveGuard | null): void {
+  guard = g;
+}
+
 /** Anda até um ponto do mundo pelo melhor caminho. `arrive` roda ao chegar. */
 export function walkTo(target: Vec2, arrive?: () => void): boolean {
   if (seated) standUp();
+  // Destino numa sala de porta fechada: vai até a porta.
+  if (guard?.blocks(target)) {
+    const alt = guard.redirect(target);
+    if (!alt) return false;
+    target = alt;
+    // O que era para fazer ao chegar (sentar, jogar) fica do outro lado da porta.
+    arrive = undefined;
+  }
   const found = world().nav.findPath({ x: self.x, z: self.z }, target);
   path = found && found.length > 0 ? found : null;
   onArrive = path ? (arrive ?? null) : null;
@@ -220,7 +243,9 @@ function step(dt: number): void {
 
   let anim: Anim = "idle";
   if (move) {
-    const next = nav.move({ x: self.x, z: self.z }, move);
+    let next = nav.move({ x: self.x, z: self.z }, move);
+    // Porta fechada: para no batente (se já está dentro, por qualquer motivo, não trava).
+    if (guard && guard.blocks(next) && !guard.blocks(self)) next = { x: self.x, z: self.z };
     const moved = Math.hypot(next.x - self.x, next.z - self.z);
     if (moved > 1e-4) {
       const targetYaw = yawOf(move);

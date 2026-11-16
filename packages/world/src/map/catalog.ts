@@ -105,4 +105,6 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   "watering-station": { w: 0.9, d: 0.45, h: 1.1, blocks: true, action: "use", label: "Pegar o regador", look: "Banquinho de jardinagem com regadores, vasinhos de muda e uma plaquinha das plantas felizes." },
   // estruturas
   pod: { w: 2.2, d: 2.2, h: 2.4, blocks: false, look: "(Estrutura: cabine de foco, montada com paredes no mapa.)" },
+  // pacote portas
+  door: { w: 1.6, d: 0.08, h: 2.2, blocks: false, look: "(Porta de sala no vão da parede: folha e luz de estado desenhadas pela atividade \"portas\", nas duas lentes.)" },
 };
