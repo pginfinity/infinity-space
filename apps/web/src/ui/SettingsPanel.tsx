@@ -69,6 +69,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           </div>
+          <Toggle
+            label="Aperte para falar"
+            hint="Segure M (ou o botão do microfone) para falar; soltou, silencia."
+            checked={s.micMode === "ptt"}
+            onChange={(on) => setMediaSettings({ micMode: on ? "ptt" : "open" })}
+          />
           <Toggle label="Cancelamento de eco" hint="Evita que sua voz volte pelo alto-falante dos outros." checked={s.echo} onChange={(echo) => setMediaSettings({ echo })} />
           <Toggle label="Ganho automático" hint="Equilibra o volume quando você se afasta do microfone." checked={s.autoGain} onChange={(autoGain) => setMediaSettings({ autoGain })} />
         </Section>

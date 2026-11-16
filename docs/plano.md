@@ -9,7 +9,7 @@ Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gra
 | Etapa | Situação | O que falta |
 |---|---|---|
 | 0. Fundação | Pronta | — |
-| 1. Áudio e vídeo | Pronta | Aperte-para-falar, desfoque e fundo da câmera, anel "quem te ouve" no chão |
+| 1. Áudio e vídeo | Pronta | — (aperte-para-falar, fundo da câmera e anel "quem te ouve" entraram em 16/11) |
 | 2. Tela compartilhada | Pronta | Anotação sobre a tela, TV parada com relógio e próxima reserva |
 | 3. Presença e convivência | Em andamento | Login, status, emotes e sentar prontos; chat, chamar/seguir/Ctrl+K, status automático, janela flutuante, portas e mesas em construção |
 | 4. Lente, avatar e arte | Parcial | Terra no horário real, luz do dia e escada de qualidade prontas; avatares melhores (adiado a pedido) e transição contínua 2D↔3D |

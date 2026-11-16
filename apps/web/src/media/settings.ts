@@ -8,6 +8,7 @@ import { create } from "zustand";
 export type NoiseMode = "off" | "browser" | "strong" | "max";
 export type VideoQuality = "low" | "standard" | "high";
 export type CamBackground = "none" | "blur" | "infinity";
+export type MicMode = "open" | "ptt";
 
 export interface MediaSettings {
   micId: string | null;
@@ -17,6 +18,8 @@ export interface MediaSettings {
   echo: boolean;
   autoGain: boolean;
   video: VideoQuality;
+  /** Microfone aberto (M liga e desliga) ou aperte-para-falar (segure M). */
+  micMode: MicMode;
   /** Fundo da câmera: nenhum, desfocado ou o fundo da Infinity (processado no próprio navegador). */
   camBg: CamBackground;
   /** Volume geral de quem você ouve (0 a 1.5). */
@@ -36,6 +39,7 @@ const DEFAULTS: MediaSettings = {
   autoGain: true,
   video: "standard",
   camBg: "none",
+  micMode: "open",
   master: 1,
   people: {},
 };

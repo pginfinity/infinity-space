@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { FileText, Film, Mic, MicOff, MonitorUp, Video, VideoOff } from "lucide-react";
 import { setCam, setMic, startShare, stopShare, useMedia, type ShareIntent } from "../media/rtc.ts";
+import { useMediaSettings } from "../media/settings.ts";
 import { toast } from "./toasts.ts";
 
 /** Microfone e câmera na doca, com o contador de quem te ouve. Atalhos: M e V. */
@@ -12,6 +13,7 @@ export function MediaControls() {
   const audience = useMedia((s) => s.audience);
   const error = useMedia((s) => s.error);
   const ready = status === "on";
+  const ptt = useMediaSettings((s) => s.micMode === "ptt");
 
   useEffect(() => {
     if (error) toast(error, 5000);
@@ -23,11 +25,25 @@ export function MediaControls() {
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       const s = useMedia.getState();
-      if (e.code === "KeyM") void setMic(!s.mic);
+      const ptt = useMediaSettings.getState().micMode === "ptt";
+      if (e.code === "KeyM") void setMic(ptt ? true : !s.mic);
       if (e.code === "KeyV") void setCam(!s.cam);
     };
+    // Aperte-para-falar: soltar M (ou a janela perder o foco) silencia.
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === "KeyM" && useMediaSettings.getState().micMode === "ptt" && useMedia.getState().mic) void setMic(false);
+    };
+    const onBlur = () => {
+      if (useMediaSettings.getState().micMode === "ptt" && useMedia.getState().mic) void setMic(false);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
+    };
   }, []);
 
   const title = !ready ? (status === "connecting" ? "Conectando o áudio…" : status === "error" ? "Áudio indisponível" : "Áudio desligado") : undefined;
@@ -37,10 +53,14 @@ export function MediaControls() {
       <button
         type="button"
         disabled={!ready}
-        onClick={() => void setMic(!mic)}
+        onClick={ptt ? undefined : () => void setMic(!mic)}
+        // Aperte-para-falar: segurar o botão (ou M) fala; soltar silencia.
+        onPointerDown={ptt ? () => void setMic(true) : undefined}
+        onPointerUp={ptt ? () => void setMic(false) : undefined}
+        onPointerLeave={ptt && mic ? () => void setMic(false) : undefined}
         aria-pressed={mic}
-        aria-label={mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
-        title={mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
+        aria-label={ptt ? "Segure para falar (M)" : mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
+        title={ptt ? "Segure para falar (M)" : mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
         className={clsx(
           "relative flex h-10 items-center gap-1.5 rounded-xl px-3 transition-colors disabled:opacity-40",
           mic ? "bg-ok/20 text-ok hover:bg-ok/30" : "bg-danger/15 text-danger hover:bg-danger/25",
