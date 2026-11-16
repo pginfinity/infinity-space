@@ -7,6 +7,8 @@ import { useApp } from "../state/store.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { walkTo } from "../engine/movement.ts";
 import { guideItems, nearestSpot, type GuideGroup, type GuideItem } from "./guide.ts";
+// pacote mesas: mesas livres/ocupadas no mapa ampliado
+import { DesksGuide, DesksMapLayer } from "../activities/mesas/minimap.tsx";
 
 /**
  * Minimapa da estação: salas coloridas pela cor de cada área, você e as outras pessoas.
@@ -100,6 +102,7 @@ export function Minimap() {
         {map.walls.map((w, i) => (
           <line key={i} x1={w.a.x} y1={w.a.z} x2={w.b.x} y2={w.b.z} stroke={w.kind === "solid" ? "#E9E5DF" : "#5FD0FF"} strokeWidth={w.kind === "solid" ? 0.22 : 0.14} strokeOpacity={0.85} />
         ))}
+        {big && <DesksMapLayer />}
         {big &&
           map.labels.map((l) => (
             <text key={l.text + l.pos.x} x={l.pos.x} y={l.pos.z} textAnchor="middle" fontSize={0.95} fill="#F2F0EF" fontFamily="Geist, sans-serif" fontWeight={600} pointerEvents="none">
@@ -141,6 +144,7 @@ function GuideList({ items, active, onHover, onGo }: { items: GuideItem[]; activ
   return (
     <aside className="max-h-[45%] shrink-0 overflow-y-auto border-t border-offwhite/8 px-2 pb-2 pt-1 sm:max-h-none sm:w-64 sm:border-l sm:border-t-0" aria-label="O que fazer aqui" onMouseLeave={() => onHover(null)}>
       <p className="px-2 pb-1 pt-2 text-sm font-medium">O que fazer aqui</p>
+      <DesksGuide />
       {GROUPS.map((g) => (
         <section key={g} className="mt-1">
           <h3 className="label-caps px-2 py-1">{g}</h3>

@@ -7,4 +7,5 @@ export * from "./escritorio/index.ts";
 export * from "./vivo/index.ts";
 export * from "./arcade/index.ts";
 export * from "./grupo/index.ts";
+export * from "./mesas/index.ts";
 export * from "./reuniao.ts";
