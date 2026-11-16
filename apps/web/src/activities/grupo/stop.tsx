@@ -395,7 +395,7 @@ function Playing({ s, me }: { s: StopState; me: string }) {
           </div>
           <TimeBar left={stopping ? 0 : left} total={s.duration} className="mt-1.5" />
           {others.length > 0 && (
-            <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Progresso">
+            <ul className="mt-1.5 flex flex-wrap gap-1" aria-label={T.stop.progress}>
               {others.map((p) => (
                 <li key={p.id} className="rounded-full bg-offwhite/[0.05] px-2 py-0.5 text-[11px] text-offwhite/75 ring-1 ring-offwhite/8">
                   {p.name} <span className="tabular-nums text-slate">{T.stop.filled(p.filled, s.categories.length)}</span>
@@ -453,7 +453,7 @@ function Playing({ s, me }: { s: StopState; me: string }) {
         })}
         <AnimatePresence>
           {stopping && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 grid place-items-center rounded-xl bg-space/80 backdrop-blur-[2px]" role="status">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 grid place-items-center rounded-xl bg-space/90 backdrop-blur-[2px]" role="status">
               <div className="flex flex-col items-center gap-1 text-center">
                 <motion.span initial={{ rotate: -8, scale: 1.4 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 12 }} className="font-display text-4xl font-black text-orange">
                   {T.stop.stop}

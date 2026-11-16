@@ -148,6 +148,7 @@ export type ObjectType =
   | "jukebox"
   // jogos de grupo (pacote grupo)
   | "stop-board"
+  | "mission-console"
   // estruturas
   | "pod";
 

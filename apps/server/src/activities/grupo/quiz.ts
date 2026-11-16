@@ -167,7 +167,7 @@ export class QuizActivity implements Activity {
   }
 
   private enter(from: string): void {
-    if (this.st.phase === "idle" || this.isHost(from) || !this.inAuditorium(from)) return;
+    if (this.st.phase === "idle" || this.st.phase === "final" || this.isHost(from) || !this.inAuditorium(from)) return;
     if (this.player(from)) return;
     const name = this.name(from);
     // Quem caiu e voltou (id novo, mesmo nome) recupera a pontuação.

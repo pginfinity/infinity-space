@@ -4,9 +4,11 @@ import { fxClient } from "./fx.tsx";
 import { quizClient } from "./quiz.tsx";
 import { drawClient } from "./draw.tsx";
 import { stopClient } from "./stop.tsx";
+import { impostorClient } from "./impostor.tsx";
 
-/** Pacote "grupo": jogos de grupo (Quiz Show, Desenhe e adivinhe, Stop). */
+/** Pacote "grupo": jogos de grupo (Quiz Show, Desenhe e adivinhe, Stop, Impostor na Estação). */
 registerActivity(quizClient);
 registerActivity(drawClient);
 registerActivity(stopClient);
+registerActivity(impostorClient);
 registerActivity(fxClient);

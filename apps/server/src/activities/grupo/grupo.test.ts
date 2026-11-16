@@ -8,7 +8,12 @@ import {
   buildStationMap,
   dist,
   wallBetween,
+  IMP_FIRST_TAG_MS,
+  IMP_TASK_MS,
+  impTaskSpots,
   type DrawState,
+  type ImpRoleEvent,
+  type ImpState,
   type QuizBank,
   type QuizState,
   type StopState,
@@ -365,5 +370,103 @@ describe("Stop no servidor", () => {
     advance(STOP_GRACE_MS + 10);
     expect(st().phase).toBe("review");
     expect(st().stoppedBy).toBeNull();
+  });
+});
+
+describe("Impostor na Estação no servidor", () => {
+  const imp = () => get("impostor");
+  const st = () => imp().snapshot() as ImpState;
+  const ATRIO = (i: number) => ({ x: -2 + i * 1.2, z: 7.6 });
+  const roleOf = (id: string) => h.evs("role").filter((e) => e.to?.[0] === id).at(-1)!.data as ImpRoleEvent;
+
+  beforeEach(() => {
+    ["Ana", "Bruno", "Caio", "Duda"].forEach((n, i) => h.add(n[0]!.toLowerCase(), n, ATRIO(i)));
+    h.add("x", "Xavier", { x: -8, z: 18 });
+  });
+
+  it("partida completa: papéis privados, tarefa, congelar, reunião e vitória da tripulação", () => {
+    imp().handle("x", "join", {});
+    expect(st().phase).toBe("idle");
+    for (const id of ["a", "b", "c", "d"]) imp().handle(id, "join", {});
+    expect(st().players).toHaveLength(4);
+    imp().handle("b", "start", {});
+    expect(st().phase).toBe("lobby");
+    imp().handle("a", "start", {});
+    expect(st()).toMatchObject({ phase: "playing", impostors: 1, progress: { done: 0, total: 12 } });
+    // Cada um recebe o próprio papel, só para si; o estado público não diz quem é.
+    const roles = Object.fromEntries(["a", "b", "c", "d"].map((id) => [id, roleOf(id)]));
+    const impostor = Object.keys(roles).find((id) => roles[id]!.role === "impostor")!;
+    const crew = Object.keys(roles).filter((id) => id !== impostor);
+    expect(crew).toHaveLength(3);
+    expect(JSON.stringify(st())).not.toContain("impostor\"");
+
+    // Tarefa: precisa estar perto e esperar o tempo.
+    const spots = new Map(impTaskSpots(h.map, h.nav).map((s) => [s.id, s]));
+    const [c1, c2, c3] = crew as [string, string, string];
+    const task = roles[c1]!.tasks[0]!;
+    imp().handle(c1, "taskStart", { task });
+    vi.advanceTimersByTime(IMP_TASK_MS);
+    imp().handle(c1, "taskDone", { task });
+    expect(st().progress.done).toBe(0); // estava longe
+    h.pos.set(c1, spots.get(task)!.point);
+    imp().handle(c1, "taskStart", { task });
+    vi.advanceTimersByTime(800);
+    imp().handle(c1, "taskDone", { task });
+    expect(st().progress.done).toBe(0); // cedo demais
+    vi.advanceTimersByTime(IMP_TASK_MS);
+    imp().handle(c1, "taskDone", { task });
+    expect(st().progress.done).toBe(1);
+    expect(h.evs("task").at(-1)).toMatchObject({ to: [c1] });
+
+    // Congelar: só o infiltrado, perto, depois da espera inicial.
+    h.pos.set(impostor, { ...h.pos.get(c2)!, x: h.pos.get(c2)!.x + 0.8 });
+    imp().handle(impostor, "tag", { target: c2 });
+    expect(st().frozen).toHaveLength(0);
+    imp().handle(c3, "tag", { target: c2 });
+    vi.advanceTimersByTime(IMP_FIRST_TAG_MS);
+    imp().handle(impostor, "tag", { target: c2 });
+    expect(st().frozen.map((f) => f.id)).toEqual([c2]);
+    expect(h.evs("tagged").at(-1)).toMatchObject({ to: [c2] });
+
+    // Reportar: perto do congelado; congelado não reporta nem vota.
+    imp().handle(c2, "report", { body: c2 });
+    expect(st().phase).toBe("playing");
+    h.pos.set(c3, { ...h.pos.get(c2)!, z: h.pos.get(c2)!.z - 1 });
+    imp().handle(c3, "report", { body: c2 });
+    expect(st()).toMatchObject({ phase: "meeting", meeting: { reason: "report" } });
+    imp().handle(c3, "chat", { text: "Vi alguém perto do café!" });
+    imp().handle(c2, "chat", { text: "fantasma falando" });
+    expect(st().meeting!.chat.map((m) => m.text)).toEqual(["Vi alguém perto do café!"]);
+    imp().handle(c2, "vote", { target: impostor });
+    imp().handle(c1, "vote", { target: impostor });
+    imp().handle(c3, "vote", { target: impostor });
+    imp().handle(impostor, "vote", { target: "skip" });
+    expect(st()).toMatchObject({ phase: "result", result: { wasImpostor: true } });
+    advance(7000);
+    expect(st()).toMatchObject({ phase: "final", final: { winner: "crew" } });
+  });
+
+  it("infiltrados vencem quando ficam em igual número", () => {
+    for (const id of ["a", "b", "c", "d"]) imp().handle(id, "join", {});
+    imp().handle("a", "start", {});
+    const ids = ["a", "b", "c", "d"];
+    const impostor = ids.find((id) => roleOf(id).role === "impostor")!;
+    const crew = ids.filter((id) => id !== impostor);
+    vi.advanceTimersByTime(IMP_FIRST_TAG_MS);
+    h.pos.set(impostor, h.pos.get(crew[0]!)!);
+    imp().handle(impostor, "tag", { target: crew[0] });
+    // Reunião de emergência sem ninguém sair (todos pulam).
+    imp().handle(crew[1]!, "emergency", {});
+    for (const id of [crew[1]!, crew[2]!, impostor]) imp().handle(id, "vote", { target: "skip" });
+    expect(st().result).toMatchObject({ ejected: null });
+    advance(7000);
+    expect(st().phase).toBe("playing");
+    // Segunda chamada de emergência da mesma pessoa não vale.
+    imp().handle(crew[1]!, "emergency", {});
+    expect(st().phase).toBe("playing");
+    vi.advanceTimersByTime(30_000);
+    h.pos.set(impostor, h.pos.get(crew[1]!)!);
+    imp().handle(impostor, "tag", { target: crew[1] });
+    expect(st()).toMatchObject({ phase: "final", final: { winner: "impostor" } });
   });
 });

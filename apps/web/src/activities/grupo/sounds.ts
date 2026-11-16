@@ -156,3 +156,25 @@ registerSynth("stop-largada", (c, out) => {
   o.stop(t + 0.6);
   lfo.stop(t + 0.6);
 });
+
+registerSynth("imp-papel", (c, out) => {
+  const t = c.currentTime;
+  note(c, out, 110, t, 1.6, 0.25, "sawtooth", 98);
+  note(c, out, 164.8, t + 0.05, 1.4, 0.14, "triangle");
+  note(c, out, 220, t + 0.5, 1.1, 0.12, "sine");
+  noise(c, out, t + 0.5, 0.4, 0.15, 400, 0.7, "lowpass");
+});
+
+registerSynth("imp-congelar", (c, out) => {
+  const t = c.currentTime;
+  for (let i = 0; i < 10; i++) noise(c, out, t + i * 0.03, 0.04, 0.22, 4000 + i * 300, 4);
+  [1568, 2093, 2637].forEach((f, i) => note(c, out, f, t + 0.25 + i * 0.07, 0.5, 0.12, "sine"));
+});
+
+registerSynth("imp-reuniao", (c, out) => {
+  const t = c.currentTime;
+  for (let k = 0; k < 2; k++) {
+    note(c, out, 660, t + k * 0.8, 0.35, 0.18, "square", 640);
+    note(c, out, 494, t + k * 0.8 + 0.38, 0.35, 0.18, "square", 480);
+  }
+});

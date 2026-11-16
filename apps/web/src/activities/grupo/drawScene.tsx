@@ -120,7 +120,7 @@ function compose(canvas: HTMLCanvasElement, art: HTMLCanvasElement, s: DrawState
     if (top && top.score > 0) {
       ctx.fillStyle = "#EE5C29";
       ctx.font = `700 46px Geist, sans-serif`;
-      ctx.fillText(`${top.name} venceu!`, TW / 2, 290);
+      ctx.fillText(T.draw.winner(top.name), TW / 2, 290);
     }
     doodles(ctx);
     return;

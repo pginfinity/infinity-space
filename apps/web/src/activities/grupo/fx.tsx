@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Vec2 } from "@infinity/world";
 import type { ActivityClient } from "../registry.ts";
+import { ChipDockHost } from "./shared.tsx";
 
 /**
  * Efeitos compartilhados dos jogos de grupo: chuva de confete no fim de uma partida (quiz no palco,
@@ -106,5 +107,6 @@ function Confetti() {
 
 export const fxClient: ActivityClient = {
   name: "grupo/efeitos",
+  Overlay: ChipDockHost,
   Scene: Confetti,
 };

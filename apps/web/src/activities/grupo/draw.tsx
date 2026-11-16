@@ -283,7 +283,7 @@ function Game({ id, s, me }: { id: string; s: DrawState; me: string }) {
         <div className="flex min-h-9 items-center gap-3">
           <div className="min-w-0 flex-1" aria-live="polite">
             {s.phase === "choosing" ? (
-              <p className="truncate text-sm text-offwhite/85">{iDraw ? T.draw.chooseTitle : T.draw.choosing(drawer?.name ?? "")}</p>
+              <p className="truncate text-sm text-offwhite/85">{iDraw ? T.draw.youDraw : T.draw.choosing(drawer?.name ?? "")}</p>
             ) : s.phase === "turnEnd" ? (
               <p className="truncate text-sm">
                 <span className="text-slate">{T.draw.wordWas} </span>
@@ -404,7 +404,7 @@ function CanvasArea({ id, s, iDraw }: { id: string; s: DrawState; iDraw: boolean
       />
       <AnimatePresence>
         {s.phase === "choosing" && (
-          <motion.div key="choosing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.15 } }} className="absolute inset-0 grid place-items-center bg-space/80 p-4 backdrop-blur-[2px]">
+          <motion.div key="choosing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.15 } }} className="absolute inset-0 grid place-items-center bg-space/90 p-4">
             {s.drawer === me && choices ? (
               <div className="flex w-full max-w-xl flex-col items-center gap-3">
                 <p className="font-display text-sm font-bold uppercase tracking-[0.1em] text-offwhite">{T.draw.chooseTitle}</p>
@@ -454,8 +454,8 @@ function Toolbar({ id }: { id: string }) {
   const color = useDrawLocal((l) => l.color);
   const size = useDrawLocal((l) => l.size);
   return (
-    <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Ferramentas de desenho">
-      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Cor">
+    <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label={T.draw.tools}>
+      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={T.draw.colorGroup}>
         {DRAW_COLORS.map((c, i) => (
           <button
             key={c}
@@ -474,7 +474,7 @@ function Toolbar({ id }: { id: string }) {
         ))}
       </div>
       <span className="h-6 w-px bg-offwhite/12" aria-hidden />
-      <div className="flex gap-1" role="radiogroup" aria-label="Espessura">
+      <div className="flex gap-1" role="radiogroup" aria-label={T.draw.sizeGroup}>
         {DRAW_SIZES.map((w, i) => (
           <button
             key={w}
@@ -539,7 +539,7 @@ function Feed({ id, s, me }: { id: string; s: DrawState; me: string }) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-1.5">
-      <ol ref={list} className="flex max-h-48 min-h-24 flex-col gap-0.5 overflow-y-auto rounded-xl bg-deep/60 p-2 text-[13px] ring-1 ring-offwhite/8 sm:max-h-56" aria-live="polite" aria-label="Chutes">
+      <ol ref={list} className="flex max-h-48 min-h-24 flex-col gap-0.5 overflow-y-auto rounded-xl bg-deep/60 p-2 text-[13px] ring-1 ring-offwhite/8 sm:max-h-56" aria-live="polite" aria-label={T.draw.feed}>
         {s.feed.map((f, i) => (
           <li key={`${s.game}-${i}-${f.name}-${f.text ?? ""}`} className={clsx("leading-snug", f.k === "correct" ? "font-medium text-ok" : f.k === "info" ? "text-slate" : "text-offwhite/85")}>
             {f.k === "correct" ? (

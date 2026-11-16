@@ -139,6 +139,8 @@ export function drawCheckGuess(guess: string, word: string): DrawGuessResult {
   const w = grupoFold(word);
   if (!g || !w) return "wrong";
   if (g === w || g.replace(/ /g, "") === w.replace(/ /g, "")) return "correct";
+  // Frase com a palavra dentro ("é uma girafa"): não vai para o feed (entregaria a resposta).
+  if (w.length >= 3 && g.replace(/ /g, "").includes(w.replace(/ /g, ""))) return "close";
   const tol = w.length >= 8 ? 2 : w.length >= 4 ? 1 : 0;
   if (tol === 0) return "wrong";
   const d = grupoEditDistance(g.replace(/ /g, ""), w.replace(/ /g, ""), tol);

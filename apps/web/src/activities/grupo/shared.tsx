@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
 import { X } from "lucide-react";
@@ -18,7 +19,7 @@ import { T } from "./strings.ts";
 
 // ---- painel aberto (um por vez) -------------------------------------------------------------
 
-export type GrupoGame = "quiz" | "draw" | "stop";
+export type GrupoGame = "quiz" | "draw" | "stop" | "impostor";
 
 interface GrupoUi {
   panel: { game: GrupoGame; id: string; view?: string } | null;
@@ -356,7 +357,26 @@ export function FloatChip({ children, onClick, label }: { children: ReactNode; o
   );
 }
 
-/** Onde os chips ficam: centro, acima do botão de interação. */
+const DOCK_ID = "grupo-chip-dock";
+
+/** Lugar único dos chips dos jogos (centro, acima do botão de interação): um embaixo do outro, sem sobrepor. */
+export function ChipDockHost() {
+  return <div id={DOCK_ID} className="pointer-events-none absolute inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+120px)] z-20 flex flex-col items-center gap-2 px-3" />;
+}
+
+/** Chips de um jogo, levados para o lugar único (portal). */
 export function ChipDock({ children }: { children: ReactNode }) {
-  return <div className="pointer-events-none absolute inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+120px)] z-20 flex flex-col items-center gap-2 px-3">{children}</div>;
+  const [el, setEl] = useState<HTMLElement | null>(() => document.getElementById(DOCK_ID));
+  useEffect(() => {
+    if (el?.isConnected) return;
+    const find = () => {
+      const e = document.getElementById(DOCK_ID);
+      if (e) setEl(e);
+      return !!e;
+    };
+    if (find()) return;
+    const t = window.setInterval(() => find() && window.clearInterval(t), 120);
+    return () => window.clearInterval(t);
+  }, [el]);
+  return el?.isConnected ? createPortal(children, el) : null;
 }

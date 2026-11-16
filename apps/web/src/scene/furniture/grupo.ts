@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { C, mix, poly, trs, type ModelFn } from "./core.ts";
+import { C, T, lit, litClear, mix, poly, trs, type ModelFn } from "./core.ts";
+import { at } from "./kit.ts";
 
 /**
  * Móveis do pacote "grupo" (jogos de grupo).
@@ -88,4 +89,62 @@ export const stopBoard: ModelFn = ({ b, accent }) => {
     // ponteiro (triângulo) apontando para o gomo de cima
     b.front(C.graphite, poly([[-0.03, 0.05], [0.03, 0.05], [0, -0.012]]), 0.02, 0, 0.16, 0.03);
   });
+};
+
+/**
+ * Terminal de missões (Impostor na Estação): pedestal com tampo inclinado de comando, mini mapa
+ * da estação aceso e a estação em holograma girando por cima. Fica no Átrio, perto do lounge.
+ */
+export const missionConsole: ModelFn = ({ b, accent }) => {
+  const glowC = accent ?? C.signal;
+  b.box(C.graphite, 0.86, 0.07, 0.66, 0, 0.035, 0, { r: 0.025 });
+  b.box(C.navy, 0.62, 0.86, 0.46, 0, 0.5, -0.02, { r: 0.04 });
+  // faixas de luz na frente do pedestal
+  b.box(lit(glowC), 0.5, 0.022, 0.01, 0, 0.78, 0.212, { r: 0 });
+  b.box(lit(mix(glowC, C.navy, 0.45)), 0.5, 0.014, 0.01, 0, 0.2, 0.212, { r: 0 });
+  // tampo inclinado com a tela do mapa
+  const tilt = -0.42;
+  b.at(0, 0.98, 0.04, { rx: tilt }, () => {
+    b.box(C.graphite, 0.8, 0.05, 0.5, 0, 0, 0, { r: 0.02 });
+    b.box(lit(T.screen), 0.62, 0.012, 0.36, 0, 0.03, 0.01, { r: 0 });
+    const room = lit(mix(T.screen, glowC, 0.45));
+    const rooms: [number, number, number, number][] = [
+      [-0.21, -0.11, 0.14, 0.08],
+      [-0.04, -0.11, 0.14, 0.08],
+      [0.13, -0.11, 0.14, 0.08],
+      [-0.21, 0.02, 0.14, 0.1],
+      [0.13, 0.02, 0.14, 0.1],
+      [-0.12, 0.13, 0.2, 0.06],
+      [0.12, 0.13, 0.2, 0.06],
+    ];
+    for (const [x, z, w, d] of rooms) b.box(room, w, 0.006, d, x, 0.038, z, { r: 0 });
+    b.cyl(lit(glowC), 0.04, 0.008, -0.04, 0.04, 0.02, { seg: 14 });
+    // alerta laranja (a "reunião de emergência") e dois botões
+    b.cyl(C.ink, 0.045, 0.02, 0.33, 0.03, 0.12, { seg: 14 });
+    b.cyl(lit(C.orange), 0.034, 0.03, 0.33, 0.04, 0.12, { seg: 14 });
+    b.box(lit(C.sky), 0.05, 0.016, 0.03, 0.33, 0.035, -0.02, { r: 0.004 });
+    b.box(lit(C.offwhite), 0.05, 0.016, 0.03, 0.33, 0.035, -0.08, { r: 0.004 });
+  });
+  // emissor e feixe do holograma
+  b.cyl(C.graphite, 0.09, 0.08, 0, 1.12, -0.16, { seg: 16 });
+  b.cyl(lit(glowC), 0.06, 0.01, 0, 1.165, -0.16, { seg: 16 });
+  b.cyl(litClear(glowC, 0.1), 0.06, 0.42, 0, 1.38, -0.16, { rt: 0.26, open: true, seg: 20 });
+  b.anim(
+    (s) => {
+      const hc = litClear(glowC, 0.5);
+      // a estação em miniatura: um deck retangular com salas e o átrio no meio
+      s.box(hc, 0.44, 0.012, 0.26, 0, 0, 0, { r: 0 });
+      for (const x of [-0.15, 0, 0.15]) s.box(litClear(C.sky, 0.45), 0.12, 0.05, 0.08, x, 0.03, -0.08, { r: 0 });
+      for (const x of [-0.15, 0.15]) s.box(litClear(C.sky, 0.45), 0.12, 0.05, 0.08, x, 0.03, 0.08, { r: 0 });
+      s.cyl(litClear(C.orange, 0.85), 0.03, 0.08, 0, 0.05, 0.08, { seg: 10 });
+      s.torus(litClear(glowC, 0.35), 0.3, 0.005, 0, 0, 0, { rx: Math.PI / 2, seg: 36, tseg: 3 });
+    },
+    {
+      copies: [at(0, 1.62, -0.16)],
+      pose: (t, seed, _k, out) => {
+        out.makeRotationY(t * 0.5 + seed * 6);
+        out.setPosition(0, Math.sin(t * 1.4 + seed * 3) * 0.025, 0);
+      },
+    },
+  );
 };

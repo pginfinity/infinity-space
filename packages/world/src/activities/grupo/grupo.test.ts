@@ -25,6 +25,9 @@ import {
   drawPickChoices,
   drawRevealCount,
 } from "./draw.ts";
+import { buildStationMap } from "../../map/estacao.ts";
+import { NavGrid } from "../../nav.ts";
+import { impImpostorCount, impPickImpostors, impPickTasks, impTally, impTaskSpots, impWinner } from "./impostor.ts";
 import { STOP_LETTERS, stopCleanCategories, stopDrawLetter, stopFitsLetter, stopScore, stopVotesNeeded } from "./stop.ts";
 
 describe("grupo: utilidades", () => {
@@ -133,6 +136,8 @@ describe("Desenhe e adivinhe", () => {
     expect(drawCheckGuess("jirafa", "girafa")).toBe("close");
     expect(drawCheckGuess("elefnate", "elefante")).toBe("close");
     expect(drawCheckGuess("leao", "leão")).toBe("correct");
+    // chute com a palavra dentro não aparece para os outros
+    expect(drawCheckGuess("é uma girafa", "girafa")).toBe("close");
     // palavra curta não tem "quase"
     expect(drawCheckGuess("sal", "sol")).toBe("wrong");
     expect(drawCheckGuess("cavalo", "girafa")).toBe("wrong");
@@ -222,5 +227,44 @@ describe("Stop", () => {
     expect(stopCleanCategories(["Nome", " nome ", "Cor", "", "Animal"])).toEqual(["Nome", "Cor", "Animal"]);
     expect(stopCleanCategories(["Nome", "Cor"])).toBeNull();
     expect(stopCleanCategories("x")).toBeNull();
+  });
+});
+
+describe("Impostor na Estação", () => {
+  const map = buildStationMap();
+  const nav = NavGrid.fromMap(map);
+  const spots = impTaskSpots(map, nav);
+
+  it("tarefas espalhadas pela estação, com ponto andável", () => {
+    expect(spots.length).toBeGreaterThanOrEqual(12);
+    expect(new Set(spots.map((s) => s.zone)).size).toBeGreaterThanOrEqual(6);
+    for (const s of spots) expect(nav.isWalkable(s.point)).toBe(true);
+  });
+
+  it("sorteio: um infiltrado (dois com 7+) e tarefas em salas diferentes", () => {
+    expect(impImpostorCount(4)).toBe(1);
+    expect(impImpostorCount(7)).toBe(2);
+    const ids = ["a", "b", "c", "d", "e", "f", "g"];
+    const imps = impPickImpostors(ids, grupoRng(5));
+    expect(imps).toHaveLength(2);
+    expect(new Set(imps).size).toBe(2);
+    const tasks = impPickTasks(spots, 4, grupoRng(2));
+    expect(new Set(tasks).size).toBe(4);
+    const zones = tasks.map((t) => spots.find((s) => s.id === t)!.zone);
+    expect(new Set(zones).size).toBe(4);
+  });
+
+  it("votação: maioria tira; empate ou pular não tira ninguém", () => {
+    expect(impTally(new Map([["a", "c"], ["b", "c"], ["c", "skip"]])).ejected).toBe("c");
+    expect(impTally(new Map([["a", "c"], ["b", "d"]]))).toMatchObject({ ejected: null, tie: true });
+    expect(impTally(new Map([["a", "skip"], ["b", "skip"], ["c", "d"]])).ejected).toBeNull();
+    expect(impTally(new Map()).ejected).toBeNull();
+  });
+
+  it("vitória: tarefas completas ou infiltrados descobertos; infiltrados empatando em número", () => {
+    expect(impWinner({ crew: 3, impostors: 1 }, { done: 12, total: 12 })).toBe("crew");
+    expect(impWinner({ crew: 3, impostors: 0 }, { done: 0, total: 12 })).toBe("crew");
+    expect(impWinner({ crew: 1, impostors: 1 }, { done: 3, total: 12 })).toBe("impostor");
+    expect(impWinner({ crew: 2, impostors: 1 }, { done: 3, total: 12 })).toBeNull();
   });
 });

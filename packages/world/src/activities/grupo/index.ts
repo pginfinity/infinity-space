@@ -7,3 +7,4 @@ export * from "./quiz.ts";
 export * from "./quizSeed.ts";
 export * from "./draw.ts";
 export * from "./stop.ts";
+export * from "./impostor.ts";

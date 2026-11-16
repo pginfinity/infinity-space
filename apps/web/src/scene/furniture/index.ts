@@ -97,6 +97,7 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   arcade: games.arcade,
   jukebox: games.jukebox,
   "stop-board": grupo.stopBoard,
+  "mission-console": grupo.missionConsole,
 };
 
 /** Quantas variantes (o.variant) cada tipo tem. Tipos ausentes têm só a 0. */

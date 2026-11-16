@@ -325,6 +325,8 @@ export function buildStationMap(): MapDef {
   b.put("plant", -4.3, 8.3, N, { zoneId: "atrio", variant: 1 });
   b.put("plant", 6.3, 4.4, N, { zoneId: "atrio", variant: 2 });
   b.put("water-cooler", 6.4, 6.8, W, { zoneId: "atrio" });
+  // pacote grupo: terminal de missões do Impostor na Estação, perto do lounge
+  b.put("mission-console", 6.25, 2.3, W, { zoneId: "atrio", label: "Terminal de missões", interact: { point: { x: 5.4, z: 2.3 }, yaw: E, radius: 1.7, action: "use", label: "Impostor na Estação" } });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],
