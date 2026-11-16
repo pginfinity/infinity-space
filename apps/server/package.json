@@ -6,8 +6,7 @@
   "description": "Servidor do mundo do Infinity Space: WebSocket + API HTTP.",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts",
-    "start": "node dist/index.js",
-    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/index.js --packages=external --alias:@infinity/world=../../packages/world/src/index.ts",
+    "start": "node --import tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -20,12 +19,11 @@
     "livekit-server-sdk": "^2.19.3",
     "msgpackr": "^2.1.4",
     "nodemailer": "10.3.1",
-    "ws": "^8.23.0"
+    "ws": "^8.23.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/nodemailer": "8.0.2",
-    "@types/ws": "^8.18.2",
-    "esbuild": "^0.28.2",
-    "tsx": "^4.23.15"
+    "@types/ws": "^8.18.2"
   }
 }

@@ -1,5 +1,8 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { existsSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import { OfficeRoom } from "./room.ts";
 import { Accounts } from "./auth/accounts.ts";
@@ -17,6 +20,19 @@ const app = new Hono();
 const accounts = new Accounts(room.store);
 app.route("/api", authRoutes(accounts, { removed: (email) => room.disconnectEmail(email) }));
 app.get("/health", (c) => c.json({ ok: true, online: room.size, uptime: Math.round((Date.now() - startedAt) / 1000) }));
+app.all("/api/*", (c) => c.json({ error: "não encontrado" }, 404));
+// Produção: o próprio servidor entrega o app compilado (apps/web/dist), com cache longo nos arquivos com hash.
+const STATIC_DIR = process.env.STATIC_DIR ? resolve(process.env.STATIC_DIR) : null;
+if (STATIC_DIR && existsSync(STATIC_DIR)) {
+  const root = relative(process.cwd(), STATIC_DIR) || ".";
+  app.use("/assets/*", async (c, next) => {
+    await next();
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+  });
+  app.use("*", serveStatic({ root }));
+  // Qualquer outra rota de página volta para o app (ele decide o que mostrar).
+  app.get("*", serveStatic({ root, path: "index.html" }));
+}
 
 const server = serve({ fetch: app.fetch, port: PORT, hostname: HOST }, (info) => {
   console.log(`[servidor] login ${AUTH_REQUIRED ? "ligado" : "desligado (desenvolvimento)"}`);

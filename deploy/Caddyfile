@@ -1,0 +1,20 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# App: atrás do proxy da Cloudflare (nuvem laranja), com o Origin Certificate dela (SSL Full strict).
+space.ai-infinity.io {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+	encode zstd gzip
+	reverse_proxy app:2567
+}
+
+# Sinalização do LiveKit (DNS only: a Cloudflare não transporta WebRTC). Certificado Let's Encrypt.
+rtc.space.ai-infinity.io {
+	reverse_proxy host.docker.internal:7880
+}
+
+# Só para o Caddy emitir o certificado que o TURN do LiveKit usa (porta 5349).
+turn.space.ai-infinity.io {
+	respond "Infinity Space TURN" 200
+}

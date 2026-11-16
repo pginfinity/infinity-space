@@ -1,0 +1,18 @@
+**/node_modules
+**/dist
+.git
+.agentes
+.claude
+.tools
+.github
+test-results
+playwright-report
+apps/server/data
+.env
+.env.*
+ID 2026 INFINITY
+docs
+e2e
+**/*.mp4
+**/*.mov
+**/*.eps

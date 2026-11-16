@@ -53,9 +53,19 @@ O login é por convite com link mágico (sem senha), então o servidor precisa m
 - Repositório GitHub privado com estes **secrets** em Actions: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
 - Arquivo `.env` de produção criado direto na VPS (nunca no repositório). O modelo vem em `.env.example`.
 
+Primeira subida (uma vez, na VPS):
+
+1. `git clone <repositório> /opt/infinity-space` e criar `/opt/infinity-space/.env` a partir do `.env.example`.
+2. Pôr o Origin Certificate da Cloudflare em `/etc/infinity/certs/origin.pem` e `origin.key` (permissão 600).
+3. `cd /opt/infinity-space && docker compose --env-file .env -f deploy/docker-compose.yml up -d --build`.
+4. Conferir `https://space.ai-infinity.io/health` e entrar com um dos e-mails de `ADMIN_EMAILS`.
+
+Depois disso, cada push na `main` que passar na verificação (typecheck, testes e build) é publicado sozinho pelo workflow `Deploy`. Arquivos: `Dockerfile`, `deploy/docker-compose.yml` (app, LiveKit e Caddy), `deploy/Caddyfile`, `deploy/livekit.yaml`.
+
 ## 6. Backups e manutenção
 
-- Dump diário do PostgreSQL, guardado por 14 dias, com cópia fora da VPS.
+- Backup diário do volume `dados` (contas, mural, plantas, rankings, gravações pendentes), guardado por 14 dias, com cópia fora da VPS. Ex.: `docker run --rm -v infinity-space_dados:/d -v /backup:/b alpine tar czf /b/dados-$(date +%F).tgz -C /d .`
+- O certificado do TURN (Let's Encrypt, emitido pelo Caddy) renova a cada ~60 dias e o LiveKit só lê na partida: reiniciar o LiveKit uma vez por semana (cron: `docker compose -f /opt/infinity-space/deploy/docker-compose.yml restart livekit`), de madrugada.
 - Atualizações de segurança automáticas do Ubuntu (`unattended-upgrades`).
 - Monitoramento simples de disponibilidade (ex.: UptimeRobot grátis) em `https://space.ai-infinity.io/health`.
 

@@ -1,0 +1,60 @@
+# Infinity Space em produção, numa VPS só (ver docs/infra.md).
+# Na VPS:  cd /opt/infinity-space && docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+#
+# - app: servidor do mundo + app web (porta interna 2567, atrás do Caddy)
+# - livekit: áudio, vídeo, tela e TURN (rede do host: WebRTC precisa das portas UDP diretas)
+# - caddy: HTTPS (certificado de origem da Cloudflare no domínio principal; Let's Encrypt em rtc/turn)
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      # O LiveKit roda na rede do host; o gravador de reuniões fala com ele por aqui.
+      LIVEKIT_INTERNAL_URL: ws://host.docker.internal:7880
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - dados:/var/lib/infinity/data
+      # JSON da conta de serviço do Google (gravações no Drive), se houver.
+      - /etc/infinity:/etc/infinity:ro
+    expose:
+      - "2567"
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    network_mode: host
+    command: --config /etc/livekit.yaml
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+      # Certificado do TURN emitido pelo Caddy (Let's Encrypt).
+      - caddy_data:/caddy:ro
+
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      ACME_EMAIL: "${ACME_EMAIL}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Origin Certificate da Cloudflare: origin.pem e origin.key.
+      - /etc/infinity/certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  dados:
+  caddy_data:
+  caddy_config:
