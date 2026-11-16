@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Builder, C, T, clear, lit, mix, poly, roundRect, type ModelFn } from "./core.ts";
-import { at, ball } from "./kit.ts";
+import { at } from "./kit.ts";
 
 /** Mesas de jogos, fliperama e jukebox. */
 
@@ -74,20 +74,10 @@ export const pool: ModelFn = ({ b, color }) => {
   }
   // marcações (diamantes)
   for (const s of [-1, 1]) for (const k of [-2, -1, 1, 2]) b.box(C.offwhite, 0.03, 0.006, 0.03, s * (W / 2 - 0.06), H + 0.001, k * 0.3, { r: 0, ry: Math.PI / 4 });
-  // bolas em triângulo + branca + taco
-  const cols = [C.gold, C.signal, C.red, C.navy, C.orange, C.green, C.woodDark, C.ink, C.gold, C.sky, C.pink, T.navySoft, C.orange, C.leaf, C.wood];
-  const r = 0.028;
-  let k = 0;
-  for (let row = 0; row < 5; row++)
-    for (let i = 0; i <= row; i++) {
-      const x = (i - row / 2) * r * 2.05;
-      const z = -0.55 - row * r * 1.78;
-      ball(b, cols[k++ % cols.length] as string, r, x, H - 0.02, z);
-    }
-  ball(b, C.offwhite, r, 0.08, H - 0.02, 0.62);
-  b.rod(C.woodLight, 0.011, -0.42, H + 0.012, 0.9, 0.2, H + 0.012, -0.2, { rt: 0.008, seg: 8 });
-  b.rod(C.woodDark, 0.014, -0.5, H + 0.014, 1.04, -0.42, H + 0.012, 0.9, { seg: 8 });
-  b.box(C.signal, 0.03, 0.025, 0.03, 0.62, H + 0.012, -1.05, { r: 0.006 });
+  // as bolas da partida são desenhadas ao vivo (cena do pacote arcade); o taco fica apoiado na tabela
+  b.rod(C.woodLight, 0.011, W / 2 - 0.06, H + 0.012, -0.95, W / 2 - 0.06, H + 0.012, 0.35, { rt: 0.008, seg: 8 });
+  b.rod(C.woodDark, 0.014, W / 2 - 0.06, H + 0.014, 0.35, W / 2 - 0.06, H + 0.016, 0.95, { seg: 8 });
+  b.box(C.signal, 0.03, 0.025, 0.03, -W / 2 + 0.06, H + 0.012, -1.05, { r: 0.006 });
 };
 
 export const pingpong: ModelFn = ({ b, color }) => {

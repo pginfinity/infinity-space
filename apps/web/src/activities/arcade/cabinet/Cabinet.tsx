@@ -112,7 +112,8 @@ function CabinetPanel({ machine }: { machine: string }) {
     ctl.current = { start, pause, close };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Tab continua mudando o foco (botões da lateral)
+      if (e.ctrlKey || e.metaKey || e.altKey || e.code === "Tab") return;
       const t = e.target as HTMLElement | null;
       // botões da lateral continuam funcionando com Enter
       if (t?.tagName === "BUTTON" && (e.code === "Enter" || e.code === "Space") && t.closest("[data-cab-side]")) return;

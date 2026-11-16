@@ -7,3 +7,4 @@ export * from "./hockey.ts";
 export * from "./pong.ts";
 export * from "./cabinets.ts";
 export * from "./paperball.ts";
+export * from "./pool.ts";

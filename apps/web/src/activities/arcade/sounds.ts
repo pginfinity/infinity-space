@@ -117,3 +117,17 @@ registerSynth("arcade-paper-rim", (c, out) => {
   tone(c, out, { type: "triangle", f0: 3150, dur: 0.18, gain: 0.08 });
 });
 registerSynth("arcade-paper-miss", (c, out) => noise(c, out, { freq: 1500, q: 1.5, dur: 0.06, gain: 0.25 }));
+
+// ---- sinuca
+registerSynth("arcade-pool-cue", (c, out) => {
+  noise(c, out, { freq: 1800, q: 2.5, dur: 0.05, gain: 0.35 });
+  tone(c, out, { f0: 700, f1: 450, dur: 0.06, gain: 0.15 });
+});
+registerSynth("arcade-pool-clack", (c, out) => {
+  tone(c, out, { f0: 2600, f1: 2200, dur: 0.05, gain: 0.25 });
+  noise(c, out, { freq: 4000, q: 3, dur: 0.03, gain: 0.2 });
+});
+registerSynth("arcade-pool-pocket", (c, out) => {
+  tone(c, out, { f0: 260, f1: 140, dur: 0.18, gain: 0.3 });
+  noise(c, out, { freq: 500, q: 1, dur: 0.15, gain: 0.25, at: 0.05 });
+});

@@ -122,5 +122,17 @@
   "arcade-paper-miss": {
     "prompt": "Crumpled paper ball landing on a carpet floor, very soft tap, no music",
     "seconds": 0.3
+  },
+  "arcade-pool-cue": {
+    "prompt": "Pool cue tip striking the cue ball, short crisp tock, no music",
+    "seconds": 0.3
+  },
+  "arcade-pool-clack": {
+    "prompt": "Two billiard balls colliding, sharp bright clack, close up, no music",
+    "seconds": 0.3
+  },
+  "arcade-pool-pocket": {
+    "prompt": "Billiard ball dropping into a pool table pocket and rolling, soft hollow thunk, no music",
+    "seconds": 0.6
   }
 }
