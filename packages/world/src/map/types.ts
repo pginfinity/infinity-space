@@ -146,6 +146,10 @@ export type ObjectType =
   | "pingpong"
   | "chess-table"
   | "connect4-table"
+  // pacote arcade
+  | "tictactoe-table"
+  | "arcade-board"
+  | "trash-bin"
   | "arcade"
   | "jukebox"
   // jogos de grupo (pacote grupo)

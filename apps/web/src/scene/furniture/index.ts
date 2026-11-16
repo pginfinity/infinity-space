@@ -14,6 +14,7 @@ import * as games from "./games.ts";
 import * as grupo from "./grupo.ts";
 import * as escritorio from "./escritorio.ts";
 import * as vivo from "./vivo.ts";
+import * as arcade from "./arcade.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -122,6 +123,10 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   telescope: vivo.telescope,
   chalkboard: vivo.chalkboard,
   "watering-station": vivo.wateringStation,
+  // pacote arcade
+  "tictactoe-table": arcade.tictactoeTable,
+  "arcade-board": arcade.arcadeBoard,
+  "trash-bin": arcade.trashBin,
 };
 
 // ---- mobília montada na cena (para as atividades mudarem o visual de uma cópia) ----------------

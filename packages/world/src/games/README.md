@@ -23,7 +23,7 @@ Todo estado tem `turn` (lugar da vez), `winner`, `draw`, `over`, `reason`, `move
 
 - Xadrez (`ChessState`): `fen`, `history` (UCI), `san`, `last`, `check`, `lost`. Lugar 0 = brancas.
 - Lig 4 (`Connect4State`): `grid[row * 7 + col]` (linha 0 no topo; -1 vazio, 0/1 lugar), `last`, `line`. Lugar 0 = laranja.
-- Jogo da velha (`TicTacToeState`): `grid` (0 a 8), `last`, `line`. Lugar 0 = X. A mesa `tictactoe-table` ainda precisa entrar no catálogo do mapa.
+- Jogo da velha (`TicTacToeState`): `grid` (0 a 8), `last`, `line`. Lugar 0 = X. Mesa no mapa: `tictactoe-table` (Arcade).
 
 ## Cliente
 

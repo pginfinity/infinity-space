@@ -90,6 +90,10 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   pingpong: { w: 1.5, d: 2.7, h: 0.76, blocks: true, action: "play", label: "Jogar pingue-pongue", look: "Mesa de pingue-pongue azul com rede no meio." },
   "chess-table": { w: 0.8, d: 0.8, h: 0.74, blocks: true, action: "play", label: "Jogar xadrez", look: "Mesinha com tabuleiro de xadrez e peças." },
   "connect4-table": { w: 0.9, d: 0.7, h: 0.74, blocks: true, action: "play", label: "Jogar Lig 4", look: "Mesinha com o tabuleiro vertical de ligar 4 (grade azul, fichas laranja e brancas)." },
+  // pacote arcade
+  "tictactoe-table": { w: 0.8, d: 0.8, h: 0.74, blocks: true, action: "play", label: "Jogar jogo da velha", look: "Mesinha quadrada com tampo de acrílico escuro e a grade do jogo da velha acesa (a partida aparece ao vivo no tampo)." },
+  "arcade-board": { w: 2.2, d: 0.08, h: 1.2, blocks: false, action: "use", label: "Ver recordes", wallMounted: 1.75, look: "Placar de recordes dos fliperamas: moldura retrô com filete neon e tela larga (a textura com os rankings é desenhada à parte)." },
+  "trash-bin": { w: 0.36, d: 0.36, h: 0.5, blocks: true, action: "use", label: "Arremessar bolinha", look: "Lixeira de escritório cilíndrica, aro claro, com papel amassado dentro." },
   arcade: { w: 0.8, d: 0.8, h: 1.8, blocks: true, action: "play", label: "Jogar fliperama", look: "Máquina de fliperama retrô, tela brilhante, controles, lateral com arte colorida." },
   jukebox: { w: 0.9, d: 0.6, h: 1.6, blocks: true, action: "use", label: "Escolher música", look: "Jukebox retrô com painel frontal laranja brilhante e arco de luz." },
   // jogos de grupo (pacote grupo)

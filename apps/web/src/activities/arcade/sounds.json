@@ -1,0 +1,138 @@
+{
+  "arcade-hockey-hit": {
+    "prompt": "Air hockey mallet striking a plastic puck, sharp short plastic clack, close up, no music",
+    "seconds": 0.3
+  },
+  "arcade-hockey-wall": {
+    "prompt": "Air hockey puck bouncing off the table rail, short soft plastic knock, no music",
+    "seconds": 0.3
+  },
+  "arcade-hockey-goal": {
+    "prompt": "Air hockey puck dropping into the goal slot with a clunk followed by a short arcade buzzer, no music",
+    "seconds": 1
+  },
+  "arcade-pong-hit": {
+    "prompt": "Table tennis paddle hitting a ping pong ball, crisp single tok, close up, no music",
+    "seconds": 0.3
+  },
+  "arcade-pong-bounce": {
+    "prompt": "Ping pong ball bouncing once on a table, light high tick, no music",
+    "seconds": 0.3
+  },
+  "arcade-duel-point": {
+    "prompt": "Short friendly two note arcade chime for scoring a point, bright, no voice",
+    "seconds": 0.6
+  },
+  "arcade-duel-count": {
+    "prompt": "Single short retro countdown beep, clean, no music",
+    "seconds": 0.3
+  },
+  "arcade-duel-go": {
+    "prompt": "Single higher retro start beep, slightly longer, energetic, no music",
+    "seconds": 0.5
+  },
+  "arcade-duel-win": {
+    "prompt": "Short triumphant arcade victory jingle, four ascending notes, cheerful, no voice",
+    "seconds": 1.2
+  },
+  "arcade-duel-lose": {
+    "prompt": "Short gentle game over jingle, two descending notes, friendly not sad, no voice",
+    "seconds": 0.8
+  },
+  "cab-shoot": {
+    "prompt": "8-bit chiptune laser shot, short descending square wave zap, no voice",
+    "seconds": 0.2
+  },
+  "cab-pop": {
+    "prompt": "8-bit chiptune small debris pop, short noise burst, no voice",
+    "seconds": 0.2
+  },
+  "cab-explode": {
+    "prompt": "8-bit chiptune explosion, crunchy noise with low drop, no voice",
+    "seconds": 0.5
+  },
+  "cab-hit": {
+    "prompt": "8-bit chiptune metallic hit blip, no voice",
+    "seconds": 0.2
+  },
+  "cab-coin": {
+    "prompt": "8-bit chiptune coin pickup, two quick rising notes, no voice",
+    "seconds": 0.3
+  },
+  "cab-power": {
+    "prompt": "8-bit chiptune power-up, fast rising four note arpeggio, no voice",
+    "seconds": 0.4
+  },
+  "cab-shield": {
+    "prompt": "8-bit chiptune shield absorbing a hit, descending shimmer, no voice",
+    "seconds": 0.4
+  },
+  "cab-death": {
+    "prompt": "8-bit chiptune player lost a life, long falling tone with crunch, no voice",
+    "seconds": 0.8
+  },
+  "cab-level": {
+    "prompt": "8-bit chiptune level up jingle, four rising notes, no voice",
+    "seconds": 0.6
+  },
+  "cab-eat": {
+    "prompt": "8-bit chiptune collect sparkle, tiny upward blip, no voice",
+    "seconds": 0.2
+  },
+  "cab-bounce": {
+    "prompt": "8-bit chiptune ball bouncing on paddle, short square blip, no voice",
+    "seconds": 0.15
+  },
+  "cab-wall": {
+    "prompt": "8-bit chiptune ball touching a wall, very short low blip, no voice",
+    "seconds": 0.1
+  },
+  "cab-brick": {
+    "prompt": "8-bit chiptune brick breaking, bright short blip, no voice",
+    "seconds": 0.15
+  },
+  "cab-metal": {
+    "prompt": "8-bit chiptune ball hitting unbreakable metal, clink, no voice",
+    "seconds": 0.2
+  },
+  "cab-start": {
+    "prompt": "8-bit chiptune game start, three rising notes, no voice",
+    "seconds": 0.4
+  },
+  "cab-over": {
+    "prompt": "8-bit chiptune game over, three falling notes, no voice",
+    "seconds": 0.7
+  },
+  "cab-record": {
+    "prompt": "8-bit chiptune new high score fanfare, short and happy, no voice",
+    "seconds": 1
+  },
+  "arcade-paper-throw": {
+    "prompt": "Crumpled paper ball tossed through the air, soft quick whoosh, office ambience, no music",
+    "seconds": 0.4
+  },
+  "arcade-paper-in": {
+    "prompt": "Paper ball dropping cleanly into an office metal trash bin, soft swish and light thud, no music",
+    "seconds": 0.6
+  },
+  "arcade-paper-rim": {
+    "prompt": "Paper ball hitting the metal rim of a trash bin and bouncing off, light metallic clink, no music",
+    "seconds": 0.5
+  },
+  "arcade-paper-miss": {
+    "prompt": "Crumpled paper ball landing on a carpet floor, very soft tap, no music",
+    "seconds": 0.3
+  },
+  "arcade-pool-cue": {
+    "prompt": "Pool cue tip striking the cue ball, short crisp tock, no music",
+    "seconds": 0.3
+  },
+  "arcade-pool-clack": {
+    "prompt": "Two billiard balls colliding, sharp bright clack, close up, no music",
+    "seconds": 0.3
+  },
+  "arcade-pool-pocket": {
+    "prompt": "Billiard ball dropping into a pool table pocket and rolling, soft hollow thunk, no music",
+    "seconds": 0.6
+  }
+}
