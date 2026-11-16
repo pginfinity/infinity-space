@@ -11,6 +11,7 @@ import * as tech from "./tech.ts";
 import * as kitchen from "./kitchen.ts";
 import * as decor from "./decor.ts";
 import * as games from "./games.ts";
+import * as grupo from "./grupo.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -95,6 +96,7 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   "connect4-table": games.connect4Table,
   arcade: games.arcade,
   jukebox: games.jukebox,
+  "stop-board": grupo.stopBoard,
 };
 
 /** Quantas variantes (o.variant) cada tipo tem. Tipos ausentes têm só a 0. */
