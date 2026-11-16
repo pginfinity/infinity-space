@@ -13,7 +13,7 @@ Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gra
 | 2. Tela compartilhada | Pronta | Próxima reserva na TV parada, quando houver agenda de salas (caneta e TV com sala e hora entraram em 16/11) |
 | 3. Presença e convivência | Em andamento | Login, status, emotes e sentar prontos; chat, chamar/seguir/Ctrl+K, status automático, janela flutuante, portas e mesas em construção |
 | 4. Lente, avatar e arte | Parcial | Terra no horário real, luz do dia e escada de qualidade prontas; avatares melhores (adiado a pedido) e transição contínua 2D↔3D |
-| 5. Jogos e rituais | Parcial | 12 jogos prontos (ver interatividade.md); daily na sala do time, damas, dominó, baralho, palavra secreta |
+| 5. Jogos e rituais | Parcial | 12 jogos e a daily prontos (ver interatividade.md); damas, dominó, baralho, palavra secreta |
 | 6. App, celular e som | Pronta | App instalável (PWA), celular, sons gerados; músicas da jukebox aguardando decisão |
 | 7. Produção | Preparada | Docker, LiveKit, HTTPS e deploy automático prontos; falta a VPS e as credenciais (docs/infra.md) |
 

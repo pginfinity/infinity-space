@@ -12,7 +12,7 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação.
 - **Reuniões:** gravação da sala com envio ao Google Drive.
 
-Ainda não: rituais (daily, Pomodoro compartilhado), TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
+Ainda não: Pomodoro compartilhado (a daily já existe), TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
 
 ## Jogos
 

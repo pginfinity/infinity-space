@@ -1,0 +1,4 @@
+{
+  "daily-tempo": { "prompt": "Single soft gentle chime, warm and calm, signalling time is up without urgency, very short", "seconds": 1 },
+  "daily-fim": { "prompt": "Short cheerful three-note ascending chime, friendly team celebration, clean and discreet", "seconds": 1.2 }
+}
