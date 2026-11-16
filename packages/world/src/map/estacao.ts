@@ -333,6 +333,8 @@ export function buildStationMap(): MapDef {
     label: "Mural de recados",
     interact: { point: { x: -2.95, z: -3.1 }, yaw: N, radius: 1.9, action: "use", label: "Ver mural" },
   });
+  // pacote vivo: estação de rega (regadores e a plaquinha das plantas felizes)
+  b.put("watering-station", 6.45, 5.6, W, { zoneId: "atrio", label: "Estação de rega" });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],
@@ -429,6 +431,8 @@ export function buildStationMap(): MapDef {
   b.put("round-table", 23.0, -9.8, N, { zoneId: dirL.id });
   b.around("chair", 23.0, -9.8, 1.08, 4, 0, { zoneId: dirL.id, color: "#6B4A32" });
   b.put("plant-tall", 25.5, -7.6, N, { zoneId: dirL.id });
+  // pacote vivo: telescópio apontado para a janela leste
+  b.put("telescope", 25.1, -11.7, E, { zoneId: dirL.id, label: "Telescópio" });
 
   // ── Salas de reunião Órbita e Lua ───────────────────────────────────────────────────
   const orb = b.room("orbita", "Sala Órbita", "meeting", rect(-26, -16, -4, 2.5), s.orbita, { glass: true, capacity: 10 });
@@ -555,6 +559,8 @@ export function buildStationMap(): MapDef {
   b.put("plant-tall", -2.5, 12.6, N, { zoneId: cafe.id, variant: 1 });
   // pacote grupo: cavalete do Stop (Adedonha), ponto de entrada do jogo no Café
   b.put("stop-board", -4.4, 13.25, S, { zoneId: cafe.id, label: "Stop", interact: { point: { x: -4.4, z: 14.1 }, yaw: N, radius: 1.7, action: "use", label: "Jogar Stop" } });
+  // pacote vivo: quadro de giz com o contador do dia, embaixo do neon
+  b.put("chalkboard", -9.6, 12.6, S, { zoneId: cafe.id, label: "Quadro da copa" });
 
   // ── Gestão & Projetos (Ordenar) ─────────────────────────────────────────────────────
   const ges = b.room("gestao", "Gestão & Projetos", "open", rect(-2, 9, 12, 22), s.gestao, { team: "Gestão & Projetos" });

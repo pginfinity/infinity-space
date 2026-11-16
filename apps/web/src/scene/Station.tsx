@@ -4,7 +4,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { Lens } from "@infinity/world";
 import { world } from "../world/world.ts";
-import { buildFurniture } from "./furniture/index.ts";
+import { buildFurniture, registerFurniture } from "./furniture/index.ts";
 import { buildFloors } from "./floors.ts";
 import { buildWalls } from "./walls.ts";
 import { buildSigns } from "./signs.ts";
@@ -27,6 +27,7 @@ export function Station({ lens }: { lens: Lens }) {
 
   // Registra as TVs só depois de montar: no StrictMode o useMemo roda duas vezes e uma cópia é descartada.
   useEffect(() => registerScreens(built.furniture.screens), [built]);
+  useEffect(() => registerFurniture(built.furniture), [built]);
 
   useEffect(
     () => () => {

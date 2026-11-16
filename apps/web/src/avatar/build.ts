@@ -27,6 +27,9 @@ export interface AvatarRig {
   shoulderR: THREE.Group;
   elbowL: THREE.Group;
   elbowR: THREE.Group;
+  /** Pegadas das mãos (filhas dos cotovelos, no centro da mão): onde vão os itens segurados. */
+  handL: THREE.Group;
+  handR: THREE.Group;
   hipL: THREE.Group;
   hipR: THREE.Group;
   kneeL: THREE.Group;
@@ -229,7 +232,9 @@ export function buildAvatar(look: AvatarLook): AvatarRig {
     mesh(geo("forearm", () => capsule(0.048, 0.075)), shortSleeve ? skin : top, elbow, 0, -0.065);
     if (look.top === 1) mesh(geo("cuff-arm", () => new THREE.CylinderGeometry(0.052, 0.052, 0.03, 12)), top2, elbow, 0, -0.12);
     mesh(geo("hand", () => sphere(0.058, 16, 12)), skin, elbow, 0, -0.15);
-    return { shoulder, elbow };
+    const hand = joint(elbow, 0, -0.15);
+    hand.name = side > 0 ? "handL" : "handR";
+    return { shoulder, elbow, hand };
   });
 
   // Cabeça.
@@ -261,6 +266,8 @@ export function buildAvatar(look: AvatarLook): AvatarRig {
     shoulderR: arms[1]!.shoulder,
     elbowL: arms[0]!.elbow,
     elbowR: arms[1]!.elbow,
+    handL: arms[0]!.hand,
+    handR: arms[1]!.hand,
     hipL: legs[1]!.hip,
     hipR: legs[0]!.hip,
     kneeL: legs[1]!.knee,

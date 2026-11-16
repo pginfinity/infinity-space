@@ -151,6 +151,10 @@ export type ObjectType =
   // jogos de grupo (pacote grupo)
   | "stop-board"
   | "mission-console"
+  // pacote vivo (estação viva)
+  | "telescope"
+  | "chalkboard"
+  | "watering-station"
   // estruturas
   | "pod";
 

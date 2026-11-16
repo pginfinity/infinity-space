@@ -1,0 +1,15 @@
+{
+  "vivo-espresso": { "prompt": "Espresso machine brewing a single cup: short grinder whirr, then pump hum and gentle hiss of coffee pouring into a ceramic cup, cozy office kitchen, clean recording, no music", "seconds": 3.2 },
+  "vivo-kettle": { "prompt": "Small electric kettle finishing a boil with soft bubbling, then hot water poured into a glass cup with a tea bag, calm kitchen ambience, no music", "seconds": 3.2 },
+  "vivo-water": { "prompt": "Office water cooler dispensing water into a paper cup, two soft glugs of air bubbles rising in the jug, short and clean, no music", "seconds": 1.8 },
+  "vivo-fridge": { "prompt": "Refrigerator door opening with a soft seal pop, a glass bottle clink, juice poured into a glass, door closing gently, no music", "seconds": 1.6 },
+  "vivo-popcorn": { "prompt": "Small popcorn machine popping kernels, irregular light pops building up then slowing down, warm and playful, no music", "seconds": 4.2 },
+  "vivo-ready": { "prompt": "Soft friendly two-note chime meaning ready, warm marimba-like tone, very short, no music bed", "seconds": 0.6 },
+  "vivo-watering": { "prompt": "Watering can sprinkling water over a potted plant, gentle shower of drops on leaves and soil, short and calm, no music", "seconds": 2.4 },
+  "vivo-plant-happy": { "prompt": "Tiny magical shimmer of a plant coming back to life, three soft ascending bell notes with airy sparkle, subtle and tasteful, no music", "seconds": 1.2 },
+  "vivo-can": { "prompt": "Light metal watering can picked up from a wooden shelf, a soft clink and handle rattle, very short", "seconds": 0.4 },
+  "vivo-orbi-beep": { "prompt": "Cute small hovering robot making two curious chirping beeps, friendly and original, clean synth tones, very short", "seconds": 0.5 },
+  "vivo-orbi-happy": { "prompt": "Cute small hovering robot purring happily after being petted, a rising warbly synth melody of four notes, adorable and original, no words", "seconds": 1.2 },
+  "vivo-orbi-call": { "prompt": "Small friendly robot answering a call, quick bright double beep with a little upward swoop, very short", "seconds": 0.6 },
+  "vivo-telescope": { "prompt": "Soft cinematic whoosh opening into a quiet starry space ambience, gentle and wide, short, no music", "seconds": 1.4 }
+}
