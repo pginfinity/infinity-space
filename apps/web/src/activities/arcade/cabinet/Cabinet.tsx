@@ -275,6 +275,7 @@ function CabinetPanel({ machine }: { machine: string }) {
           aria-label={T.cab.screen(info.name)}
           data-cab-screen={game}
         />
+        <TouchPad />
       </div>
 
       <aside className="glass flex w-full flex-col gap-3 overflow-y-auto rounded-[var(--radius-panel)] p-4 text-offwhite md:w-[290px]" data-cab-side>
@@ -468,4 +469,43 @@ function demoInput(g: CabGame): CabInput {
     if (head.r <= 1 && g.dir === 3) i.leftPressed = true;
   }
   return i;
+}
+
+/** Toque: botões na tela que valem como as teclas (os jogos leem o teclado). Só em tela de toque. */
+const COARSE = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+
+function TouchPad() {
+  if (!COARSE) return null;
+  const press = (code: string, down: boolean) => window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup", { code, bubbles: true }));
+  const btn = (code: string, label: string, aria: string, wide = false) => (
+    <button
+      type="button"
+      aria-label={aria}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+        press(code, true);
+      }}
+      onPointerUp={() => press(code, false)}
+      onPointerCancel={() => press(code, false)}
+      onContextMenu={(e) => e.preventDefault()}
+      className={`grid h-14 select-none place-items-center rounded-2xl bg-offwhite/10 text-lg font-bold text-offwhite active:bg-offwhite/25 ${wide ? "w-28" : "w-14"}`}
+      style={{ touchAction: "none" }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="mt-3 flex w-full items-center justify-between gap-3" aria-label="Controles de toque">
+      <div className="flex gap-2">
+        {btn("ArrowLeft", "◀", "Esquerda")}
+        {btn("ArrowUp", "▲", "Acelerar")}
+        {btn("ArrowRight", "▶", "Direita")}
+      </div>
+      <div className="flex gap-2">
+        {btn("KeyP", "II", "Pausar")}
+        {btn("Space", "Ação", "Ação (atirar, lançar)", true)}
+      </div>
+    </div>
+  );
 }

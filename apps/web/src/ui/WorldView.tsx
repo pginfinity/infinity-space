@@ -4,6 +4,7 @@ import { useApp } from "../state/store.ts";
 import { connect, disconnect, sendInfo } from "../net/session.ts";
 import { startMovement, stopMovement } from "../engine/movement.ts";
 import { startInteract, stopInteract } from "../engine/interact.ts";
+import { toast } from "./toasts.ts";
 import { startEmoteKeys } from "../engine/emotes.ts";
 import { self } from "../world/registry.ts";
 import { placeName } from "../world/zoneLabel.ts";
@@ -33,6 +34,23 @@ export function WorldView() {
       disconnect();
     };
   }, []);
+
+  // Primeira visita neste navegador: aponta para o guia da estação (uma vez só).
+  useEffect(() => {
+    if (conn !== "open") return;
+    // No atalho de desenvolvimento/testes (?nome=) a dica não aparece.
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has("nome")) return;
+    let seen = true;
+    try {
+      seen = localStorage.getItem("infinity.dica.guia") === "1";
+      if (!seen) localStorage.setItem("infinity.dica.guia", "1");
+    } catch {
+      seen = true;
+    }
+    if (seen) return;
+    const id = window.setTimeout(() => toast("Dica: abra o mapa (canto inferior direito) para ver tudo o que dá para fazer na estação.", 9000), 2500);
+    return () => window.clearTimeout(id);
+  }, [conn]);
 
   // Avisa os outros sobre a lente em uso.
   useEffect(() => {
