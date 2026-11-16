@@ -20,6 +20,8 @@ export interface MediaSettings {
   master: number;
   /** Volume por pessoa, pelo nome (0 a 1.5). O id muda a cada conexão; o nome não. */
   people: Record<string, number>;
+  /** Presença: minutos sem mexer até ficar "Ausente" sozinho (0 = desligado). Detectado só aqui. */
+  awayAfter: number;
 }
 
 const KEY = "infinity.media.v1";
@@ -34,6 +36,7 @@ const DEFAULTS: MediaSettings = {
   video: "standard",
   master: 1,
   people: {},
+  awayAfter: 0,
 };
 
 function load(): MediaSettings {

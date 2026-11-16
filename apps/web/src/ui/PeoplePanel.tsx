@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { Footprints, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../net/auth.ts";
 import { InvitePanel } from "./InvitePanel.tsx";
@@ -11,7 +11,7 @@ import { useApp } from "../state/store.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { placeName } from "../world/zoneLabel.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
-import { walkTo } from "../engine/movement.ts";
+import { PersonActions } from "../presence/PersonActions.tsx";
 import { AvatarFace } from "./AvatarFace.tsx";
 
 /** Quem está no escritório, onde está e um atalho para ir até a pessoa. */
@@ -40,7 +40,7 @@ export function PeoplePanel() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 16 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="glass pointer-events-auto absolute right-3 top-16 bottom-24 flex w-[min(340px,calc(100vw-24px))] flex-col overflow-hidden rounded-[var(--radius-panel)]"
+      className="glass pointer-events-auto absolute right-3 top-16 bottom-24 flex w-[min(360px,calc(100vw-24px))] flex-col overflow-hidden rounded-[var(--radius-panel)]"
       aria-label={t("hud.people")}
     >
       <header className="flex items-center justify-between border-b border-offwhite/8 px-5 py-4">
@@ -83,16 +83,7 @@ export function PeoplePanel() {
                   {t(`status.${p.status}`)} · {pos ? placeName(pos) : "—"} · {p.lens.toUpperCase()}
                 </p>
               </div>
-              {!isSelf && pos && (
-                <button
-                  type="button"
-                  onClick={() => walkTo(pos)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-offwhite/10 px-2.5 py-1.5 text-xs text-offwhite/90 opacity-80 transition hover:border-signal hover:text-signal group-hover:opacity-100"
-                >
-                  <Footprints className="size-3.5" />
-                  {t("hud.goTo")}
-                </button>
-              )}
+              {!isSelf && <PersonActions id={p.id} name={p.name} canGo={!!pos} />}
               {!isSelf && (
                 <button
                   type="button"

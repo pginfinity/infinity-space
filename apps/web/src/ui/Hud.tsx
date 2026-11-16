@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
@@ -15,6 +15,7 @@ import { MediaControls } from "./MediaControls.tsx";
 import { ScreenShares } from "./ScreenShares.tsx";
 import { ActivitiesOverlay } from "../activities/index.tsx";
 import { SettingsPanel } from "./SettingsPanel.tsx";
+import { PresenceDock } from "../presence/Dock.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -30,6 +31,15 @@ export function Hud() {
     setSettingsOpen(v);
     if (v) togglePeople(false);
   };
+  // A busca (Ctrl+K) e outros pacotes pedem os ajustes por evento.
+  useEffect(() => {
+    const open = () => {
+      setSettingsOpen(true);
+      useApp.getState().togglePeople(false);
+    };
+    window.addEventListener("infinity:settings", open);
+    return () => window.removeEventListener("infinity:settings", open);
+  }, []);
   const list = Object.values(players);
 
   return (
@@ -110,6 +120,7 @@ export function Hud() {
         <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
           <Smile className="size-[18px]" />
         </DockButton>
+        <PresenceDock />
         <div className="hidden sm:contents">
           <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
             <LocateFixed className="size-[18px]" />
