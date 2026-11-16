@@ -23,6 +23,12 @@ export interface Activity {
   join?(id: string): void;
   leave?(id: string): void;
   dispose?(): void;
+  /** Jogos com lugar: nome do jogo se a pessoa está sentada aqui (para ninguém jogar em dois lugares). */
+  seatLabel?(id: string): string | null;
+  /** A pessoa está no meio de uma partida aqui? (não dá para tirá-la) */
+  inMatchFor?(id: string): boolean;
+  /** Tira a pessoa do lugar (ela foi sentar em outro jogo e aqui não há partida rolando). */
+  releaseSeat?(id: string): void;
 }
 
 export interface ActivityHost {
@@ -47,6 +53,13 @@ export interface ActivityHost {
   objects(type: ObjectType): MapObject[];
   /** A pessoa está a até `range` metros do ponto, sem parede no meio? */
   near(id: string, p: Vec2, range: number): boolean;
+  /**
+   * Antes de sentar alguém num jogo: se a pessoa só está sentada esperando em outro jogo, sai de lá;
+   * se está no meio de uma partida em outro lugar, devolve o nome desse jogo (e não pode sentar aqui).
+   */
+  claimSeat(id: string, here: Activity): string | null;
+  /** Aviso curto só para a pessoa (aparece como toast). */
+  notify(id: string, text: string): void;
 }
 
 export type ActivityFactory = (host: ActivityHost) => Activity[];

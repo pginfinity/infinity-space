@@ -51,6 +51,11 @@ export class FakeHost implements ActivityHost {
   objects(type: ObjectType): MapObject[] {
     return this.objs.filter((o) => o.type === type);
   }
+  /** Nos testes ninguém está sentado em outro jogo. */
+  claimSeat(): string | null {
+    return null;
+  }
+  notify(): void {}
   near(id: string, p: Vec2, range: number): boolean {
     const q = this.pos.get(id);
     return !!q && Math.hypot(q.x - p.x, q.z - p.z) <= range;

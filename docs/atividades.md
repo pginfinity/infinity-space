@@ -27,6 +27,7 @@ interface Activity {
 
 O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(this, ev, data, { to, from })` (acontecimento pontual), `players()`, `playerName`, `playerPos`, `playerZone`, `near(id, ponto, metros)` (perto e sem parede no meio), `emote(id, e)`, `setHeld(id, item)`, `objects(tipo)`, `map`, `nav`, `zones` e `store`.
 
+- **Um jogo por vez:** jogos com lugar implementam `seatLabel`, `inMatchFor` e `releaseSeat`, e chamam `host.claimSeat(id, this)` antes de sentar alguém: quem estava só esperando em outro jogo sai de lá; quem está no meio de uma partida recebe um aviso (`host.notify`).
 - **Persistência:** `host.store.get(chave, padrão)` e `host.store.set(chave, valor)`. A chave começa pelo pacote (`"escritorio/gongo"`). Os arquivos JSON vão para `DATA_DIR`, que fica fora do Git.
 - **Limite:** cada pessoa manda no máximo 90 pedidos por segundo para as atividades.
 - **Estado grande ou frequente:** o snapshot vai inteiro a cada mudança. Física a 30 Hz vai por `event` (`"frame"`), só para quem joga ou assiste.
@@ -50,6 +51,9 @@ registerActivity({
 - **Estado:** `useAct<T>(id)` no React, `actState<T>(id)` fora dele (por exemplo, dentro de `useFrame`). `actsOfKind(kind)` lista todas as atividades de um tipo.
 - **Pedido:** `sendAct(id, op, data)`.
 - **Som:** `sfx(nome, { at, volume, range })` toca `/sfx/<nome>.mp3`. Enquanto o arquivo não existe, toca o sintetizado registrado com `registerSynth(nome, fn)`, ou um "plim". Com `at`, o volume cai com a distância e o som fica abafado atrás de parede. Cada som novo entra em `sounds.json` do pacote (prompt em inglês e duração), para os scripts locais gerarem depois.
+- **Efeitos de avatar:** `setAvatarEffect(id, { ghost: true })` (de `avatar/effects.ts`) deixa o avatar como fantasma translúcido, só no cliente.
+- **Relógio:** `serverNow()` (de `net/session.ts`) dá a hora do servidor, para contagens iguais para todos.
+- **Objetos de parede no 2D:** quem desenha sobre um objeto de parede usa `useWallVisible(id)` (de `scene/wallFacing.ts`), porque no 2D o objeto de costas para a câmera some.
 - **Pessoas:** `self`, `sampleRemote(id)` e `remoteIds()` vêm de `world/registry.ts`. Nomes e status ficam em `useApp` (`state/store.ts`). O campo `held` da pessoa é o item na mão; `note` é o status curto.
 
 ## Regras da casa
@@ -68,10 +72,8 @@ registerActivity({
 
 Pedidas pelos pacotes, ao construir os jogos e interações:
 
-- **Onde a pessoa está jogando:** um registro comum para mesas de jogo e atividades (hoje dá para estar no xadrez e no hockey ao mesmo tempo).
 - **Interação:** prioridade entre alvos, mais de uma ação por alvo, "segurar E", raio por tipo no catálogo e objetos sem `action` assumíveis por atividade.
-- **Avatar:** `faceTowards(yaw)` no movimento, avatar "fantasma"/translúcido, e um ponto de ancoragem para balões acima da etiqueta de nome.
-- **Tempo do servidor:** `serverNow()` na sessão, a partir do `serverTime` do welcome.
+- **Avatar:** `faceTowards(yaw)` no movimento e um ponto de ancoragem para balões acima da etiqueta de nome.
 - **Áudio:** um contexto de áudio compartilhado entre `sfx`, jukebox e vozes.
 - **TVs:** API para uma atividade ocupar a tela de uma TV (hoje cada pacote desenha um plano na frente).
 - **Host:** `playerHeld(id)`, `flush()` imediato para timers próprios, e um jeito de reunir jogadores (chamada/teleporte) para reuniões de jogo.

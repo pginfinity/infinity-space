@@ -93,6 +93,18 @@ export class DuelActivity<S> implements Activity {
     this.useTimer = opts.timer !== false;
   }
 
+  seatLabel(id: string): string | null {
+    return this.state.seats.includes(id) ? (this.kind === "pingpong" ? "Pingue-pongue" : "Hockey de mesa") : null;
+  }
+
+  inMatchFor(id: string): boolean {
+    return this.state.seats.includes(id) && this.inMatch();
+  }
+
+  releaseSeat(id: string): void {
+    if (this.state.seats.includes(id) && !this.inMatch()) this.stand(id);
+  }
+
   /** Onde fica em pé quem joga no lado de `seat`. */
   standPoint(seat: number): Vec2 {
     return rtTableToWorld(this.table, 0, (seat === 0 ? 1 : -1) * (this.def.L / 2 + this.def.stand));
@@ -171,6 +183,11 @@ export class DuelActivity<S> implements Activity {
     const seat = seatRaw;
     if (s.seats[seat] !== null) return;
     if (!this.host.near(from, this.standPoint(seat), DUEL_SIT_RANGE)) return;
+    const busy = this.host.claimSeat(from, this);
+    if (busy) {
+      this.host.notify(from, `Você está no meio de uma partida de ${busy}. Termine ou levante de lá primeiro.`);
+      return;
+    }
     const other = seatedIn.get(from);
     if (other && other !== this) {
       if (other.inMatch()) return;

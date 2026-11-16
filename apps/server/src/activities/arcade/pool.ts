@@ -79,6 +79,11 @@ export class PoolActivity implements Activity {
     const s = this.state;
     if (s.phase === "playing" || (seat !== 0 && seat !== 1) || s.seats[seat] !== null) return;
     if (!this.host.near(from, this.standPoint(seat), POOL_SIT_RANGE)) return;
+    const busy = this.host.claimSeat(from, this);
+    if (busy) {
+      this.host.notify(from, `Você está no meio de uma partida de ${busy}. Termine ou levante de lá primeiro.`);
+      return;
+    }
     const cur = s.seats.indexOf(from);
     if (cur >= 0) s.seats[cur] = null;
     s.seats[seat] = from;
@@ -86,6 +91,18 @@ export class PoolActivity implements Activity {
     this.away[seat] = 0;
     if (s.seats[0] && s.seats[1]) this.start();
     this.host.changed(this);
+  }
+
+  seatLabel(id: string): string | null {
+    return this.state.seats.includes(id) ? "Sinuca" : null;
+  }
+
+  inMatchFor(id: string): boolean {
+    return this.state.seats.includes(id) && this.state.phase === "playing";
+  }
+
+  releaseSeat(id: string): void {
+    if (this.state.seats.includes(id) && this.state.phase !== "playing") this.stand(id);
   }
 
   private stand(from: string): void {

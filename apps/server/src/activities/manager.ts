@@ -50,6 +50,10 @@ export class ActivitiesManager {
     return this.acts.get(id);
   }
 
+  all(): Iterable<Activity> {
+    return this.acts.values();
+  }
+
   snapshots(): ActSnapshot[] {
     return [...this.acts.values()].map(snap);
   }

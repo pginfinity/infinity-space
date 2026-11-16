@@ -57,6 +57,8 @@ class Host {
       emote: (id, e) => void this.emotes.push({ id, e }),
       setHeld: () => undefined,
       objects: (t) => this.map.objects.filter((o) => o.type === t),
+      claimSeat: () => null,
+      notify: () => undefined,
       near: (id, p, r) => {
         const at = this.pos.get(id);
         return !!at && dist(at, p) <= r && !wallBetween(this.map.walls, at, p);

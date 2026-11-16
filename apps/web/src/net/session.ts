@@ -5,6 +5,7 @@ import { clearRemote, playEmote, pushRemote, removeRemote, self, setSelf } from 
 import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
 import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
 import { recheckSession } from "./auth.ts";
+import { toast } from "../ui/toasts.ts";
 
 
 const packr = new Packr({ useRecords: false });
@@ -160,6 +161,11 @@ function handle(msg: ServerMsg): void {
       setAct(msg.act);
       break;
     case "actev":
+      // Aviso do servidor só para você (ex.: "termine a partida de xadrez antes").
+      if (msg.id === "sistema" && msg.ev === "aviso") {
+        toast(String((msg.data as { text?: unknown } | undefined)?.text ?? ""), 4500);
+        break;
+      }
       dispatchActEvent(msg.id, msg.ev, msg.data, msg.from);
       break;
     case "join":

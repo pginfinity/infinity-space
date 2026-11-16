@@ -6,7 +6,13 @@ export interface GameHost {
   playerName(id: string): string | undefined;
   /** Posição atual da pessoa (para conferir se está perto da mesa). */
   playerPos(id: string): { x: number; z: number } | undefined;
+  /** Ver ActivityHost.claimSeat: libera lugares de espera nos jogos das atividades ou diz onde há partida. */
+  claimSeat?(id: string): string | null;
+  notify?(id: string, text: string): void;
 }
+
+/** Nome de cada jogo de mesa (para avisos). */
+const TABLE_TITLE: Record<string, string> = { chess: "Xadrez", connect4: "Lig 4", tictactoe: "Jogo da velha" };
 
 /** Distância máxima (m) entre a pessoa e o centro da mesa para sentar. */
 export const SIT_RANGE = 3;
@@ -125,6 +131,17 @@ export class GamesManager {
 
   // ---------------------------------------------------------------- operações
 
+  /** Onde a pessoa está sentada (para os outros jogos não a sentarem em dois lugares). */
+  seatInfo(id: string): { label: string; playing: boolean } | null {
+    for (const t of this.tables.values()) if (t.seats.includes(id)) return { label: TABLE_TITLE[t.kind] ?? "um jogo de mesa", playing: t.phase === "playing" };
+    return null;
+  }
+
+  /** Levanta a pessoa das mesas sem partida rolando. */
+  releaseSeat(id: string): void {
+    for (const t of this.tables.values()) if (t.seats.includes(id) && t.phase !== "playing" && this.stand(t, id)) this.publish(t);
+  }
+
   private sit(t: Table, playerId: string, data: unknown): boolean {
     const p = this.host.playerPos(playerId);
     if (!p || Math.hypot(p.x - t.pos.x, p.z - t.pos.z) > SIT_RANGE) return false;
@@ -133,6 +150,13 @@ export class GamesManager {
     // Sentado em outra mesa com partida rolando: precisa terminar ou levantar lá antes.
     const elsewhere = [...this.tables.values()].filter((o) => o !== t && o.seats.includes(playerId));
     if (elsewhere.some((o) => o.phase === "playing")) return false;
+
+    // Em outro tipo de jogo (hockey, sinuca...): sai de lá se estava só esperando; com partida, não senta.
+    const busy = this.host.claimSeat?.(playerId);
+    if (busy) {
+      this.host.notify?.(playerId, `Você está no meio de uma partida de ${busy}. Termine ou levante de lá primeiro.`);
+      return false;
+    }
 
     const wanted = (data as { seat?: unknown } | null | undefined)?.seat;
     const current = t.seats.indexOf(playerId);

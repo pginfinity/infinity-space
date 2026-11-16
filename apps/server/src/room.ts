@@ -33,6 +33,7 @@ import { cleanLook, cleanName } from "./clean.ts";
 import { GamesManager } from "./games/manager.ts";
 import { RTC, rtcToken } from "./rtc.ts";
 import { ActivitiesManager } from "./activities/manager.ts";
+import type { Activity } from "./activities/types.ts";
 import { DATA_DIR, Store } from "./store.ts";
 import { RecordingActivity } from "./recording/manager.ts";
 import { hearing } from "@infinity/world";
@@ -73,6 +74,8 @@ export class OfficeRoom {
       const m = this.members.get(id);
       return m ? { x: m.x, z: m.z } : undefined;
     },
+    claimSeat: (id) => this.claimSeat(id, null),
+    notify: (id, text) => this.notify(id, text),
   });
   readonly store = new Store(DATA_DIR);
   readonly acts = new ActivitiesManager(
@@ -112,6 +115,8 @@ export class OfficeRoom {
         this.broadcast({ t: "info", id, patch: { held } });
       },
       objects: (type) => this.map.objects.filter((o) => o.type === type),
+      claimSeat: (id, here) => this.claimSeat(id, here),
+      notify: (id, text) => this.notify(id, text),
       near: (id, p, range) => {
         const m = this.members.get(id);
         if (!m) return false;
@@ -132,6 +137,34 @@ export class OfficeRoom {
     // Gravação de reuniões: precisa da sala (quem está em cada grupo de salas e as listas de áudio).
     const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
     this.recording = rec as RecordingActivity;
+  }
+
+  /**
+   * Uma pessoa vai sentar num jogo (`here`; null = mesas de tabuleiro). Nos outros jogos: se estava só
+   * esperando, sai do lugar; se está no meio de uma partida, devolve o nome do jogo e não pode sentar.
+   */
+  private claimSeat(id: string, here: Activity | null): string | null {
+    if (here !== null) {
+      const g = this.games.seatInfo(id);
+      if (g) {
+        if (g.playing) return g.label;
+        this.games.releaseSeat(id);
+      }
+    }
+    for (const a of this.acts.all()) {
+      if (a === here || !a.seatLabel) continue;
+      const label = a.seatLabel(id);
+      if (!label) continue;
+      if (a.inMatchFor?.(id)) return label;
+      a.releaseSeat?.(id);
+    }
+    return null;
+  }
+
+  /** Aviso curto só para uma pessoa (o cliente mostra como toast). */
+  private notify(id: string, text: string): void {
+    const m = this.members.get(id);
+    if (m) this.sendTo(m, { t: "actev", id: "sistema", ev: "aviso", data: { text: text.slice(0, 200) } });
   }
 
   /** Derruba as conexões de uma conta (pessoa removida pelo admin). */

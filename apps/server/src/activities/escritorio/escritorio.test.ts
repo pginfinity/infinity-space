@@ -81,6 +81,11 @@ class FakeHost implements ActivityHost {
   objects(type: string) {
     return MAP.objects.filter((o) => o.type === type);
   }
+  /** Nos testes ninguém está sentado em outro jogo. */
+  claimSeat(): string | null {
+    return null;
+  }
+  notify(): void {}
   near(id: string, p: Vec2, range: number): boolean {
     const at = this.pos.get(id);
     return !!at && dist(at, p) <= range;

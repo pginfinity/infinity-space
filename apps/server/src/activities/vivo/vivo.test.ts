@@ -54,6 +54,8 @@ function fakeHost() {
     emote: () => undefined,
     setHeld: (id, item) => void held.set(id, item),
     objects: (type) => map.objects.filter((o) => o.type === type),
+    claimSeat: () => null,
+    notify: () => undefined,
     near: (id, p, range) => {
       const at = pos.get(id);
       return !!at && dist(at, p) <= range && !wallBetween(map.walls, at, p);
