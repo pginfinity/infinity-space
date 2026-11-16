@@ -16,8 +16,10 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Arcade:** tabuleiros ao vivo nas mesas, jogo da velha, hockey de mesa e pingue-pongue em tempo real, 3 fliperamas originais com ranking (Faxina Orbital, Cauda de Cometa, Estilhaço), bolinha de papel com recorde do dia, sinuca.
 - **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação.
 - **Reuniões:** gravação da sala com envio ao Google Drive.
+- **Primeiros passos:** na primeira entrada o Orbi se apresenta, vai até a pessoa e acompanha uma lista que se marca sozinha (andar, usar com E, microfone, chat, achar alguém, mapa, 2D/3D). Tecla ? abre todos os atalhos; dá para rever pela busca, pelos ajustes ou pelo menu Mais.
+- **Jukebox:** 10 faixas originais geradas com a ElevenLabs (`scripts/music.mjs`, duas versões de cada; a escolhida fica em `apps/web/public/music`). A versão generativa continua de reserva se um arquivo faltar.
 
-Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
+Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no mural da copa.
 
 ## Jogos
 

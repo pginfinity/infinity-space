@@ -45,6 +45,7 @@ import {
 } from "./state.ts";
 import { focusSoon, goSit, selfNear, useEscape } from "./shared.ts";
 import { T } from "./strings.ts";
+import { InStack } from "../../ui/HudStack.tsx";
 
 /** Ícone de cada objeto pessoal no painel. */
 export const ITEM_ICON: Record<MesasItem, LucideIcon> = {
@@ -561,6 +562,7 @@ export function ArrivalChip() {
   // Já sentado na última mesa: o E resolve.
   const atLast = !!last && Math.hypot(self.x - last.seat.x, self.z - last.seat.z) < 1.2;
   return (
+    <InStack side="bottom-left" order={2}>
     <AnimatePresence>
       {show && last && !atLast && (
         <motion.div
@@ -569,7 +571,7 @@ export function ArrivalChip() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+128px)] left-3 z-20 flex w-[min(360px,calc(100vw-24px))] items-center gap-2.5 rounded-2xl py-2 pl-3 pr-2 text-sm"
+          className="glass pointer-events-auto flex w-[min(360px,calc(100vw-24px))] items-center gap-2.5 rounded-2xl py-2 pl-3 pr-2 text-sm"
           role="status"
           aria-live="polite"
         >
@@ -601,6 +603,7 @@ export function ArrivalChip() {
         </motion.div>
       )}
     </AnimatePresence>
+    </InStack>
   );
 }
 

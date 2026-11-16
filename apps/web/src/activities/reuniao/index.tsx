@@ -6,6 +6,7 @@ import { REC_ID, REC_KIND, recGroup, recordable, type RecSession, type RecState,
 import { registerActivity, sendAct, useAct } from "../registry.ts";
 import { registerSynth, sfx } from "../../audio/sfx.ts";
 import { toast } from "../../ui/toasts.ts";
+import { InStack } from "../../ui/HudStack.tsx";
 import { world } from "../../world/world.ts";
 import { self } from "../../world/registry.ts";
 
@@ -67,7 +68,8 @@ function RecOverlay() {
 
   if (!group) return null;
   return (
-    <div className="pointer-events-auto absolute left-3 top-[104px] z-10">
+    <InStack side="top-left" order={1}>
+    <div className="pointer-events-auto">
       <AnimatePresence mode="wait">
         {!session || session.status === "uploaded" || session.status === "saved" || session.status === "error" ? (
           <motion.div key="idle" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-start gap-1.5">
@@ -124,6 +126,7 @@ function RecOverlay() {
         )}
       </AnimatePresence>
     </div>
+    </InStack>
   );
 }
 

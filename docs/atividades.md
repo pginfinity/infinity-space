@@ -57,6 +57,9 @@ registerActivity({
 - **Relógio:** `serverNow()` (de `net/session.ts`) dá a hora do servidor, para contagens iguais para todos.
 - **Objetos de parede no 2D:** quem desenha sobre um objeto de parede usa `useWallVisible(id)` (de `scene/wallFacing.ts`), porque no 2D o objeto de costas para a câmera some.
 - **Pessoas:** `self`, `sampleRemote(id)` e `remoteIds()` vêm de `world/registry.ts`. Nomes e status ficam em `useApp` (`state/store.ts`). O campo `held` da pessoa é o item na mão; `note` é o status curto.
+- **Avisos e cartões do lado esquerdo:** nada de posição fixa (`absolute left-3 top-[...]`), que um cobre o outro. Use `<InStack side="top-left" | "bottom-left" order={n}>` de `ui/HudStack.tsx`: a pilha de cima desce a partir do status; a de baixo sobe a partir das dicas de controle. Ordem atual em cima: presença (0), gravação (1), daily (2), primeiros passos (3), aviõezinhos (4); embaixo: item na mão (0), Orbi (1), última mesa (2).
+- **Busca (Ctrl+K):** `registerPersonCommand` (ação por pessoa, ex.: "Mensagem para Ana") e `registerCommand` (ação geral, ex.: "Minha mesa", "Primeiros passos"), ambos de `presence/store.ts`.
+- **Atalho novo:** acrescente na lista de atalhos (`onboarding/Shortcuts.tsx`, tecla ?). Se for algo essencial, pense se entra nos primeiros passos (`onboarding/steps.ts`).
 
 ## Regras da casa
 
@@ -79,5 +82,4 @@ Pedidas pelos pacotes, ao construir os jogos e interações:
 - **Áudio:** um contexto de áudio compartilhado entre `sfx`, jukebox e vozes.
 - **TVs:** API para uma atividade ocupar a tela de uma TV (hoje cada pacote desenha um plano na frente).
 - **Host:** `playerHeld(id)` e `flush()` imediato para timers próprios. (Chamar e teleportar já existem pelo pacote presença e por `host.teleport`.)
-- **Paleta (Ctrl+K):** hoje só aceita ações por pessoa (`registerPersonCommand`); falta um gancho para ações gerais ("Minha mesa", por exemplo).
 - **Portas:** readmitir pelo e-mail depois de uma reconexão (com o login ligado, o id muda mas a conta é a mesma).

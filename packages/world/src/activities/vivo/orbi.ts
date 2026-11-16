@@ -18,6 +18,8 @@ export const ORBI_FOLLOW_SPEED = 3.3;
 export const ORBI_FOLLOW_GAP = 1.3;
 /** Para de seguir sozinho depois disso. */
 export const ORBI_FOLLOW_MS = 2 * 60 * 1000;
+/** Boas-vindas (primeiros passos de quem chega): vai até a pessoa e a acompanha por este tempo. */
+export const ORBI_WELCOME_MS = 90 * 1000;
 /** Carinho: fica parado curtindo por este tempo. */
 export const ORBI_PET_MS = 2800;
 /** Distâncias (m) para chamar e para fazer carinho. */

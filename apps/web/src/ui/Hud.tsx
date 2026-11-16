@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Box, LocateFixed, LogOut, Map as MapIcon, MoreHorizontal, Settings2, Smile, Users } from "lucide-react";
+import { Bot, Box, CircleHelp, LocateFixed, LogOut, Map as MapIcon, MoreHorizontal, Settings2, Smile, Users } from "lucide-react";
 import { EMOTES, type Lens } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { doEmote, EMOTE_INFO } from "../engine/emotes.ts";
@@ -17,6 +17,8 @@ import { ActivitiesOverlay } from "../activities/index.tsx";
 import { SettingsPanel } from "./SettingsPanel.tsx";
 import { ChatDockButton, setChatOpen, useChatOpen } from "../activities/chat/dock.tsx";
 import { PresenceDock } from "../presence/Dock.tsx";
+import { openShortcuts, ShortcutsSheet, startTour, Tutorial } from "../onboarding/index.ts";
+import { HudStacks } from "./HudStack.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -68,6 +70,7 @@ export function Hud() {
         type="button"
         onClick={() => togglePeople()}
         aria-expanded={peopleOpen}
+        data-tour-target="pessoas"
         className="glass pointer-events-auto absolute right-3 top-3 flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 transition hover:border-offwhite/25"
       >
         <span className="flex -space-x-2">
@@ -78,6 +81,8 @@ export function Hud() {
         <span className="text-sm text-offwhite/90">{t("hud.online", { count: list.length })}</span>
       </button>
 
+      {/* Pilhas da esquerda: avisos e cartões dos pacotes se empilham aqui sem se cobrir. */}
+      <HudStacks />
       <AnimatePresence>{peopleOpen && !settingsOpen && <PeoplePanel />}</AnimatePresence>
       <AnimatePresence>{settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}</AnimatePresence>
       {!peopleOpen && !settingsOpen && !chatOpen && <Minimap />}
@@ -85,6 +90,8 @@ export function Hud() {
       <ScreenShares />
       <ActivitiesOverlay />
       <InteractPrompt />
+      <Tutorial />
+      <ShortcutsSheet />
 
       {/* Barra de emotes, aberta pela doca. */}
       <AnimatePresence>
@@ -138,6 +145,7 @@ export function Hud() {
         </div>
         <ChatDockButton />
         <DockButton
+          tour="pessoas"
           label={t("hud.people")}
           onClick={() => {
             setSettingsOpen(false);
@@ -160,21 +168,28 @@ export function Hud() {
             { label: lens === "3d" ? "Ver em 2D" : "Ver em 3D", icon: lens === "3d" ? <MapIcon className="size-4" /> : <Box className="size-4" />, run: () => setLens(lens === "3d" ? "2d" : "3d") },
             { label: t("hud.recenter"), icon: <LocateFixed className="size-4" />, run: () => window.dispatchEvent(new Event("infinity:recenter")) },
             { label: "Áudio e vídeo", icon: <Settings2 className="size-4" />, run: () => openSettings(true) },
+            { label: t("tour.replay"), icon: <Bot className="size-4" />, run: startTour },
+            { label: t("shortcuts.title"), icon: <CircleHelp className="size-4" />, run: openShortcuts },
             { label: t("hud.leave"), icon: <LogOut className="size-4" />, run: leave },
           ]}
         />
       </div>
 
-      <p className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 hidden max-w-[30ch] text-xs leading-relaxed text-slate/90 lg:block">
-        {lens === "3d" ? t("hud.controls3d") : t("hud.controls")}
-      </p>
+      <div className="absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 hidden max-w-[30ch] text-xs leading-relaxed text-slate/90 lg:block">
+        <p>{lens === "3d" ? t("hud.controls3d") : t("hud.controls")}</p>
+        <button type="button" onClick={openShortcuts} className="pointer-events-auto -ml-1 mt-1 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-slate transition-colors hover:text-offwhite">
+          <CircleHelp className="size-3.5" />
+          {t("shortcuts.open")}
+          <kbd className="rounded bg-offwhite/8 px-1 font-sans text-[10px] text-offwhite/80 ring-1 ring-offwhite/12">?</kbd>
+        </button>
+      </div>
     </div>
   );
 }
 
 function LensSwitch({ lens, onChange, label }: { lens: Lens; onChange: (l: Lens) => void; label: string }) {
   return (
-    <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label={label} title={label}>
+    <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label={label} title={label} data-tour-target="lente">
       {(["2d", "3d"] as const).map((l) => (
         <button
           key={l}
@@ -195,11 +210,12 @@ function LensSwitch({ lens, onChange, label }: { lens: Lens; onChange: (l: Lens)
   );
 }
 
-function DockButton({ label, onClick, active, children }: { label: string; onClick: () => void; active?: boolean; children: ReactNode }) {
+function DockButton({ label, onClick, active, tour, children }: { label: string; onClick: () => void; active?: boolean; tour?: string; children: ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      data-tour-target={tour}
       aria-label={label}
       title={label}
       aria-pressed={active}

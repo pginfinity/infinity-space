@@ -19,6 +19,7 @@ import {
 import { actState, sendAct, useAct, type ActivityClient, type DynamicTarget } from "../registry.ts";
 import { sfx } from "../../audio/sfx.ts";
 import { toast } from "../../ui/toasts.ts";
+import { InStack } from "../../ui/HudStack.tsx";
 import { useApp } from "../../state/store.ts";
 import { self } from "../../world/registry.ts";
 import { avatarRig, playHandAction } from "../../avatar/hands.ts";
@@ -69,7 +70,8 @@ export const orbiClient: ActivityClient = {
       }
       return;
     }
-    if (e.ev === "call") {
+    // Boas-vindas (primeiros passos): mesmo bipe de quando alguém chama.
+    if (e.ev === "call" || e.ev === "welcome") {
       callAt = performance.now();
       sfx("vivo-orbi-call", { at: { x: where.x, z: where.z }, volume: 0.55, range: 12 });
       return;
@@ -90,6 +92,7 @@ function OrbiOverlay() {
   const me = useApp((st) => st.selfId);
   const following = !!s?.follow && s.follow.id === me;
   return (
+    <InStack side="bottom-left" order={1}>
     <AnimatePresence>
       {following && (
         <motion.div
@@ -98,7 +101,7 @@ function OrbiOverlay() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6 }}
           transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+128px)] left-3 z-20 flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-offwhite"
+          className="glass pointer-events-auto flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-offwhite"
           role="status"
           aria-live="polite"
         >
@@ -118,6 +121,7 @@ function OrbiOverlay() {
         </motion.div>
       )}
     </AnimatePresence>
+    </InStack>
   );
 }
 

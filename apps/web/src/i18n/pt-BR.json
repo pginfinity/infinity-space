@@ -47,5 +47,112 @@
   },
   "loading": {
     "world3d": "Montando o escritório em 3D…"
+  },
+  "tour": {
+    "orbi": "Orbi",
+    "title": "Primeiros passos",
+    "progress": "{{done}} de {{total}}",
+    "hello": "Oi, {{name}}! Eu sou o Orbi.",
+    "helloBody": "Moro aqui na estação. Em um minuto te mostro o essencial, e você vai fazendo junto.",
+    "start": "Vamos lá",
+    "later": "Agora não",
+    "laterToast": "Quando quiser, aperte ? ou busque \"Primeiros passos\" no Ctrl+K.",
+    "laterToastTouch": "Quando quiser, toque em Mais › Primeiros passos.",
+    "skipStep": "Pular este",
+    "skipAll": "Encerrar",
+    "minimize": "Minimizar",
+    "expand": "Abrir primeiros passos",
+    "close": "Fechar",
+    "stepDone": "Feito",
+    "steps": {
+      "andar": {
+        "label": "Ande pela estação",
+        "say": "WASD ou setas para andar. Clique no chão para ir direto; com Shift você corre.",
+        "sayTouch": "Toque no chão para ir até lá."
+      },
+      "usar": {
+        "label": "Use algo com E",
+        "say": "Estou indo até você! Quando eu chegar, aperte E para um carinho. O E também serve café, abre jogos e bate em portas.",
+        "sayTouch": "Estou indo até você! Quando eu chegar, toque no botão que aparece embaixo da tela.",
+        "labelTouch": "Use algo que está perto"
+      },
+      "mic": {
+        "label": "Ligue o microfone",
+        "say": "Quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some. M liga e desliga.",
+        "sayTouch": "Quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some."
+      },
+      "chat": {
+        "label": "Abra o chat",
+        "say": "Perto fala com quem está ao seu redor, Geral com todo mundo, e dá para mandar mensagem direta."
+      },
+      "pessoas": {
+        "label": "Encontre alguém",
+        "say": "Veja quem está online, ou use Ctrl+K, para ir até a pessoa, chamar ou seguir.",
+        "sayTouch": "Veja quem está online, ou use a busca, para ir até a pessoa, chamar ou seguir."
+      },
+      "mapa": {
+        "label": "Abra o mapa",
+        "say": "Amplie o mapa: o guia mostra jogos, copa, jukebox e mural, com um botão para ir até lá.",
+        "sayTouch": "Na busca, escolha \"Mapa da estação\": o guia mostra jogos, copa, jukebox e mural."
+      },
+      "lente": {
+        "label": "Veja em 2D e 3D",
+        "say": "É o mesmo escritório nas duas vistas. Use a que rodar melhor no seu computador."
+      }
+    },
+    "doneTitle": "Pronto! Você já sabe o essencial.",
+    "doneBody": "Tem muito mais pela estação. Aperte ? quando quiser ver todos os atalhos.",
+    "doneBodyTouch": "Tem muito mais pela estação. Explore o mapa e chame o time.",
+    "seeShortcuts": "Ver atalhos",
+    "replay": "Primeiros passos",
+    "replayHint": "O Orbi mostra o essencial de novo",
+    "welcome": "Boas-vindas à Infinity!"
+  },
+  "shortcuts": {
+    "title": "Atalhos",
+    "open": "Atalhos de teclado",
+    "hint": "Aperte ? a qualquer hora para abrir esta lista.",
+    "touchTitle": "No celular",
+    "touch": [
+      "Toque no chão para andar até lá",
+      "Toque no botão que aparece embaixo para usar o que está perto",
+      "Microfone, câmera e chat ficam na barra de baixo",
+      "Busca e mapa: botão de lupa"
+    ],
+    "groups": {
+      "move": "Andar",
+      "voice": "Voz e vídeo",
+      "use": "Interagir",
+      "nav": "Navegar",
+      "games": "Jogos"
+    },
+    "items": {
+      "walk": "Andar",
+      "run": "Correr (segure)",
+      "click": "Ir até um ponto",
+      "rotate": "Girar a vista",
+      "drag": "Girar a vista no 3D",
+      "mic": "Microfone (no modo apertar para falar, segure)",
+      "cam": "Câmera",
+      "whisper": "Sussurrar para quem está mais perto (segure)",
+      "use": "Usar o que está perto",
+      "drop": "Largar o que está na mão",
+      "emotes": "Emotes",
+      "greet": "Aceitar um cumprimento",
+      "call": "Aceitar um chamado",
+      "search": "Buscar pessoas, salas e comandos",
+      "chat": "Chat",
+      "lens": "Trocar entre 2D e 3D",
+      "esc": "Fechar painéis · parar de seguir",
+      "help": "Esta lista",
+      "play": "Jogar (fliperama, sinuca, bolinha de papel)",
+      "pause": "Pausar o fliperama",
+      "leaveGame": "Sair do jogo"
+    },
+    "keys": {
+      "click": "Clique no chão",
+      "drag": "Arraste",
+      "hold": "segure"
+    }
   }
 }

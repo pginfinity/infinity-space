@@ -40,6 +40,10 @@ export function Minimap() {
     window.addEventListener("infinity:map", open);
     return () => window.removeEventListener("infinity:map", open);
   }, []);
+  // Mapa ampliado (com o guia): avisa quem acompanha, como os primeiros passos.
+  useEffect(() => {
+    if (big) window.dispatchEvent(new Event("infinity:map-opened"));
+  }, [big]);
 
   // Pontinhos das pessoas, atualizados fora do React.
   useEffect(() => {
@@ -79,7 +83,7 @@ export function Minimap() {
     <div className={clsx("glass pointer-events-auto absolute right-3 flex flex-col overflow-hidden rounded-2xl transition-all duration-300", big ? "bottom-24 top-16 z-30 w-[min(1000px,calc(100vw-24px))]" : "bottom-[max(12px,env(safe-area-inset-bottom))] hidden w-[230px] sm:flex")}>
       <div className="flex items-center justify-between px-3 pt-2">
         <span className="label-caps">{hover ?? "Mapa da estação"}</span>
-        <button type="button" onClick={() => setBig((v) => !v)} className="rounded-md p-1 text-slate hover:text-offwhite" aria-label={big ? "Diminuir mapa" : "Ampliar mapa"}>
+        <button type="button" onClick={() => setBig((v) => !v)} className="rounded-md p-1 text-slate hover:text-offwhite" aria-label={big ? "Diminuir mapa" : "Ampliar mapa"} data-tour-target="mapa">
           {big ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
         </button>
       </div>

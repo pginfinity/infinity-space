@@ -61,6 +61,27 @@
   }
 }
 
+/* Primeiros passos: destaca o controle do passo da vez (o tutorial põe data-tour no <html>). */
+@keyframes tour-ring {
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-signal), 0 0 0 4px color-mix(in oklab, var(--color-signal) 0%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--color-signal), 0 0 0 8px color-mix(in oklab, var(--color-signal) 30%, transparent); }
+}
+:root[data-tour="mic"] [data-tour-target~="mic"],
+:root[data-tour="chat"] [data-tour-target~="chat"],
+:root[data-tour="pessoas"] [data-tour-target~="pessoas"],
+:root[data-tour="mapa"] [data-tour-target~="mapa"],
+:root[data-tour="lente"] [data-tour-target~="lente"] {
+  animation: tour-ring 1.8s ease-in-out infinite;
+}
+
+/* Retrato do Orbi (OrbiFace): flutua, pisca e a luz da antena pulsa. */
+@keyframes orbi-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes orbi-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.12); } }
+@keyframes orbi-pulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }
+.orbi-bob { animation: orbi-bob 3.2s ease-in-out infinite; }
+.orbi-blink { transform-box: fill-box; transform-origin: center; animation: orbi-blink 4.6s infinite; }
+.orbi-pulse { animation: orbi-pulse 2.2s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

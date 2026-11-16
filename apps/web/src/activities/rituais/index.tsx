@@ -7,6 +7,7 @@ import { DAILY_ID, DAILY_KIND, DAILY_TURNS, dailyAllowed, type DailyRoom, type D
 import { registerActivity, sendAct, useAct, actState } from "../registry.ts";
 import { registerSynth, sfx } from "../../audio/sfx.ts";
 import { toast } from "../../ui/toasts.ts";
+import { InStack } from "../../ui/HudStack.tsx";
 import { useApp } from "../../state/store.ts";
 import { world } from "../../world/world.ts";
 import { sampleRemote, self } from "../../world/registry.ts";
@@ -42,7 +43,8 @@ function DailyOverlay() {
   const room = state?.rooms[zone.id];
 
   return (
-    <div className="pointer-events-auto absolute left-3 top-[148px] z-10 w-72">
+    <InStack side="top-left" order={2}>
+    <div className="pointer-events-auto w-72">
       {!room ? (
         !setup ? (
           <button type="button" onClick={() => setSetup(true)} className="glass flex items-center gap-2 rounded-full py-1.5 pl-2.5 pr-3.5 text-xs text-offwhite/90 hover:text-offwhite">
@@ -83,6 +85,7 @@ function DailyOverlay() {
         <RunningCard room={room} me={me} myName={myName} />
       )}
     </div>
+    </InStack>
   );
 }
 

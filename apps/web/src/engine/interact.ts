@@ -125,9 +125,18 @@ function scan(): void {
   useInteract.setState({ target: { object: best.object, point: best.point, action: best.object.interact!.action, label, key } });
 }
 
+const activateListeners = new Set<() => void>();
+
+/** Avisa quando a pessoa usa algo (E, F ou o botão do aviso); os primeiros passos usam isso. */
+export function onActivate(fn: () => void): () => void {
+  activateListeners.add(fn);
+  return () => activateListeners.delete(fn);
+}
+
 /** Executa a ação do alvo atual. */
 export function activate(target = useInteract.getState().target): void {
   if (!target) return;
+  activateListeners.forEach((f) => f());
   if (target.action === "dynamic" || !target.object) {
     target.run?.();
     return;

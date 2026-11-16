@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Camera, Gauge, Headphones, Mic, Volume2, X } from "lucide-react";
+import { Bot, Camera, CircleHelp, Gauge, Headphones, Keyboard, Mic, Volume2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { audioContext } from "../media/rtc.ts";
 import { createNoiseNode, type NoiseNode } from "../media/noise.ts";
@@ -10,6 +11,7 @@ import { applyBackground, backgroundSupported } from "../media/background.ts";
 import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 import { PresenceSettings } from "../presence/PresenceSettings.tsx";
+import { openShortcuts, startTour } from "../onboarding/index.ts";
 
 /**
  * Áudio e vídeo de cada pessoa: dispositivos, supressão de ruído, teste do microfone com o filtro
@@ -145,6 +147,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </Section>
 
         <PresenceSettings />
+        <HelpSection onClose={onClose} />
       </div>
     </motion.aside>
   );
@@ -380,6 +383,29 @@ const QUALITY_OPTIONS: { id: Quality; title: string; hint: string }[] = [
   { id: "leve", title: "Leve", hint: "Para PC mais fraco" },
   { id: "alta", title: "Alta", hint: "Mais nitidez no 3D" },
 ];
+
+/** Ajuda: rever os primeiros passos com o Orbi e a lista de atalhos. */
+function HelpSection({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const go = (fn: () => void) => () => {
+    onClose();
+    fn();
+  };
+  return (
+    <Section icon={<CircleHelp className="size-4" />} title="Ajuda">
+      <div className="grid grid-cols-2 gap-1.5">
+        <button type="button" onClick={go(startTour)} className="flex items-center gap-2 rounded-xl border border-offwhite/10 px-3 py-2.5 text-left text-sm transition-colors hover:border-offwhite/25">
+          <Bot className="size-4 shrink-0 text-slate" />
+          {t("tour.replay")}
+        </button>
+        <button type="button" onClick={go(openShortcuts)} className="flex items-center gap-2 rounded-xl border border-offwhite/10 px-3 py-2.5 text-left text-sm transition-colors hover:border-offwhite/25">
+          <Keyboard className="size-4 shrink-0 text-slate" />
+          {t("shortcuts.title")}
+        </button>
+      </div>
+    </Section>
+  );
+}
 
 /** Qualidade do 3D (o 2D já é leve). */
 function GraphicsSection() {

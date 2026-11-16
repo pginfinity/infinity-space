@@ -59,6 +59,7 @@ export function MediaControls() {
         onPointerUp={ptt ? () => void setMic(false) : undefined}
         onPointerLeave={ptt && mic ? () => void setMic(false) : undefined}
         aria-pressed={mic}
+        data-tour-target="mic"
         aria-label={ptt ? "Segure para falar (M)" : mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
         title={ptt ? "Segure para falar (M)" : mic ? "Desligar microfone (M)" : "Ligar microfone (M)"}
         className={clsx(

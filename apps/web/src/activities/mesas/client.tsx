@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
+import { Armchair } from "lucide-react";
 import { MESAS_KIND, mesasDeskOf, mesasKey, mesasLabel, mesasOwner, type MesasPrivate } from "@infinity/world";
 import type { ActivityClient, DynamicTarget } from "../registry.ts";
 import { registerSynth, sfx } from "../../audio/sfx.ts";
 import { seatedAt } from "../../engine/movement.ts";
 import { serverNow } from "../../net/session.ts";
 import { useApp } from "../../state/store.ts";
+import { registerCommand } from "../../presence/store.ts";
 import { toast } from "../../ui/toasts.ts";
 import { self } from "../../world/registry.ts";
 import { act, deskByChair, deskById, mesasState, myKey, openCard, openPanel, pending, unread, useMesas } from "./state.ts";
@@ -148,6 +150,9 @@ function Overlay() {
     </>
   );
 }
+
+// Busca (Ctrl+K): "Minha mesa" abre o painel de check-in, objetos e recados.
+registerCommand({ key: "minha-mesa", label: T.myDesk, keywords: "mesa check-in checkin sentar trabalhar objetos recados", icon: Armchair, run: () => openPanel() });
 
 export const mesasClient: ActivityClient = {
   name: "mesas/mesas",

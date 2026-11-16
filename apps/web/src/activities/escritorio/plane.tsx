@@ -21,6 +21,7 @@ import { registerSynth, sfx } from "../../audio/sfx.ts";
 import { useApp } from "../../state/store.ts";
 import { toast } from "../../ui/toasts.ts";
 import { AvatarFace } from "../../ui/AvatarFace.tsx";
+import { InStack } from "../../ui/HudStack.tsx";
 import { placeName } from "../../world/zoneLabel.ts";
 import { toon } from "../../scene/materials.ts";
 import { deferScene, focusSoon, groundY, poseOf, useEscape } from "./shared.tsx";
@@ -106,13 +107,15 @@ function PlaneOverlay() {
   return (
     <>
       <AnimatePresence>{composer && <Composer initialTo={composer.to} />}</AnimatePresence>
-      <div className="pointer-events-none absolute left-3 top-[104px] flex w-[min(300px,calc(100vw-24px))] flex-col gap-2" role="status" aria-live="polite">
+      <InStack side="top-left" order={4}>
+      <div className="pointer-events-none flex w-[min(300px,calc(100vw-24px))] flex-col gap-2" role="status" aria-live="polite">
         <AnimatePresence initial={false}>
           {letters.map((l) => (
             <LetterCard key={l.key} letter={l} />
           ))}
         </AnimatePresence>
       </div>
+      </InStack>
     </>
   );
 }

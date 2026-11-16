@@ -18,6 +18,7 @@ export const ChatDockButton = forwardRef<HTMLButtonElement, { onToggle?: (open: 
       ref={ref}
       type="button"
       data-chat-dock
+      data-tour-target="chat"
       onClick={() => {
         toggleChat();
         onToggle?.(useChat.getState().open);

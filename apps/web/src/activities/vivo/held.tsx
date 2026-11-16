@@ -11,6 +11,7 @@ import { avatarRig } from "../../avatar/hands.ts";
 import { heldScale } from "../../avatar/held.ts";
 import { Particles, ballGeometry, flatMaterial } from "./particles.ts";
 import { T } from "./strings.ts";
+import { InStack } from "../../ui/HudStack.tsx";
 
 /**
  * Item na mão: o chip "Segurando: Café · Soltar (G)" e a tecla G para soltar.
@@ -60,6 +61,7 @@ function HeldChip() {
 
   const Icon = held ? ICON[held] : null;
   return (
+    <InStack side="bottom-left" order={0}>
     <AnimatePresence>
       {held && Icon && (
         <motion.div
@@ -68,7 +70,7 @@ function HeldChip() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6 }}
           transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+84px)] left-3 z-20 flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-offwhite"
+          className="glass pointer-events-auto flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-offwhite"
           role="status"
           aria-live="polite"
         >
@@ -91,6 +93,7 @@ function HeldChip() {
         </motion.div>
       )}
     </AnimatePresence>
+    </InStack>
   );
 }
 

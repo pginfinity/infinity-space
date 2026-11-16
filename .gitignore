@@ -36,3 +36,6 @@ apps/server/data/
 
 # WebAssembly do MediaPipe (copiado do node_modules por scripts/mediapipe.mjs)
 apps/web/public/mediapipe/wasm/
+
+# Versões brutas das músicas da jukebox (scripts/music.mjs); as escolhidas vão para apps/web/public/music
+.musica/

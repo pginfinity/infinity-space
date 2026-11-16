@@ -4,6 +4,7 @@ import { BellRing, Footprints, Route, Sparkles, Users } from "lucide-react";
 import type { ChamadoInvite, SeguirAsk } from "@infinity/world";
 import { useApp } from "../../state/store.ts";
 import { AvatarFace } from "../../ui/AvatarFace.tsx";
+import { InStack } from "../../ui/HudStack.tsx";
 import {
   acceptCall,
   acceptFollow,
@@ -193,7 +194,8 @@ function StateChips() {
   const names = Object.values(followers);
   useKey("Escape", stopFollowing, !!following);
   return (
-    <div className="pointer-events-none absolute left-3 top-[100px] flex max-w-[calc(100vw-24px)] flex-col items-start gap-1.5">
+    <InStack side="top-left" order={0}>
+    <div className="pointer-events-none flex max-w-[calc(100vw-24px)] flex-col items-start gap-1.5 empty:hidden">
       <AnimatePresence>
         {callOut && (
           <Chip key={`co-${callOut.to}-${callOut.start}`} icon={<BellRing className="size-3.5 text-signal" aria-hidden />} text={T.call.calling(callOut.name)} action={T.cancel} onAction={cancelCall}>
@@ -220,6 +222,7 @@ function StateChips() {
         )}
       </AnimatePresence>
     </div>
+    </InStack>
   );
 }
 

@@ -30,7 +30,7 @@ import { placeName } from "../world/zoneLabel.ts";
 import { world } from "../world/world.ts";
 import { AvatarFace } from "../ui/AvatarFace.tsx";
 import { askFollow, callPerson, callWait, goToPerson, goToPlace, goToRoom, stopFollowing } from "./actions.ts";
-import { personCommandList, usePresence } from "./store.ts";
+import { commandList, personCommandList, usePresence } from "./store.ts";
 import { setMyStatus } from "./status.ts";
 import { rank } from "./search.ts";
 import { T } from "./strings.ts";
@@ -375,6 +375,11 @@ function useCommands(): Cmd[] {
     out.push({ id: "a:map", group: "actions", label: T.palette.map, keywords: "guia minimapa estacao", icon: <MapIcon className={icon} />, run: () => window.dispatchEvent(new Event("infinity:map")) });
     out.push({ id: "a:recenter", group: "actions", label: T.palette.recenter, keywords: "camera centralizar", icon: <LocateFixed className={icon} />, run: () => window.dispatchEvent(new Event("infinity:recenter")) });
     out.push({ id: "a:people", group: "actions", label: T.palette.people, keywords: "pessoas online lista", icon: <Users className={icon} />, run: () => useApp.getState().togglePeople(true) });
+    // Ações de outros pacotes (mesas, primeiros passos...).
+    for (const c of commandList()) {
+      const Icon = c.icon;
+      out.push({ id: `a:x:${c.key}`, group: "actions", label: c.label, hint: c.hint, keywords: c.keywords, shortcut: c.shortcut, icon: <Icon className={icon} />, run: c.run });
+    }
 
     // Salas.
     for (const z of world().map.zones) {
@@ -405,7 +410,7 @@ function useCommands(): Cmd[] {
 /** Atalho para quem não tem teclado: botão da doca. */
 export function PaletteButton({ className }: { className?: string }) {
   return (
-    <button type="button" onClick={openPalette} aria-label={T.palette.open} title={T.palette.open} className={className}>
+    <button type="button" onClick={openPalette} aria-label={T.palette.open} title={T.palette.open} className={className} data-tour-target="pessoas">
       <Search className="size-[18px]" />
     </button>
   );

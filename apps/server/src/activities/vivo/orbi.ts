@@ -8,6 +8,7 @@ import {
   ORBI_PET_MS,
   ORBI_PET_RANGE,
   ORBI_WANDER_SPEED,
+  ORBI_WELCOME_MS,
   ORBI_ZONES,
   boundsOf,
   orbiArriveAt,
@@ -35,13 +36,17 @@ const REST_MAX_MS = 14000;
 const WANDER_MAX_PATH = 34;
 /** Salas onde o Orbi não entra atrás de ninguém. */
 const CLOSED = new Set(["meeting", "office", "focus"]);
+/** Cada pessoa recebe as boas-vindas no máximo uma vez neste intervalo (o pedido vem do cliente). */
+const WELCOME_COOLDOWN_MS = 10 * 60 * 1000;
 
 /**
  * Orbi, o robô mascote: passeia pelas áreas comuns, segue quem chama e curte carinho.
  * O estado leva o trajeto e a hora de saída; cada cliente calcula a mesma posição (nada a 15 Hz na rede).
  *
- * Operações: `call` (seguir quem chamou), `pet` (carinho), `dismiss` (parar de seguir).
- * Eventos: `pet` `{ name }`, `call` `{ name }`, `bye` `{ reason }` (para quem ele seguia).
+ * Operações: `call` (seguir quem chamou), `pet` (carinho), `dismiss` (parar de seguir) e
+ * `welcome` (primeiros passos: vai até quem acabou de chegar, de qualquer distância, se estiver livre).
+ * Eventos: `pet` `{ name }`, `call` `{ name }`, `welcome` `{ name }` (só para quem chegou),
+ * `bye` `{ reason }` (para quem ele seguia).
  */
 export class OrbiActivity implements Activity {
   readonly id = ORBI_ID;
@@ -53,6 +58,8 @@ export class OrbiActivity implements Activity {
   private nextReplan = 0;
   private lastTarget: Vec2 | null = null;
   private readonly pose: OrbiPose = { x: 0, z: 0, yaw: 0, moving: false };
+  /** Quando cada pessoa recebeu as boas-vindas (id → hora). */
+  private readonly welcomed = new Map<string, number>();
 
   constructor(private readonly host: ActivityHost) {
     this.zones = ORBI_ZONES.map((id) => host.map.zones.find((z) => z.id === id)).filter((z): z is Zone => !!z);
@@ -90,6 +97,23 @@ export class OrbiActivity implements Activity {
       this.state = { ...this.state, mode: "pet", from: { x: at.x, z: at.z }, path: [], startAt: now, yaw, pet: { name, at: now } };
       this.host.changed(this);
       this.host.event(this, "pet", { name }, { from });
+      return;
+    }
+    if (op === "welcome") {
+      // Já acompanhando outra pessoa: não larga ninguém para dar boas-vindas.
+      if (this.state.follow && this.state.follow.id !== from) return;
+      if (now - (this.welcomed.get(from) ?? -Infinity) < WELCOME_COOLDOWN_MS) return;
+      if (!this.host.playerPos(from)) return;
+      const zone = this.host.playerZone(from);
+      if (zone && CLOSED.has(zone.kind)) return;
+      this.welcomed.set(from, now);
+      const name = this.host.playerName(from) ?? "Alguém";
+      this.state = { ...this.state, mode: "follow", follow: { id: from, name, until: now + ORBI_WELCOME_MS } };
+      this.nextReplan = 0;
+      this.lastTarget = null;
+      this.followStep(now);
+      this.host.changed(this);
+      this.host.event(this, "welcome", { name }, { to: [from] });
       return;
     }
     if (op === "dismiss" && this.state.follow?.id === from) this.stopFollow(now, null);
@@ -130,6 +154,7 @@ export class OrbiActivity implements Activity {
   }
 
   leave(id: string): void {
+    this.welcomed.delete(id);
     if (this.state.follow?.id === id) this.stopFollow(Date.now(), null);
   }
 

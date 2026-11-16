@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   COPA_STATIONS,
   NavGrid,
+  ORBI_CALL_RANGE,
   ORBI_PET_MS,
   PLANT_DRY_MS,
   ZoneIndex,
@@ -250,6 +251,50 @@ describe("Orbi (servidor)", () => {
     runFor(orbi, 1000);
     expect((orbi.snapshot() as OrbiState).follow).toBeNull();
     expect(h.events.at(-1)).toMatchObject({ ev: "bye", data: { reason: "room" }, to: ["ana"] });
+  });
+});
+
+describe("Orbi: boas-vindas", () => {
+  function runFor(a: Activity, ms: number) {
+    for (let t = 0; t < ms; t += 66) {
+      vi.advanceTimersByTime(66);
+      a.tick?.(1 / 15);
+    }
+  }
+
+  it("vai até quem chegou, de longe, uma vez só, e não larga quem já acompanha", () => {
+    const h = fakeHost();
+    const orbi = new OrbiActivity(h.host);
+    // Longe demais para "chamar", mas boas-vindas vêm de qualquer distância (área aberta).
+    const at = orbiPoseAt(orbi.snapshot() as OrbiState, Date.now());
+    const far = h.nav.nearestWalkable({ x: at.x, z: at.z + 14 }, 4)!;
+    expect(dist(far, at)).toBeGreaterThan(ORBI_CALL_RANGE);
+    expect(["meeting", "office", "focus"]).not.toContain(h.host.zones.zoneAt(far)?.kind);
+    h.put("nova", far, "Nova");
+    orbi.handle("nova", "call", undefined);
+    expect((orbi.snapshot() as OrbiState).mode).not.toBe("follow");
+    orbi.handle("nova", "welcome", undefined);
+    expect(orbi.snapshot() as OrbiState).toMatchObject({ mode: "follow", follow: { id: "nova", name: "Nova" } });
+    expect(h.events.at(-1)).toMatchObject({ ev: "welcome", data: { name: "Nova" }, to: ["nova"] });
+    runFor(orbi, 12000);
+    const p = orbiPoseAt(orbi.snapshot() as OrbiState, Date.now());
+    expect(dist(p, far)).toBeLessThan(2.4);
+    // Outra pessoa chegando agora não rouba o Orbi.
+    h.put("outra", far, "Outra");
+    orbi.handle("outra", "welcome", undefined);
+    expect((orbi.snapshot() as OrbiState).follow?.id).toBe("nova");
+    // Dispensado, um segundo pedido de boas-vindas da mesma pessoa é ignorado.
+    orbi.handle("nova", "dismiss", undefined);
+    orbi.handle("nova", "welcome", undefined);
+    expect((orbi.snapshot() as OrbiState).follow).toBeNull();
+  });
+
+  it("não entra em sala fechada para dar boas-vindas", () => {
+    const h = fakeHost();
+    const orbi = new OrbiActivity(h.host);
+    h.put("ana", { x: -21, z: 1 }, "Ana"); // Sala Órbita
+    orbi.handle("ana", "welcome", undefined);
+    expect((orbi.snapshot() as OrbiState).follow).toBeNull();
   });
 });
 

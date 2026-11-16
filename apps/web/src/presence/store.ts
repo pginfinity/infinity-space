@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { create } from "zustand";
 import type { ChamadoCalling, ChamadoInvite, SeguirAsk, SeguirAsking } from "@infinity/world";
 
@@ -85,4 +86,34 @@ export function registerPersonCommand(c: PersonCommand): void {
 
 export function personCommandList(): readonly PersonCommand[] {
   return personCommands;
+}
+
+/** Ação geral oferecida por outros pacotes na busca (ex.: "Minha mesa", "Primeiros passos"). */
+export interface GeneralCommand {
+  key: string;
+  label: string;
+  hint?: string;
+  /** Palavras extras para a busca (sem acento). */
+  keywords?: string;
+  /** Ícone (componente, ex.: do lucide-react). */
+  icon: ComponentType<{ className?: string }>;
+  /** Tecla mostrada à direita ("?", "C"...). */
+  shortcut?: string;
+  run: () => void;
+}
+
+const generalCommands: GeneralCommand[] = [];
+
+/**
+ * Gancho para outros pacotes: acrescenta uma ação geral na busca (Ctrl+K), no grupo "Ações".
+ * As mesas, por exemplo: `registerCommand({ key: "minha-mesa", label: "Minha mesa", icon: Armchair, run: abrirPainel })`.
+ */
+export function registerCommand(c: GeneralCommand): void {
+  const i = generalCommands.findIndex((x) => x.key === c.key);
+  if (i >= 0) generalCommands[i] = c;
+  else generalCommands.push(c);
+}
+
+export function commandList(): readonly GeneralCommand[] {
+  return generalCommands;
 }
