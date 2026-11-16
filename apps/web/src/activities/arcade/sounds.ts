@@ -105,3 +105,15 @@ registerSynth("cab-metal", (c, out) => tone(c, out, { type: "triangle", f0: 1800
 registerSynth("cab-start", (c, out) => notes(c, out, [523, 784, 1047], 0.07, "square", 0.06, 0.09));
 registerSynth("cab-over", (c, out) => notes(c, out, [392, 330, 262], 0.14, "square", 0.06, 0.18));
 registerSynth("cab-record", (c, out) => notes(c, out, [523, 659, 784, 1047, 784, 1047], 0.08, "square", 0.07, 0.12));
+
+// ---- bolinha de papel
+registerSynth("arcade-paper-throw", (c, out) => noise(c, out, { freq: 900, q: 0.7, dur: 0.22, gain: 0.25 }));
+registerSynth("arcade-paper-in", (c, out) => {
+  noise(c, out, { freq: 2200, q: 0.8, dur: 0.18, gain: 0.3 });
+  tone(c, out, { f0: 180, f1: 120, dur: 0.12, gain: 0.25, at: 0.08 });
+});
+registerSynth("arcade-paper-rim", (c, out) => {
+  tone(c, out, { type: "triangle", f0: 2100, dur: 0.25, gain: 0.18 });
+  tone(c, out, { type: "triangle", f0: 3150, dur: 0.18, gain: 0.08 });
+});
+registerSynth("arcade-paper-miss", (c, out) => noise(c, out, { freq: 1500, q: 1.5, dur: 0.06, gain: 0.25 }));

@@ -106,5 +106,21 @@
   "cab-record": {
     "prompt": "8-bit chiptune new high score fanfare, short and happy, no voice",
     "seconds": 1
+  },
+  "arcade-paper-throw": {
+    "prompt": "Crumpled paper ball tossed through the air, soft quick whoosh, office ambience, no music",
+    "seconds": 0.4
+  },
+  "arcade-paper-in": {
+    "prompt": "Paper ball dropping cleanly into an office metal trash bin, soft swish and light thud, no music",
+    "seconds": 0.6
+  },
+  "arcade-paper-rim": {
+    "prompt": "Paper ball hitting the metal rim of a trash bin and bouncing off, light metallic clink, no music",
+    "seconds": 0.5
+  },
+  "arcade-paper-miss": {
+    "prompt": "Crumpled paper ball landing on a carpet floor, very soft tap, no music",
+    "seconds": 0.3
   }
 }
