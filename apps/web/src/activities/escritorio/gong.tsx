@@ -7,6 +7,8 @@ import { GONG_ID, GONG_KIND, GONG_MSG_MAX, type GongRing, type MapObject, type V
 import { sendAct, type ActivityClient } from "../registry.ts";
 import { registerSynth, sfx } from "../../audio/sfx.ts";
 import { world } from "../../world/world.ts";
+import { toast } from "../../ui/toasts.ts";
+import { focusSoon, useEscape } from "./shared.tsx";
 import { T } from "./strings.ts";
 
 /**
@@ -36,6 +38,7 @@ export const gong: ActivityClient = {
   label: () => T.gong.action,
   use: (_o: MapObject) => useGongUi.setState({ open: true }),
   onEvent: (e) => {
+    if (e.ev === "busy") toast(T.gong.busy((e.data as { ms: number }).ms));
     if (e.ev !== "ring") return;
     const ring = e.data as GongRing;
     sfx("gong", { volume: 0.8 });
@@ -84,8 +87,10 @@ function GongOverlay() {
 function RingDialog() {
   const [msg, setMsg] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
+  // Foca depois do E que abriu o campo (senão o "e" entra no texto).
+  useEffect(() => focusSoon(input.current), []);
   const close = () => useGongUi.setState({ open: false });
+  useEscape(close);
   const ring = () => {
     sendAct(GONG_ID, "ring", { msg });
     close();
@@ -144,6 +149,8 @@ function Confetti() {
     if (!m) return;
     for (let i = 0; i < N; i++) m.setColorAt(i, COLORS[i % COLORS.length]!);
     m.count = 0;
+    // Escondido até o primeiro toque: o shader só compila quando precisa.
+    m.visible = false;
   }, []);
 
   useFrame((_, dt) => {
@@ -167,8 +174,10 @@ function Confetti() {
     if (started.current > LIFE) {
       started.current = -1;
       m.count = 0;
+      m.visible = false;
       return;
     }
+    m.visible = true;
     const k = Math.min(dt, 1 / 20);
     for (let i = 0; i < N; i++) {
       const q = parts[i]!;

@@ -80,6 +80,8 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   rug: { w: 3.0, d: 2.0, h: 0.02, blocks: false, look: "Tapete retangular com padrão geométrico simples nas cores `color`/`accent`." },
   sculpture: { w: 2.2, d: 2.2, h: 3.6, blocks: true, look: "(Modelo próprio, feito à parte: a estrela da Infinity.)" },
   gong: { w: 1.0, d: 0.5, h: 1.8, blocks: true, action: "use", label: "Tocar o gongo", look: "Gongo dourado pendurado numa moldura de madeira." },
+  // pacote escritorio
+  "notice-board": { w: 2.0, d: 0.08, h: 1.25, blocks: false, action: "use", label: "Ver mural", wallMounted: 1.5, look: "Mural de cortiça com moldura de madeira e post-its coloridos (os recados reais vêm por cima, em textura)." },
   // auditório
   lectern: { w: 0.7, d: 0.5, h: 1.15, blocks: true, action: "use", label: "Ir ao púlpito", look: "Púlpito de palestra com microfone." },
   // jogos

@@ -136,6 +136,8 @@ export type ObjectType =
   | "rug"
   | "sculpture"
   | "gong"
+  // pacote escritorio
+  | "notice-board"
   // auditório
   | "lectern"
   // jogos

@@ -325,6 +325,12 @@ export function buildStationMap(): MapDef {
   b.put("plant", -4.3, 8.3, N, { zoneId: "atrio", variant: 1 });
   b.put("plant", 6.3, 4.4, N, { zoneId: "atrio", variant: 2 });
   b.put("water-cooler", 6.4, 6.8, W, { zoneId: "atrio" });
+  // pacote escritorio: mural de recados na parede norte, à esquerda da entrada.
+  b.onWall("notice-board", -4, -2.95, S, {
+    zoneId: "atrio",
+    label: "Mural de recados",
+    interact: { point: { x: -2.95, z: -3.1 }, yaw: N, radius: 1.9, action: "use", label: "Ver mural" },
+  });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],
