@@ -31,6 +31,7 @@ import { NOTICE_CORK } from "../../scene/furniture/escritorio.ts";
 import { browserKey, deferScene, focusSoon, selfNear, timeAgo, useEscape } from "./shared.tsx";
 import { noise, tone } from "./synth.ts";
 import { T } from "./strings.ts";
+import { useWallVisible } from "../../scene/wallFacing.ts";
 
 /**
  * Mural de recados do Átrio: post-its para o time todo, com reações (uma por pessoa por recado).
@@ -400,6 +401,7 @@ function drawBoard(ctx: CanvasRenderingContext2D, notes: readonly BoardNote[]): 
 function BoardScene() {
   const state = useAct<BoardState>(BOARD_ID);
   const o = board();
+  const wallVisible = useWallVisible(o?.id);
   const { tex, ctx, mat, geo, place } = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = TEX_W;
@@ -440,7 +442,7 @@ function BoardScene() {
   }, [state, ctx, tex, o]);
 
   if (!o) return null;
-  return <mesh geometry={geo} material={mat} position={place.p} quaternion={place.q} scale={place.s} />;
+  return <mesh geometry={geo} material={mat} position={place.p} quaternion={place.q} scale={place.s} visible={wallVisible} />;
 }
 
 // ---- sons de reserva ----------------------------------------------------------------------

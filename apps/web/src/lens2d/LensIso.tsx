@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { yawOf } from "@infinity/world";
+import { setWallView } from "../scene/wallFacing.ts";
 import { SPACE } from "../world/theme.ts";
 import { WorldScene } from "../scene/WorldScene.tsx";
 import { wallUniforms } from "../scene/walls.ts";
@@ -58,6 +59,7 @@ function initialZoom(): number {
 function IsoRig() {
   const { camera, gl, size } = useThree();
   const st = useRef({ step: 0, yaw: Math.PI / 4, tx: self.x, tz: self.z, panX: 0, panZ: 0, follow: true });
+  const wallStep = useRef(-1);
 
   useEffect(() => {
     const el = gl.domElement;
@@ -161,6 +163,10 @@ function IsoRig() {
     const cam = camera as THREE.OrthographicCamera;
     // Gira suavemente até o ângulo escolhido.
     const goal = Math.PI / 4 + s.step * (Math.PI / 2);
+    if (s.step !== wallStep.current) {
+      wallStep.current = s.step;
+      setWallView({ x: Math.sin(goal), z: Math.cos(goal) });
+    }
     let d = goal - s.yaw;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     s.yaw += d * Math.min(1, dt * 8);

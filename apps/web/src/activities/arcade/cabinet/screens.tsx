@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { CAB_GAMES, CAB_ID, CAB_ORDER, cabGameOfVariant, type CabState, type MapObject } from "@infinity/world";
+import { CAB_GAMES, CAB_ID, CAB_ORDER, cabGameOfVariant, type CabState, type MapObject, CATALOG } from "@infinity/world";
 import { world } from "../../../world/world.ts";
 import { objectMatrix } from "../../../scene/furniture/index.ts";
 import { BOARD_SCREEN } from "../../../scene/furniture/arcade.ts";
@@ -10,6 +10,7 @@ import { actState } from "../../registry.ts";
 import { PX, pixelText, textWidth } from "./pixel.ts";
 import { GAME_COLOR } from "./Cabinet.tsx";
 import { T } from "../strings.ts";
+import { useWallFacing, wallHidden } from "../../../scene/wallFacing.ts";
 
 /**
  * Telas dos fliperamas e o placar do Arcade no mundo (2D e 3D): textura de pixel pequena,
@@ -63,6 +64,12 @@ function build(objects: readonly MapObject[]) {
     _m.multiplyMatrices(objectMatrix(o), local).decompose(mesh.position, mesh.quaternion, mesh.scale);
     mesh.name = `arcade:tela:${o.id}`;
     root.add(mesh);
+    // Placar na parede: no 2D some quando está de costas para a câmera (ver scene/wallFacing.ts).
+    if (CATALOG[o.type]?.wallMounted) {
+      mesh.visible = !wallHidden(o.id);
+      const off = useWallFacing.subscribe((s) => (mesh.visible = !s.hidden.has(o.id)));
+      owned.push({ dispose: off });
+    }
     screens.push({ canvas, ctx, tex, draw });
   };
 

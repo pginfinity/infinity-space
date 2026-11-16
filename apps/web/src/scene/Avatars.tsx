@@ -66,6 +66,18 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const key = lookKey(info.look);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const rig = useMemo(() => buildAvatar(info.look), [key]);
+  // Nó fixo durante a vida do avatar: leva a posição e a etiqueta de nome. Quando o visual muda, só o
+  // boneco dentro dele é trocado (trocar o objeto da etiqueta desmontava o Html no meio da renderização).
+  const holder = useMemo(() => {
+    const g = new THREE.Group();
+    g.name = `avatar:${info.id}`;
+    return g;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    holder.add(rig.root);
+    return () => void holder.remove(rig.root);
+  }, [holder, rig]);
   const st = useMemo(newAnimState, []);
   const scratch = useMemo<Pose>(() => ({ x: 0, z: 0, yaw: 0, anim: "idle" }), []);
   const last = useRef<{ x: number; z: number } | null>(null);
@@ -98,7 +110,7 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
     const surfing = p.anim === "run" && speed > 1.5;
     st.board += ((surfing ? 1 : 0) - st.board) * Math.min(1, dt * (surfing ? 7 : 5));
     const lift = 0.12 * st.board;
-    rig.root.position.set(p.x, y.current + lift, p.z);
+    holder.position.set(p.x, y.current + lift, p.z);
     board.visible = st.board > 0.03;
     if (board.visible) {
       const bob = Math.sin(now / 160) * 0.008;
@@ -138,7 +150,7 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const speaking = useMedia((s) => !!s.speaking[info.id]);
   const video = useMedia((s) => s.videos[info.id]);
   return (
-    <primitive object={rig.root}>
+    <primitive object={holder}>
       <Html position={[0, 1.72, 0]} center zIndexRange={[8, 1]} style={{ pointerEvents: "none" }}>
         <div className="flex flex-col items-center gap-1" style={{ opacity: away ? 0.6 : 1 }}>
           <div ref={bubble} className="text-2xl drop-shadow-[0_2px_6px_rgb(0_0_0/0.5)] transition-all duration-300" style={{ opacity: 0 }} />
@@ -180,4 +192,3 @@ function VideoBubble({ el, speaking, mirror }: { el: HTMLVideoElement; speaking:
   );
 }
 
-export const _types = THREE;

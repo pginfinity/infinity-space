@@ -7,6 +7,7 @@ import { objectMatrix } from "../../scene/furniture/index.ts";
 import { burst } from "./fx.tsx";
 import { StrokePainter, board, drawBoards, ensureSynced, useDrawLocal } from "./drawStore.ts";
 import { T } from "./strings.ts";
+import { useWallVisible } from "../../scene/wallFacing.ts";
 
 /**
  * Quadros brancos no mundo: enquanto há jogo, o quadro mostra o desenho ao vivo (traços por eventos)
@@ -59,6 +60,7 @@ function BoardTexture({ id, lens }: { id: string; lens: Lens }) {
   }, [lens]);
   const matrix = useMemo(() => objectMatrix(info.object).multiply(new THREE.Matrix4().makeTranslation(0, 0.555, 0.026)), [info]);
   const last = useRef({ state: null as DrawState | null, version: -1, epoch: -1 });
+  const wallVisible = useWallVisible(info.object.id);
 
   useEffect(() => () => tex.dispose(), [tex]);
 
@@ -79,7 +81,7 @@ function BoardTexture({ id, lens }: { id: string; lens: Lens }) {
   });
 
   return (
-    <mesh matrixAutoUpdate={false} matrix={matrix} renderOrder={2} name={`desenho:${id}`}>
+    <mesh matrixAutoUpdate={false} matrix={matrix} renderOrder={2} name={`desenho:${id}`} visible={wallVisible}>
       <planeGeometry args={[1.88, 1.0]} />
       <meshBasicMaterial map={tex} toneMapped={false} />
     </mesh>

@@ -11,6 +11,7 @@ import { burst } from "./fx.tsx";
 import { deadlineOf } from "./shared.tsx";
 import { SCREEN_H, SCREEN_W, paintQuizScreen } from "./quizScreen.ts";
 import { useQuiz, useQuizLocal } from "./quizStore.ts";
+import { useWallVisible } from "../../scene/wallFacing.ts";
 
 /**
  * O Quiz Show no mundo: o telão do auditório mostra pergunta, alternativas e placar (por cima da TV,
@@ -31,6 +32,8 @@ export function QuizScene({ lens }: { lens: Lens }) {
 /** Plano do telão: mesma posição e tamanho da tela da TV do auditório, um pouco à frente. */
 function BigScreen({ lens }: { lens: Lens }) {
   const tv = useMemo(() => world().map.objects.find((o) => o.screenId === "auditorio"), []);
+  // No 2D, objeto de parede de costas para a câmera some (ver scene/wallFacing.ts).
+  const wallVisible = useWallVisible(tv?.id);
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
     // No 2D (pixelado) meia resolução basta e fica mais nítido no pixel art.
@@ -79,7 +82,7 @@ function BigScreen({ lens }: { lens: Lens }) {
 
   if (!matrix) return null;
   return (
-    <mesh matrixAutoUpdate={false} matrix={matrix} renderOrder={3} name="quiz:telao">
+    <mesh matrixAutoUpdate={false} matrix={matrix} renderOrder={3} name="quiz:telao" visible={wallVisible}>
       <planeGeometry args={[1.62, 0.88]} />
       <meshBasicMaterial map={tex} toneMapped={false} />
     </mesh>

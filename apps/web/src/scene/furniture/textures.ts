@@ -125,13 +125,16 @@ export function neonTexture(text: string, color: string, aspect: number, isDead:
     h,
     (ctx) => {
       let size = h * 0.56;
-      ctx.font = `700 ${size}px ${FONT}`;
+      ctx.font = `500 ${size}px ${FONT}`;
       const mw = ctx.measureText(text).width;
       if (mw > w * 0.84) size *= (w * 0.84) / mw;
-      ctx.font = `700 ${size}px ${FONT}`;
+      ctx.font = `500 ${size}px ${FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.lineJoin = "round";
+      // Letras um pouco afastadas e contorno fino: a abertura estreita do "C" da NORD não fecha
+      // (com contorno grosso, "ARCADE" virava "AROADE").
+      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${Math.round(size * 0.05)}px`;
       const x = w / 2;
       const y = h / 2 + size * 0.04;
       // halo largo
@@ -143,17 +146,17 @@ export function neonTexture(text: string, color: string, aspect: number, isDead:
       // tubo
       ctx.globalAlpha = 1;
       ctx.shadowBlur = size * 0.2;
-      ctx.lineWidth = size * 0.14;
+      ctx.lineWidth = size * 0.045;
       ctx.strokeStyle = color;
       ctx.strokeText(text, x, y);
       ctx.fillText(text, x, y);
       // núcleo claro
       ctx.shadowBlur = 0;
-      ctx.lineWidth = size * 0.045;
+      ctx.lineWidth = size * 0.02;
       ctx.strokeStyle = core;
       ctx.strokeText(text, x, y);
     },
-    `700 64px ${FONT}`,
+    `500 64px ${FONT}`,
     isDead,
   );
 }

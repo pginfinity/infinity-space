@@ -5,12 +5,14 @@ import { SPACE } from "../world/theme.ts";
 import { WorldScene } from "../scene/WorldScene.tsx";
 import { wallUniforms } from "../scene/walls.ts";
 import { CameraRig } from "./CameraRig.tsx";
+import { setWallView } from "../scene/wallFacing.ts";
 
 /** Lente 3D: o escritório em terceira pessoa, paredes inteiras e vazadas em volta de você. */
 export default function Lens3D() {
   useEffect(() => {
     wallUniforms.uCut.value = 100;
     wallUniforms.uSee.value = 1;
+    setWallView(null);
   }, []);
 
   return (
