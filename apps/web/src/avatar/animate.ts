@@ -1,6 +1,8 @@
-import type { Anim, Emote } from "@infinity/world";
+import * as THREE from "three";
+import { VIVO_HELD, heldGestureGap, type Anim, type Emote, type HeldGesture, type HeldItem } from "@infinity/world";
 import { HIP_Y, type AvatarRig } from "./build.ts";
 import type { Expression } from "./face.ts";
+import type { HandActionKind } from "./hands.ts";
 
 /**
  * Animação procedural do avatar chibi: cada quadro calcula a pose alvo do estado atual
@@ -17,9 +19,69 @@ export interface AnimState {
   blinkAt: number;
   blinkUntil: number;
   expr: Expression;
+  /** Item que aparece na mão direita (o que a pessoa segura ou o do gesto em andamento). */
+  hold: HeldItem | null;
+  /** Gesto de mão pedido por uma atividade (regar, fazer carinho), com o progresso. */
+  handAct: { kind: HandActionKind; t: number; k: number } | null;
+  /** Gesto parado com o item (gole, cheirar...): início, próximo e contador (ms de performance.now). */
+  gestureAt: number;
+  nextGestureAt: number;
+  gestureN: number;
+  lastHold: HeldItem | null;
+  seed: number;
+  /** Inclinação atual do item (suavizada). */
+  tilt: number;
 }
 
-export const newAnimState = (): AnimState => ({ phase: 0, blinkAt: performance.now() + 1500 + Math.random() * 3000, blinkUntil: 0, expr: "neutral" });
+export const newAnimState = (): AnimState => ({
+  phase: 0,
+  blinkAt: performance.now() + 1500 + Math.random() * 3000,
+  blinkUntil: 0,
+  expr: "neutral",
+  hold: null,
+  handAct: null,
+  gestureAt: 0,
+  nextGestureAt: 0,
+  gestureN: 0,
+  lastHold: null,
+  seed: Math.random(),
+  tilt: 0,
+});
+
+/** Duração de cada gesto parado com o item (ms). */
+const GESTURE_MS: Record<HeldGesture, number> = { sip: 1900, nibble: 1500, sniff: 1900, lift: 2100, read: 3200, talk: 1700, none: 0 };
+
+/** Braço direito (e cabeça) de um gesto: ombro x/z, cotovelo, inclinação do item e cabeça. */
+interface ArmPose {
+  shRx: number;
+  shRz: number;
+  /** Giro do braço no próprio eixo (leva o antebraço dobrado para fora). */
+  shRy?: number;
+  elR: number;
+  tilt: number;
+  headX: number;
+}
+
+const GESTURE_POSE: Record<Exclude<HeldGesture, "none">, ArmPose> = {
+  sip: { shRx: -1.62, shRz: 0.5, elR: -1.25, tilt: -0.75, headX: -0.12 },
+  nibble: { shRx: -1.5, shRz: 0.45, elR: -1.2, tilt: -0.25, headX: 0.04 },
+  sniff: { shRx: -1.5, shRz: 0.48, elR: -1.25, tilt: -0.2, headX: 0.1 },
+  talk: { shRx: -1.45, shRz: 0.46, elR: -1.3, tilt: -0.55, headX: -0.04 },
+  lift: { shRx: -0.25, shRz: -2.7, elR: -0.3, tilt: 0, headX: -0.22 },
+  read: { shRx: -1.0, shRz: 0.34, elR: -1.3, tilt: -0.4, headX: 0.26 },
+};
+
+const smooth01 = (x: number) => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
+
+/** Envelope de um gesto: sobe no primeiro quarto, segura e desce no último. */
+const envelope = (k: number) => smooth01(Math.min(k / 0.25, (1 - k) / 0.25));
+
+const _qChain = new THREE.Quaternion();
+const _qTilt = new THREE.Quaternion();
+const _axisX = new THREE.Vector3(1, 0, 0);
 
 interface Pose {
   bodyY: number;
@@ -34,15 +96,111 @@ interface Pose {
   shLz: number;
   shRx: number;
   shRz: number;
+  shRy: number;
   elL: number;
   elR: number;
   hipL: number;
   hipR: number;
   knL: number;
   knR: number;
+  /** Inclinação do item na mão (rad, em torno do eixo lateral; positivo leva o topo para a frente). */
+  tilt: number;
 }
 
-const p: Pose = { bodyY: 0, hipsY: HIP_Y, hipsX: 0, spineX: 0, spineZ: 0, headX: 0, headY: 0, headZ: 0, shLx: 0, shLz: 0, shRx: 0, shRz: 0, elL: 0, elR: 0, hipL: 0, hipR: 0, knL: 0, knR: 0 };
+const p: Pose = { bodyY: 0, hipsY: HIP_Y, hipsX: 0, spineX: 0, spineZ: 0, headX: 0, headY: 0, headZ: 0, shLx: 0, shLz: 0, shRx: 0, shRz: 0, shRy: 0, elL: 0, elR: 0, hipL: 0, hipR: 0, knL: 0, knR: 0, tilt: 0 };
+
+/**
+ * Pose do braço direito com o item (e o gesto parado ou da atividade). Mexe em `p`.
+ * Devolve a expressão do gesto, se houver.
+ */
+function holdPose(st: AnimState, anim: Anim, moving: boolean, now: number, t: number, emoting: boolean): Expression | null {
+  p.tilt = 0;
+  const act = st.handAct;
+  if (act) {
+    const env = envelope(act.k);
+    if (act.kind === "water") {
+      // regando: braço para a frente, regador inclinado com um balanço de quem despeja
+      const pour = 0.95 + Math.sin(act.t * 7) * 0.08;
+      blendArm({ shRx: -1.0, shRz: -0.16, elR: -0.32, tilt: pour, headX: 0.2 }, env);
+      return act.k > 0.25 && act.k < 0.85 ? "happy" : null;
+    }
+    // carinho: mão para a frente, dando tapinhas
+    const pat = Math.sin(act.t * 13) * 0.18;
+    blendArm({ shRx: -1.15 + pat * 0.4, shRz: 0.12, elR: -0.45 + pat, tilt: 0, headX: 0.12 }, env);
+    return "happy";
+  }
+
+  const item = st.hold;
+  if (item !== st.lastHold) {
+    st.lastHold = item;
+    st.gestureAt = 0;
+    // pegou algo agora: o primeiro gole vem logo
+    st.nextGestureAt = now + 2600;
+  }
+  if (!item) return null;
+  const rule = VIVO_HELD[item];
+
+  // segurando, conforme o movimento
+  const run = anim === "run";
+  if (rule.grip === "low") {
+    const swing = moving ? Math.sin(st.phase) * (run ? 0.25 : 0.14) : 0.03 * Math.sin(t * 1.3);
+    p.shRx = -0.12 - swing;
+    p.shRz = -0.22;
+    p.elR = -0.22;
+  } else if (anim === "sit") {
+    p.shRx = -0.6;
+    p.shRz = -0.25;
+    p.shRy = -0.4;
+    p.elR = -0.95;
+  } else if (moving) {
+    // braço um pouco aberto: o item aparece ao lado do corpo também para quem vê de costas
+    const bob = Math.sin(st.phase * 2) * 0.04;
+    p.shRx = (run ? -0.45 : -0.34) + bob;
+    p.shRz = run ? -0.3 : -0.32;
+    p.shRy = -0.5;
+    p.elR = run ? -1.55 : -1.45;
+  } else {
+    p.shRx = -0.34 + 0.03 * Math.sin(t * 1.1);
+    p.shRz = -0.32;
+    p.shRy = -0.6;
+    p.elR = -1.45;
+  }
+
+  // gesto parado de vez em quando (gole, cheirar, erguer...)
+  const g = rule.gesture;
+  if (g === "none") return null;
+  const dur = GESTURE_MS[g];
+  if (moving || emoting) {
+    if (st.gestureAt) st.gestureAt = 0;
+    if (now > st.nextGestureAt - 1500) st.nextGestureAt = now + 1500;
+    return null;
+  }
+  if (!st.gestureAt && now >= st.nextGestureAt) {
+    st.gestureAt = now;
+    st.nextGestureAt = now + dur + heldGestureGap(st.seed, st.gestureN++);
+  }
+  if (!st.gestureAt) return null;
+  const k = (now - st.gestureAt) / dur;
+  if (k >= 1) {
+    st.gestureAt = 0;
+    return null;
+  }
+  blendArm(GESTURE_POSE[g], envelope(k));
+  if (g === "lift" && anim !== "sit") p.bodyY += Math.max(0, Math.sin(k * Math.PI * 3)) * 0.05;
+  if (g === "sip" || g === "nibble") return k > 0.35 && k < 0.72 ? "blink" : null;
+  if (g === "sniff" || g === "lift") return "happy";
+  return null;
+}
+
+/** Mistura a pose atual do braço direito com a de um gesto. */
+function blendArm(a: ArmPose, w: number): void {
+  p.shRx += (a.shRx - p.shRx) * w;
+  p.shRz += (a.shRz - p.shRz) * w;
+  p.shRy += ((a.shRy ?? 0) - p.shRy) * w;
+  p.elR += (a.elR - p.elR) * w;
+  p.tilt += (a.tilt - p.tilt) * w;
+  p.headX += (a.headX - p.headX) * w;
+}
 
 const EXPR: Partial<Record<Emote, Expression>> = { wave: "happy", dance: "happy", clap: "happy", cheer: "laugh", laugh: "laugh", heart: "heart", think: "think", point: "wink" };
 
@@ -71,6 +229,7 @@ export function animate(rig: AvatarRig, st: AnimState, anim: Anim, speed: number
   p.shRx = -0.04 * Math.sin(t * 1.1);
   p.shLz = 0.13;
   p.shRz = -0.13;
+  p.shRy = 0;
   p.elL = -0.18;
   p.elR = -0.18;
   p.hipL = 0;
@@ -110,6 +269,9 @@ export function animate(rig: AvatarRig, st: AnimState, anim: Anim, speed: number
     p.shRz = -0.08;
     p.spineX = -0.02;
   }
+
+  // Item na mão direita: braço segurando, gesto parado de vez em quando, ou o gesto de uma atividade.
+  const handExpr = holdPose(st, anim, moving, now, t, emote !== null);
 
   // Emote por cima (corpo de cima; pernas continuam o que estavam fazendo).
   if (emote) {
@@ -183,6 +345,8 @@ export function animate(rig: AvatarRig, st: AnimState, anim: Anim, speed: number
       p.elR = -1.55;
     }
     void fade;
+    // o emote usa o braço do jeito dele: sem o giro de quem segura um copo
+    p.shRy = 0;
   }
 
   // Juntas seguem a pose alvo suavemente.
@@ -200,16 +364,25 @@ export function animate(rig: AvatarRig, st: AnimState, anim: Anim, speed: number
   rig.shoulderL.rotation.z = l(rig.shoulderL.rotation.z, p.shLz);
   rig.shoulderR.rotation.x = l(rig.shoulderR.rotation.x, p.shRx);
   rig.shoulderR.rotation.z = l(rig.shoulderR.rotation.z, p.shRz);
+  rig.shoulderR.rotation.y = l(rig.shoulderR.rotation.y, p.shRy);
   rig.elbowL.rotation.x = l(rig.elbowL.rotation.x, p.elL);
   rig.elbowR.rotation.x = l(rig.elbowR.rotation.x, p.elR);
   rig.hipL.rotation.x = l(rig.hipL.rotation.x, p.hipL);
   rig.hipR.rotation.x = l(rig.hipR.rotation.x, p.hipR);
   rig.kneeL.rotation.x = l(rig.kneeL.rotation.x, p.knL);
   rig.kneeR.rotation.x = l(rig.kneeR.rotation.x, p.knR);
+  st.tilt = l(st.tilt, p.tilt);
 
-  // Expressão: emote manda; senão, pisca de vez em quando.
-  let expr: Expression = emote ? (EXPR[emote.e] ?? "neutral") : "neutral";
-  if (!emote) {
+  // O item fica de pé no mundo: desfaz a rotação de tronco, ombro e cotovelo e aplica só a inclinação do gesto.
+  if (st.hold) {
+    _qChain.copy(rig.spine.quaternion).multiply(rig.shoulderR.quaternion).multiply(rig.elbowR.quaternion).invert();
+    _qTilt.setFromAxisAngle(_axisX, st.tilt);
+    rig.handR.quaternion.copy(_qChain).multiply(_qTilt);
+  }
+
+  // Expressão: emote manda; depois o gesto com o item; senão, pisca de vez em quando.
+  let expr: Expression = emote ? (EXPR[emote.e] ?? "neutral") : (handExpr ?? "neutral");
+  if (!emote && !handExpr) {
     if (now >= st.blinkAt) {
       st.blinkUntil = now + 120;
       st.blinkAt = now + 2200 + Math.random() * 3500;

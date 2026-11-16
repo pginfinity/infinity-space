@@ -90,6 +90,10 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   "connect4-table": { w: 0.9, d: 0.7, h: 0.74, blocks: true, action: "play", label: "Jogar Lig 4", look: "Mesinha com o tabuleiro vertical de ligar 4 (grade azul, fichas laranja e brancas)." },
   arcade: { w: 0.8, d: 0.8, h: 1.8, blocks: true, action: "play", label: "Jogar fliperama", look: "Máquina de fliperama retrô, tela brilhante, controles, lateral com arte colorida." },
   jukebox: { w: 0.9, d: 0.6, h: 1.6, blocks: true, action: "use", label: "Escolher música", look: "Jukebox retrô com painel frontal laranja brilhante e arco de luz." },
+  // pacote vivo (estação viva)
+  telescope: { w: 0.8, d: 0.8, h: 1.6, blocks: true, action: "use", label: "Olhar pelo telescópio", look: "Telescópio de latão e azul-marinho num tripé de madeira, apontado para a janela." },
+  chalkboard: { w: 0.7, d: 0.5, h: 1.25, blocks: true, look: "Cavalete de quadro de giz (A-frame) da copa, moldura de madeira. O texto do dia é desenhado à parte." },
+  "watering-station": { w: 0.9, d: 0.45, h: 1.1, blocks: true, action: "use", label: "Pegar o regador", look: "Banquinho de jardinagem com regadores, vasinhos de muda e uma plaquinha das plantas felizes." },
   // estruturas
   pod: { w: 2.2, d: 2.2, h: 2.4, blocks: false, look: "(Estrutura: cabine de foco, montada com paredes no mapa.)" },
 };

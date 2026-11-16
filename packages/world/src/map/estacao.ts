@@ -325,6 +325,8 @@ export function buildStationMap(): MapDef {
   b.put("plant", -4.3, 8.3, N, { zoneId: "atrio", variant: 1 });
   b.put("plant", 6.3, 4.4, N, { zoneId: "atrio", variant: 2 });
   b.put("water-cooler", 6.4, 6.8, W, { zoneId: "atrio" });
+  // pacote vivo: estação de rega (regadores e a plaquinha das plantas felizes)
+  b.put("watering-station", 6.45, 5.6, W, { zoneId: "atrio", label: "Estação de rega" });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],
@@ -421,6 +423,8 @@ export function buildStationMap(): MapDef {
   b.put("round-table", 23.0, -9.8, N, { zoneId: dirL.id });
   b.around("chair", 23.0, -9.8, 1.08, 4, 0, { zoneId: dirL.id, color: "#6B4A32" });
   b.put("plant-tall", 25.5, -7.6, N, { zoneId: dirL.id });
+  // pacote vivo: telescópio apontado para a janela leste
+  b.put("telescope", 25.1, -11.7, E, { zoneId: dirL.id, label: "Telescópio" });
 
   // ── Salas de reunião Órbita e Lua ───────────────────────────────────────────────────
   const orb = b.room("orbita", "Sala Órbita", "meeting", rect(-26, -16, -4, 2.5), s.orbita, { glass: true, capacity: 10 });
@@ -545,6 +549,8 @@ export function buildStationMap(): MapDef {
   b.put("coffee-table", -3.9, 16.2, E, { zoneId: cafe.id });
   b.onWall("neon-sign", 12, -9.6, S, { zoneId: cafe.id, text: "CAFÉ", accent: s.cafe.accent });
   b.put("plant-tall", -2.5, 12.6, N, { zoneId: cafe.id, variant: 1 });
+  // pacote vivo: quadro de giz com o contador do dia, embaixo do neon
+  b.put("chalkboard", -9.6, 12.6, S, { zoneId: cafe.id, label: "Quadro da copa" });
 
   // ── Gestão & Projetos (Ordenar) ─────────────────────────────────────────────────────
   const ges = b.room("gestao", "Gestão & Projetos", "open", rect(-2, 9, 12, 22), s.gestao, { team: "Gestão & Projetos" });

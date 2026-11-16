@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CATALOG, type MapObject, type ObjectType } from "@infinity/world";
 import { glow } from "../materials.ts";
-import { Builder, SLOT_ACCENT, SLOT_COLOR, type AnimSpec, type ModelFn, type Mold } from "./core.ts";
+import { Builder, SLOT_ACCENT, SLOT_COLOR, furnitureShaderPatch, type AnimSpec, type ModelFn, type Mold } from "./core.ts";
 import { leaderboardTexture, neonTexture, screenTexture } from "./textures.ts";
 import * as work from "./work.ts";
 import * as seating from "./seating.ts";
@@ -11,6 +11,7 @@ import * as tech from "./tech.ts";
 import * as kitchen from "./kitchen.ts";
 import * as decor from "./decor.ts";
 import * as games from "./games.ts";
+import * as vivo from "./vivo.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -33,7 +34,24 @@ export interface FurnitureBuild {
   screens: Map<string, THREE.Mesh>;
   /** Animações (LEDs do rack, holograma, luz do jukebox...). */
   update(dt: number, t: number): void;
+  /**
+   * Muda o visual de uma cópia pelo id do objeto (planta murcha, por exemplo), sem mexer nas outras.
+   * Vale para as peças estáticas do móvel. Devolve false se o objeto não existe.
+   */
+  setInstance(objectId: string, look: InstanceLook): boolean;
   dispose(): void;
+}
+
+/**
+ * Visual de uma cópia. `tint` multiplica a cor (as partes pintadas com a cor própria do objeto,
+ * como o vaso de uma planta, ficam como estão); `shape` é uma matriz extra no referencial do objeto
+ * (base no chão: inclinar, achatar). `null` volta ao original; ausente não mexe.
+ */
+export interface InstanceLook {
+  tint?: THREE.Color | null;
+  shape?: THREE.Matrix4 | null;
+  /** Folhagem seca (0 a 1): só o que é verde-folha vira palha; vaso, terra e tronco ficam como estão. */
+  dry?: number | null;
 }
 
 /** Modelo de cada tipo (sculpture e pod são feitos à parte). */
@@ -95,7 +113,29 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   "connect4-table": games.connect4Table,
   arcade: games.arcade,
   jukebox: games.jukebox,
+  telescope: vivo.telescope,
+  chalkboard: vivo.chalkboard,
+  "watering-station": vivo.wateringStation,
 };
+
+// ---- mobília montada na cena (para as atividades mudarem o visual de uma cópia) ----------------
+
+let mounted: FurnitureBuild | null = null;
+let mountedVersion = 0;
+
+/** A Station registra a mobília que montou (igual ao registerScreens). Devolve a limpeza. */
+export function registerFurniture(b: FurnitureBuild): () => void {
+  mounted = b;
+  mountedVersion++;
+  return () => {
+    if (mounted === b) mounted = null;
+  };
+}
+
+/** Mobília montada agora (ou null) e um número que muda a cada montagem (troca de lente). */
+export function mountedFurniture(): { build: FurnitureBuild | null; version: number } {
+  return { build: mounted, version: mountedVersion };
+}
 
 /** Quantas variantes (o.variant) cada tipo tem. Tipos ausentes têm só a 0. */
 export const VARIANTS: Partial<Record<ObjectType, number>> = {
@@ -253,6 +293,116 @@ interface Animator {
   seeds: number[];
 }
 
+interface InstanceCopy {
+  mesh: THREE.InstancedMesh;
+  index: number;
+  base: THREE.Matrix4;
+  obj: MapObject;
+  /** O molde tem cor por instância (slots). */
+  tinted: boolean;
+}
+
+/**
+ * Cor padrão (linear) de cada slot de uma geometria com slots, deduzida dos vértices:
+ * cor = mix(base, alvo, t)  =>  base = (cor - t * alvo) / (1 - t).
+ */
+const slotBases = new WeakMap<THREE.BufferGeometry, [THREE.Color | null, THREE.Color | null]>();
+function slotBase(geo: THREE.BufferGeometry, slot: 1 | 2): THREE.Color | null {
+  let bases = slotBases.get(geo);
+  if (!bases) {
+    bases = [null, null];
+    const s = geo.getAttribute("aSlot");
+    const tg = geo.getAttribute("aTarget");
+    const col = geo.getAttribute("color");
+    if (s && tg && col) {
+      for (let i = 0; i < s.count && (!bases[0] || !bases[1]); i++) {
+        const k = Math.round(s.getX(i));
+        const t = s.getY(i);
+        if ((k !== 1 && k !== 2) || bases[k - 1] || t > 0.995) continue;
+        const inv = 1 / (1 - t);
+        bases[k - 1] = new THREE.Color((col.getX(i) - t * tg.getX(i)) * inv, (col.getY(i) - t * tg.getY(i)) * inv, (col.getZ(i) - t * tg.getZ(i)) * inv);
+      }
+    }
+    slotBases.set(geo, bases);
+  }
+  return bases[slot - 1] ?? null;
+}
+
+const _look = new THREE.Matrix4();
+
+/**
+ * Variante do material dos móveis com "folhagem seca" por instância (atributo iDry): o fragmento que
+ * é verde-folha vira palha na proporção de iDry. Só as malhas que usam `dry` trocam de material.
+ */
+const dryMats = new Map<THREE.Material, THREE.Material>();
+function dryMaterial(base: THREE.Material): THREE.Material {
+  let m = dryMats.get(base);
+  if (!m) {
+    m = base.clone();
+    m.onBeforeCompile = (shader) => {
+      furnitureShaderPatch(shader);
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nattribute float iDry;\nvarying float vDry;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvDry = iDry;");
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vDry;").replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+        {
+          vec3 c = vColor.rgb;
+          float leaf = smoothstep(0.015, 0.09, c.g - max(c.r, c.b * 1.1));
+          float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(l * 1.7, l * 1.25, l * 0.42), vDry * leaf);
+        }`,
+      );
+    };
+    m.customProgramCacheKey = () => "mobilia-v2-seca";
+    dryMats.set(base, m);
+  }
+  return m;
+}
+
+/** Aplica o visual de uma cópia (ver FurnitureBuild.setInstance). */
+function applyLook(c: InstanceCopy, look: InstanceLook): void {
+  const { mesh, index } = c;
+  if (look.dry !== undefined) {
+    const geo = mesh.geometry;
+    let attr = geo.getAttribute("iDry") as THREE.InstancedBufferAttribute | undefined;
+    if (!attr && look.dry) {
+      attr = new THREE.InstancedBufferAttribute(new Float32Array(mesh.count), 1);
+      geo.setAttribute("iDry", attr);
+      mesh.material = dryMaterial(mesh.material as THREE.Material);
+    }
+    if (attr) {
+      attr.setX(index, look.dry ?? 0);
+      attr.needsUpdate = true;
+    }
+  }
+  if (look.shape !== undefined) {
+    mesh.setMatrixAt(index, look.shape ? _look.multiplyMatrices(c.base, look.shape) : c.base);
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+  if (look.tint === undefined) return;
+  if (!mesh.instanceColor) {
+    if (!look.tint) return;
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(mesh.count * 3).fill(1), 3);
+  }
+  mesh.setColorAt(index, look.tint ?? _white);
+  mesh.instanceColor.needsUpdate = true;
+  // Partes com a cor própria do objeto (slots) não seguem o tom: fixa a cor padrão delas na instância.
+  if (!c.tinted) return;
+  const geo = mesh.geometry;
+  ([["iColor", 1, c.obj.color], ["iAccent", 2, c.obj.accent]] as const).forEach(([name, slot, own]) => {
+    const attr = geo.getAttribute(name) as THREE.InstancedBufferAttribute | undefined;
+    if (!attr || own) return;
+    const base = look.tint ? slotBase(geo, slot) : null;
+    if (base) attr.setXYZW(index, base.r, base.g, base.b, 1);
+    else attr.setXYZW(index, 0, 0, 0, 0);
+    attr.needsUpdate = true;
+  });
+}
+
+const _white = new THREE.Color(1, 1, 1);
+
 const _m = new THREE.Matrix4();
 const _pose = new THREE.Matrix4();
 const _c = new THREE.Color();
@@ -267,6 +417,8 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
   const meshes: THREE.InstancedMesh[] = [];
   const animators: Animator[] = [];
   const neons: { mat: THREE.MeshBasicMaterial; seed: number }[] = [];
+  /** Cópias estáticas de cada objeto (para setInstance). */
+  const copies = new Map<string, InstanceCopy[]>();
   let disposed = false;
 
   // 1. agrupa objetos por molde. A chave só inclui a variante se o modelo a lê; cor e accent
@@ -330,6 +482,11 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
       mesh.userData.objectIds = objs.map((o) => o.id);
       meshes.push(mesh);
       group.add(mesh);
+      objs.forEach((o, i) => {
+        const list = copies.get(o.id) ?? [];
+        list.push({ mesh, index: i, base: mats[i] as THREE.Matrix4, obj: o, tinted });
+        copies.set(o.id, list);
+      });
     }
 
     // 3. peças animadas (também instanciadas)
@@ -442,6 +599,12 @@ export function buildFurniture(objects: readonly MapObject[]): FurnitureBuild {
   return {
     group,
     screens: screenMap,
+    setInstance(objectId, look) {
+      const list = copies.get(objectId);
+      if (!list || disposed) return false;
+      for (const c of list) applyLook(c, look);
+      return true;
+    },
     update(_dt: number, t: number) {
       for (const an of animators) animate(an, t);
       for (const n of neons) {

@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { pointInPolygon, type AvatarLook, type Emote, type PlayerInfo, type Vec2 } from "@infinity/world";
+import { isHeldItem, pointInPolygon, type AvatarLook, type Emote, type HeldItem, type PlayerInfo, type Vec2 } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { currentEmote, sampleRemote, self, type Pose } from "../world/registry.ts";
 import { world } from "../world/world.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
 import { buildAvatar } from "../avatar/build.ts";
 import { animate, newAnimState } from "../avatar/animate.ts";
+import { HeldSlot } from "../avatar/held.ts";
+import { currentHandAction, registerRig } from "../avatar/hands.ts";
 import { useMedia } from "../media/rtc.ts";
 
 /** Todos os avatares da sala, iguais nas duas lentes. */
@@ -69,6 +71,12 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const bubble = useRef<HTMLDivElement>(null);
   const lastEmote = useRef<Emote | null>(null);
   const y = useRef(0);
+  // Item na mão: o que a pessoa segura (do servidor) ou o do gesto em andamento (regador ao regar).
+  const slot = useMemo(() => new HeldSlot(rig.handR), [rig]);
+  const held = useRef<HeldItem | null>(null);
+  held.current = isHeldItem(info.held) ? info.held : null;
+  const faceYaw = useRef<number | null>(null);
+  useEffect(() => registerRig(info.id, rig), [info.id, rig]);
 
   useFrame((_, dt) => {
     const now = performance.now();
@@ -80,7 +88,20 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
     const seatH = p.anim === "sit" ? seatHeightAt(p.x, p.z) : 0;
     y.current += (floorY(p.x, p.z) - y.current) * Math.min(1, dt * 12);
     rig.root.position.set(p.x, y.current, p.z);
-    rig.root.rotation.y = Math.PI - p.yaw;
+    const act = currentHandAction(info.id, now);
+    st.handAct = act;
+    const shown = act?.item ?? held.current;
+    st.hold = shown;
+    slot.show(shown);
+    // Durante um gesto com alvo (regar a planta), o corpo vira para o alvo e depois volta.
+    const goalYaw = act && act.face !== null && p.anim !== "sit" ? act.face : p.yaw;
+    if (act && act.face !== null) faceYaw.current = faceYaw.current ?? p.yaw;
+    if (faceYaw.current !== null) {
+      const d = Math.atan2(Math.sin(goalYaw - faceYaw.current), Math.cos(goalYaw - faceYaw.current));
+      faceYaw.current += d * Math.min(1, dt * 10);
+      if (!act && Math.abs(d) < 0.02) faceYaw.current = null;
+    }
+    rig.root.rotation.y = Math.PI - (faceYaw.current ?? p.yaw);
     const emote = currentEmote(info.id, now);
     animate(rig, st, p.anim, speed, dt, now, seatH, emote);
 

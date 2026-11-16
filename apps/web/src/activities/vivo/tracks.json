@@ -1,0 +1,112 @@
+[
+  {
+    "id": "orbita-baixa",
+    "title": "Órbita Baixa",
+    "mood": "lo-fi calmo, para focar",
+    "seconds": 150,
+    "bpm": 78,
+    "key": "D",
+    "style": "lofi",
+    "prompt": "Mellow lo-fi hip hop instrumental, 78 BPM, D major 7th chords on a warm felt piano, soft vinyl crackle, brushed snare, round sub bass, gentle tape wobble, spacious and calm, background music for focused work in a space station office, no vocals",
+    "file": "/music/orbita-baixa.mp3"
+  },
+  {
+    "id": "cafe-na-copa",
+    "title": "Café na Copa",
+    "mood": "jazz quentinho de manhã",
+    "seconds": 140,
+    "bpm": 88,
+    "key": "F",
+    "style": "jazz",
+    "prompt": "Cozy lo-fi jazz instrumental, 88 BPM, F major, Rhodes electric piano comping with extended chords, upright bass walking softly, light swing drums with rim clicks, morning coffee shop warmth, subtle room ambience, no vocals",
+    "file": "/music/cafe-na-copa.mp3"
+  },
+  {
+    "id": "lagoa",
+    "title": "Lagoa",
+    "mood": "bossa lo-fi, fim de tarde na ilha",
+    "seconds": 160,
+    "bpm": 92,
+    "key": "A",
+    "style": "bossa",
+    "prompt": "Lo-fi bossa nova instrumental inspired by a calm lagoon at sunset in southern Brazil, 92 BPM, A minor 9 and major 7 chords on nylon guitar, soft shaker and rim click, warm bass, airy flute melody in the distance, relaxed and sunny, no vocals",
+    "file": "/music/lagoa.mp3"
+  },
+  {
+    "id": "deploy-de-sexta",
+    "title": "Deploy de Sexta",
+    "mood": "groove leve e otimista",
+    "seconds": 130,
+    "bpm": 96,
+    "key": "G",
+    "style": "groove",
+    "prompt": "Upbeat chillhop instrumental, 96 BPM, G major, bouncy bass line, crisp but soft drums, playful Rhodes stabs and a small synth lead, optimistic Friday afternoon energy, clean modern production, no vocals",
+    "file": "/music/deploy-de-sexta.mp3"
+  },
+  {
+    "id": "janela-leste",
+    "title": "Janela Leste",
+    "mood": "ambiente, amanhecer na Terra",
+    "seconds": 170,
+    "bpm": 70,
+    "key": "E",
+    "style": "ambient",
+    "prompt": "Slow ambient instrumental, 70 BPM pulse, E major, evolving warm synth pads, distant bell tones, very soft kick, the feeling of watching sunrise over Earth from an orbital window, peaceful and wide, no vocals",
+    "file": "/music/janela-leste.mp3"
+  },
+  {
+    "id": "chuva-no-casco",
+    "title": "Chuva no Casco",
+    "mood": "lo-fi de dia chuvoso",
+    "seconds": 150,
+    "bpm": 74,
+    "key": "C",
+    "style": "lofi",
+    "prompt": "Rainy day lo-fi instrumental, 74 BPM, C minor 9 chords on detuned piano, gentle rain texture, dusty boom bap drums played softly, warm bass, nostalgic and introspective, no vocals",
+    "file": "/music/chuva-no-casco.mp3"
+  },
+  {
+    "id": "revisao-de-sprint",
+    "title": "Revisão de Sprint",
+    "mood": "chillhop concentrado",
+    "seconds": 140,
+    "bpm": 85,
+    "key": "Bb",
+    "style": "groove",
+    "prompt": "Focused chillhop instrumental, 85 BPM, B flat major, steady head-nod drums, plucked guitar loop, mellow Rhodes chords, light vinyl noise, productive and steady mood for teamwork, no vocals",
+    "file": "/music/revisao-de-sprint.mp3"
+  },
+  {
+    "id": "estrela-guia",
+    "title": "Estrela Guia",
+    "mood": "sonhador, synth suave",
+    "seconds": 160,
+    "bpm": 80,
+    "key": "D",
+    "style": "dream",
+    "prompt": "Dreamy synth lo-fi instrumental, 80 BPM, D major, shimmering arpeggios, soft analog pads, gentle sidechained pulse, a guiding star in deep space, hopeful and luminous, no vocals",
+    "file": "/music/estrela-guia.mp3"
+  },
+  {
+    "id": "meia-noite-no-arcade",
+    "title": "Meia-noite no Arcade",
+    "mood": "synthwave lento e neon",
+    "seconds": 150,
+    "bpm": 90,
+    "key": "A",
+    "style": "neon",
+    "prompt": "Slow synthwave instrumental, 90 BPM, A minor, warm analog bass, gated soft drums, neon arcade atmosphere at midnight, retro but tasteful, chill and nocturnal, no vocals",
+    "file": "/music/meia-noite-no-arcade.mp3"
+  },
+  {
+    "id": "evoluir",
+    "title": "Evoluir",
+    "mood": "lo-fi inspirador",
+    "seconds": 150,
+    "bpm": 82,
+    "key": "Eb",
+    "style": "lofi",
+    "prompt": "Inspiring lo-fi instrumental, 82 BPM, E flat major, uplifting chord progression on Rhodes and soft strings, steady warm drums, gentle melodic hook, the feeling of growing and evolving together as a team, no vocals",
+    "file": "/music/evoluir.mp3"
+  }
+]

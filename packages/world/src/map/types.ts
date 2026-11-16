@@ -146,6 +146,10 @@ export type ObjectType =
   | "connect4-table"
   | "arcade"
   | "jukebox"
+  // pacote vivo (estação viva)
+  | "telescope"
+  | "chalkboard"
+  | "watering-station"
   // estruturas
   | "pod";
 
