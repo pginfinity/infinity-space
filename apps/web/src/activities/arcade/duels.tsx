@@ -59,7 +59,7 @@ function tableEnds(): DynamicTarget[] {
     const id = o.gameId;
     for (const seat of [0, 1]) {
       const { point } = duelStand(o, view.game.def as never, seat);
-      ends.push({ key: `${id}:${seat}`, point, radius: 1.1, priority: 1, label, run: () => openDuel(id) });
+      ends.push({ key: `${id}:${seat}`, point, radius: 1.1, label, run: () => openDuel(id) });
     }
   }
   return ends;

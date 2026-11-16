@@ -42,7 +42,8 @@ export interface DynamicTarget {
   run(): void;
   /**
    * Quem ganha quando há vários alvos ao alcance (depois desempata a distância). Objetos do mapa valem 0.
-   * 2 = ação de jogo em andamento · 1 = entrar num jogo · 0 = normal · -1 = ambiente (gestos, robô).
+   * Use pouco: 2 = ação de jogo em andamento (só para quem está jogando) · 0 = normal (entrar num jogo,
+   * usar algo; compete por distância com os objetos) · -1 = ambiente (gestos com pessoas, robô).
    */
   priority?: number;
 }

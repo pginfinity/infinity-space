@@ -56,7 +56,6 @@ export const drawClient: ActivityClient = {
         key: b.id,
         point: b.front,
         radius: 2.2,
-        priority: 1,
         label: mine ? T.draw.chipBack : s.phase === "idle" ? T.draw.action : T.draw.actionJoin,
         run: () => (mine ? openPanel("draw", b.id) : joinBoard(b.id)),
       });

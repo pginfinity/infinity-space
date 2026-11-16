@@ -146,7 +146,7 @@ export const pool: ActivityClient = {
       for (const o of world().map.objects) {
         if (o.type !== "pool" || !o.gameId) continue;
         const id = o.gameId;
-        for (const seat of [0, 1]) ends.push({ key: `${id}:${seat}`, point: rtTableToWorld(o, 0, (seat === 0 ? 1 : -1) * (POOL.L / 2 + POOL.STAND)), radius: 1.1, priority: 1, label: T.play, run: () => usePoolUi.setState({ open: id }) });
+        for (const seat of [0, 1]) ends.push({ key: `${id}:${seat}`, point: rtTableToWorld(o, 0, (seat === 0 ? 1 : -1) * (POOL.L / 2 + POOL.STAND)), radius: 1.1, label: T.play, run: () => usePoolUi.setState({ open: id }) });
       }
     }
     return ends;
