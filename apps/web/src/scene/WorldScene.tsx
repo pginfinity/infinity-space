@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import type { Lens } from "@infinity/world";
 import { Station } from "./Station.tsx";
@@ -19,6 +20,7 @@ export function WorldScene({ lens }: { lens: Lens }) {
       <Avatars />
       <ScreenTVs />
       <ActivitiesScene lens={lens} />
+      <BackgroundThrottle />
       {import.meta.env.DEV && <DevProbe />}
     </>
   );
@@ -28,5 +30,35 @@ export function WorldScene({ lens }: { lens: Lens }) {
 function DevProbe() {
   const gl = useThree((s) => s.gl);
   (window as unknown as { __infinityGl?: unknown }).__infinityGl = gl;
+  return null;
+}
+
+/**
+ * O escritório fica aberto o dia todo: com a janela em segundo plano (outra janela em foco),
+ * desenha a ~8 quadros por segundo em vez de 60, poupando CPU, placa de vídeo e bateria.
+ * Voz, vídeo e movimento não dependem do desenho e seguem normais. Aba escondida já para sozinha.
+ */
+function BackgroundThrottle() {
+  const setFrameloop = useThree((s) => s.setFrameloop);
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    let timer = 0;
+    const slow = () => {
+      setFrameloop("demand");
+      window.clearInterval(timer);
+      timer = window.setInterval(() => invalidate(), 125);
+    };
+    const fast = () => {
+      window.clearInterval(timer);
+      setFrameloop("always");
+    };
+    window.addEventListener("blur", slow);
+    window.addEventListener("focus", fast);
+    return () => {
+      window.removeEventListener("blur", slow);
+      window.removeEventListener("focus", fast);
+      fast();
+    };
+  }, [setFrameloop, invalidate]);
   return null;
 }
