@@ -2,6 +2,18 @@
 
 O escritório precisa ter coisa para fazer em todo canto, sem parecer genérico. Tudo aqui funciona igual no 2D e no 3D, com estado no servidor (todo mundo vê a mesma coisa) e, quando faz sentido, salvo de um dia para o outro.
 
+## Situação (15/11/2026)
+
+Pronto e integrado (base em `docs/atividades.md`):
+
+- **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos.
+- **Estação viva:** itens na mão, copa (café, chá, água, suco, pipoca) com contador do dia, plantas que murcham e estação de rega, Orbi (robô mascote), jukebox com fila, telescópio, prancha flutuante.
+- **Arcade:** tabuleiros ao vivo nas mesas, jogo da velha, hockey de mesa e pingue-pongue em tempo real, 3 fliperamas originais com ranking (Faxina Orbital, Cauda de Cometa, Estilhaço), bolinha de papel com recorde do dia, sinuca.
+- **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação.
+- **Reuniões:** gravação da sala com envio ao Google Drive.
+
+Ainda não: rituais (daily, Pomodoro compartilhado), TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
+
 ## Jogos
 
 | Onde | Jogo | Tipo |

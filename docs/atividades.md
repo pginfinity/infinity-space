@@ -63,3 +63,15 @@ registerActivity({
 - **Textos em pt-BR, marca da `docs/marca.md`.** Laranja como único destaque por tela; o gradiente da estrela só em momentos especiais. Tokens de cor em `apps/web/src/styles.css`.
 - **UI de ferramenta.** Densa e clara, operável por teclado (Esc fecha, foco visível, `aria-label`), sem padrão de landing page.
 - **Móveis novos.** Tipo em `ObjectType` (`packages/world/src/map/types.ts`), entrada no `CATALOG`, modelo procedural em `apps/web/src/scene/furniture/` registrado no `MODELS` do `index.ts`, e posição no mapa (`map/estacao.ts`). Os testes do mapa (`world.test.ts`) precisam continuar passando.
+
+## Próximas melhorias da base
+
+Pedidas pelos pacotes, ao construir os jogos e interações:
+
+- **Onde a pessoa está jogando:** um registro comum para mesas de jogo e atividades (hoje dá para estar no xadrez e no hockey ao mesmo tempo).
+- **Interação:** prioridade entre alvos, mais de uma ação por alvo, "segurar E", raio por tipo no catálogo e objetos sem `action` assumíveis por atividade.
+- **Avatar:** `faceTowards(yaw)` no movimento, avatar "fantasma"/translúcido, e um ponto de ancoragem para balões acima da etiqueta de nome.
+- **Tempo do servidor:** `serverNow()` na sessão, a partir do `serverTime` do welcome.
+- **Áudio:** um contexto de áudio compartilhado entre `sfx`, jukebox e vozes.
+- **TVs:** API para uma atividade ocupar a tela de uma TV (hoje cada pacote desenha um plano na frente).
+- **Host:** `playerHeld(id)`, `flush()` imediato para timers próprios, e um jeito de reunir jogadores (chamada/teleporte) para reuniões de jogo.
