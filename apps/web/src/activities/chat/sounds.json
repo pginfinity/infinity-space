@@ -1,0 +1,4 @@
+{
+  "chat-dm": { "prompt": "Very soft two-note notification pop for a private chat message, warm and rounded, quiet office app style, no reverb tail", "seconds": 0.4 },
+  "chat-mention": { "prompt": "Gentle bright three-note chime for being mentioned in a chat, clear but discreet, friendly office app notification", "seconds": 0.6 }
+}

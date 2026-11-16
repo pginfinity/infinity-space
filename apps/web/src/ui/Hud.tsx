@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
@@ -15,6 +15,7 @@ import { MediaControls } from "./MediaControls.tsx";
 import { ScreenShares } from "./ScreenShares.tsx";
 import { ActivitiesOverlay } from "../activities/index.tsx";
 import { SettingsPanel } from "./SettingsPanel.tsx";
+import { ChatDockButton, setChatOpen, useChatOpen } from "../activities/chat/dock.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -26,10 +27,18 @@ export function Hud() {
   const { setLens, togglePeople, leave } = useApp.getState();
   const [emotesOpen, setEmotesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const chatOpen = useChatOpen();
   const openSettings = (v: boolean) => {
     setSettingsOpen(v);
-    if (v) togglePeople(false);
+    if (v) {
+      togglePeople(false);
+      setChatOpen(false);
+    }
   };
+  // Chat e ajustes ocupam o mesmo lugar: abrir o chat (doca ou tecla C) fecha os ajustes.
+  useEffect(() => {
+    if (chatOpen) setSettingsOpen(false);
+  }, [chatOpen]);
   const list = Object.values(players);
 
   return (
@@ -60,7 +69,7 @@ export function Hud() {
 
       <AnimatePresence>{peopleOpen && !settingsOpen && <PeoplePanel />}</AnimatePresence>
       <AnimatePresence>{settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}</AnimatePresence>
-      {!peopleOpen && !settingsOpen && <Minimap />}
+      {!peopleOpen && !settingsOpen && !chatOpen && <Minimap />}
       <Toasts />
       <ScreenShares />
       <ActivitiesOverlay />
@@ -115,6 +124,7 @@ export function Hud() {
             <LocateFixed className="size-[18px]" />
           </DockButton>
         </div>
+        <ChatDockButton />
         <DockButton
           label={t("hud.people")}
           onClick={() => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { Footprints, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { Footprints, MessageSquareText, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../net/auth.ts";
 import { InvitePanel } from "./InvitePanel.tsx";
@@ -13,6 +13,7 @@ import { placeName } from "../world/zoneLabel.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
 import { walkTo } from "../engine/movement.ts";
 import { AvatarFace } from "./AvatarFace.tsx";
+import { openConv } from "../activities/chat/store.ts";
 
 /** Quem está no escritório, onde está e um atalho para ir até a pessoa. */
 export function PeoplePanel() {
@@ -91,6 +92,17 @@ export function PeoplePanel() {
                 >
                   <Footprints className="size-3.5" />
                   {t("hud.goTo")}
+                </button>
+              )}
+              {!isSelf && (
+                <button
+                  type="button"
+                  onClick={() => openConv(p.name, p.name)}
+                  aria-label={`Mensagem para ${p.name}`}
+                  title={`Mensagem para ${p.name}`}
+                  className="shrink-0 rounded-lg p-1.5 text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite"
+                >
+                  <MessageSquareText className="size-4" />
                 </button>
               )}
               {!isSelf && (
