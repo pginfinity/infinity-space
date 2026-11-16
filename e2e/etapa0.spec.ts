@@ -46,14 +46,16 @@ test("2D e 3D no mesmo mundo, em tempo real", async ({ browser }) => {
   const start = await ana.evaluate(() => ({ x: window.__infinity!.self.x, z: window.__infinity!.self.z }));
 
   // Ana anda para o norte (em direção à estrela) por um tempo.
+  // Segura W até andar 1 m (com WebGL por software a página às vezes trava ~1 s logo depois de entrar).
   await ana.waitForTimeout(600);
   await ana.keyboard.down("KeyW");
-  await ana.waitForTimeout(900);
+  await expect
+    .poll(() => ana.evaluate((z0) => z0 - window.__infinity!.self.z, start.z), { timeout: 5000, message: "Ana andou para o norte" })
+    .toBeGreaterThan(1);
   await ana.keyboard.up("KeyW");
   await ana.waitForTimeout(500);
 
   const end = await ana.evaluate(() => ({ x: window.__infinity!.self.x, z: window.__infinity!.self.z }));
-  expect(start.z - end.z, "Ana andou para o norte").toBeGreaterThan(1);
 
   // Bruno, no 3D, vê a Ana no mesmo lugar. No teste o WebGL roda por software e a página 3D fica lenta,
   // então esperamos a visão convergir em vez de conferir num instante fixo.
