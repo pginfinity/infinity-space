@@ -1,20 +1,28 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { clsx } from "clsx";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Footprints, Maximize2, Minimize2 } from "lucide-react";
 import { boundsOf } from "@infinity/world";
 import { world } from "../world/world.ts";
 import { useApp } from "../state/store.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { walkTo } from "../engine/movement.ts";
+import { guideItems, nearestSpot, type GuideGroup, type GuideItem } from "./guide.ts";
 
 /**
  * Minimapa da estação: salas coloridas pela cor de cada área, você e as outras pessoas.
- * Clicar numa sala leva você até ela. Abre grande pelo totem de mapa ou pelo botão.
+ * Clicar numa sala leva você até ela. Abre grande pelo totem de mapa ou pelo botão; grande, vira guia
+ * da estação: marcadores do que dá para fazer e a lista "O que fazer aqui", com "ir até lá".
  */
 export function Minimap() {
   const { map } = world();
   const [big, setBig] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
+  const [poi, setPoi] = useState<string | null>(null);
+  const guide = useMemo(guideItems, []);
+  const goTo = (item: GuideItem) => {
+    const spot = nearestSpot(item, { x: self.x, z: self.z });
+    if (spot) walkTo(spot);
+  };
   const svgRef = useRef<SVGSVGElement>(null);
   const dotsRef = useRef<SVGGElement>(null);
   const players = useApp((s) => s.players);
@@ -66,14 +74,15 @@ export function Minimap() {
   };
 
   return (
-    <div className={clsx("glass pointer-events-auto absolute right-3 overflow-hidden rounded-2xl transition-all duration-300", big ? "bottom-24 top-16 w-[min(760px,calc(100vw-24px))]" : "bottom-[max(12px,env(safe-area-inset-bottom))] hidden w-[230px] sm:block")}>
+    <div className={clsx("glass pointer-events-auto absolute right-3 flex flex-col overflow-hidden rounded-2xl transition-all duration-300", big ? "bottom-24 top-16 z-30 w-[min(1000px,calc(100vw-24px))]" : "bottom-[max(12px,env(safe-area-inset-bottom))] hidden w-[230px] sm:flex")}>
       <div className="flex items-center justify-between px-3 pt-2">
         <span className="label-caps">{hover ?? "Mapa da estação"}</span>
         <button type="button" onClick={() => setBig((v) => !v)} className="rounded-md p-1 text-slate hover:text-offwhite" aria-label={big ? "Diminuir mapa" : "Ampliar mapa"}>
           {big ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
         </button>
       </div>
-      <svg ref={svgRef} viewBox={vb} className={clsx("w-full cursor-pointer", big ? "h-[calc(100%-32px)]" : "h-[170px]")} onClick={go} onMouseLeave={() => setHover(null)}>
+      <div className={clsx("min-h-0", big && "flex flex-1 flex-col sm:flex-row")}>
+      <svg ref={svgRef} viewBox={vb} className={clsx("cursor-pointer", big ? "min-h-0 w-full flex-1" : "h-[170px] w-full")} onClick={go} onMouseLeave={() => setHover(null)}>
         {map.floors
           .filter((f) => f.style !== "line")
           .map((f) => (
@@ -97,13 +106,80 @@ export function Minimap() {
               {l.text}
             </text>
           ))}
+        {big &&
+          guide.flatMap((item) =>
+            item.spots.map((p, i) => (
+              <circle
+                key={`${item.key}-${i}`}
+                cx={p.x}
+                cy={p.z}
+                r={poi === item.key ? 0.85 : 0.45}
+                fill={poi === item.key ? "#EE5C29" : "#F2F0EF"}
+                fillOpacity={poi && poi !== item.key ? 0.35 : 0.9}
+                stroke="#00112A"
+                strokeWidth={0.18}
+                pointerEvents="none"
+              />
+            )),
+          )}
         <g ref={dotsRef}>
           {Object.values(players).map((p) => (
             <circle key={p.id} data-id={p.id} r={p.id === selfId ? 0.85 : 0.6} fill={p.id === selfId ? "#00B7FF" : "#F2F0EF"} stroke="#00112A" strokeWidth={0.25} pointerEvents="none" />
           ))}
         </g>
       </svg>
+      {big && <GuideList items={guide} active={poi} onHover={setPoi} onGo={goTo} />}
+      </div>
     </div>
+  );
+}
+
+const GROUPS: GuideGroup[] = ["Jogos", "Escritório", "Estação"];
+
+/** "O que fazer aqui": tudo que é interativo na estação, com ir até lá. */
+function GuideList({ items, active, onHover, onGo }: { items: GuideItem[]; active: string | null; onHover: (k: string | null) => void; onGo: (i: GuideItem) => void }) {
+  return (
+    <aside className="max-h-[45%] shrink-0 overflow-y-auto border-t border-offwhite/8 px-2 pb-2 pt-1 sm:max-h-none sm:w-64 sm:border-l sm:border-t-0" aria-label="O que fazer aqui" onMouseLeave={() => onHover(null)}>
+      <p className="px-2 pb-1 pt-2 text-sm font-medium">O que fazer aqui</p>
+      {GROUPS.map((g) => (
+        <section key={g} className="mt-1">
+          <h3 className="label-caps px-2 py-1">{g}</h3>
+          <ul>
+            {items
+              .filter((i) => i.group === g)
+              .map((i) => {
+                const Icon = i.icon;
+                const can = i.spots.length > 0;
+                return (
+                  <li key={i.key}>
+                    <button
+                      type="button"
+                      disabled={!can}
+                      onMouseEnter={() => onHover(i.key)}
+                      onFocus={() => onHover(i.key)}
+                      onClick={() => onGo(i)}
+                      className={clsx("group flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors", active === i.key ? "bg-offwhite/10" : "hover:bg-offwhite/6", !can && "cursor-default")}
+                      title={can ? `Ir até: ${i.label}` : i.hint}
+                    >
+                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-offwhite/8 text-offwhite/90">
+                        <Icon className="size-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-medium">
+                          {i.label}
+                          {i.spots.length > 1 && <span className="ml-1 text-[11px] font-normal text-slate">×{i.spots.length}</span>}
+                        </span>
+                        <span className="block truncate text-[11px] text-slate">{can ? `${i.room} · ${i.hint}` : i.hint}</span>
+                      </span>
+                      {can && <Footprints className="size-3.5 shrink-0 text-slate opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />}
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </section>
+      ))}
+    </aside>
   );
 }
 
