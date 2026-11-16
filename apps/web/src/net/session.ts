@@ -17,6 +17,15 @@ let pingTimer: number | undefined;
 let everConnected = false;
 let welcomed = false;
 
+/** Diferença entre o relógio do servidor e o daqui (ms). Refinada a cada ping. */
+let clockOffset = 0;
+let bestRtt = Infinity;
+
+/** Agora, no relógio do servidor (para contagens regressivas e "há X min" iguais para todos). */
+export function serverNow(): number {
+  return Date.now() + clockOffset;
+}
+
 /** Conectado e com a sala recebida: só então o movimento é enviado. */
 export function isReady(): boolean {
   return welcomed && socket?.readyState === WebSocket.OPEN;
@@ -116,6 +125,8 @@ function handle(msg: ServerMsg): void {
   const app = useApp.getState();
   switch (msg.t) {
     case "welcome": {
+      clockOffset = msg.serverTime - Date.now();
+      bestRtt = Infinity;
       everConnected = true;
       attempt = 0;
       clearRemote();
@@ -177,7 +188,14 @@ function handle(msg: ServerMsg): void {
         app.setConn("error", msg.message);
       }
       break;
-    case "pong":
+    case "pong": {
+      // Relógio do servidor: vale a estimativa do ping mais rápido (metade da ida e volta).
+      const rtt = performance.now() - msg.at;
+      if (rtt >= 0 && rtt < bestRtt) {
+        bestRtt = rtt;
+        clockOffset = msg.serverTime + rtt / 2 - Date.now();
+      }
       break;
+    }
   }
 }

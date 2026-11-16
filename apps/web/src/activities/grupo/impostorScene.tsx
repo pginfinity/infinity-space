@@ -6,6 +6,7 @@ import { actState, useAct } from "../registry.ts";
 import { useApp } from "../../state/store.ts";
 import { sampleRemote, self } from "../../world/registry.ts";
 import { impSpots, useImpLocal } from "./impostorStore.ts";
+import { clearAvatarEffect, setAvatarEffect } from "../../avatar/effects.ts";
 
 /**
  * Impostor no mundo (nas duas lentes): bloco de gelo onde alguém foi congelado (até a próxima reunião),
@@ -61,12 +62,16 @@ function OutMarkers() {
   const group = useRef<THREE.Group>(null);
   const geo = useMemo(() => new THREE.OctahedronGeometry(0.12, 0), []);
   useEffect(() => () => geo.dispose(), [geo]);
+  // Fim da partida (o componente sai de cena): ninguém continua fantasma.
+  useEffect(() => () => clearAvatarEffect("ghost"), []);
   useFrame((state) => {
     const g = group.current;
     const s = actState<ImpState>(IMP_ID);
     if (!g || !s) return;
     const me = useApp.getState().selfId;
     const out = s.players.filter((p) => !p.alive && !p.away);
+    // Quem está fora do jogo vira fantasma translúcido para todos (só muda algo quando o estado muda).
+    for (const p of s.players) setAvatarEffect(p.id, !p.alive && !p.away ? { ghost: true } : null);
     while (g.children.length < out.length) g.add(new THREE.Mesh(geo, flakeMat));
     const now = performance.now();
     g.children.forEach((m, i) => {

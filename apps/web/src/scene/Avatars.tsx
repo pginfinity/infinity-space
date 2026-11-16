@@ -13,6 +13,7 @@ import { HeldSlot } from "../avatar/held.ts";
 import { currentHandAction, registerRig } from "../avatar/hands.ts";
 import { hoverboard } from "../avatar/board.ts";
 import { useMedia } from "../media/rtc.ts";
+import { applyGhost, avatarEffect, avatarEffectsVersion } from "../avatar/effects.ts";
 
 /** Todos os avatares da sala, iguais nas duas lentes. */
 export function Avatars() {
@@ -89,6 +90,8 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const held = useRef<HeldItem | null>(null);
   held.current = isHeldItem(info.held) ? info.held : null;
   const faceYaw = useRef<number | null>(null);
+  const tag = useRef<HTMLDivElement>(null);
+  const fx = useRef({ version: -1, ghost: false, rig: null as unknown });
   useEffect(() => registerRig(info.id, rig), [info.id, rig]);
   // Prancha flutuante sob os pés quando corre.
   const board = useMemo(hoverboard, []);
@@ -119,9 +122,19 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
       board.rotation.x = -0.05 * st.board;
       board.children[board.children.length - 1]!.position.y = -0.015 - bob;
     }
+    // Efeitos das atividades (fantasma do Impostor): checa só quando algum efeito muda ou o boneco é refeito.
+    const v = avatarEffectsVersion();
+    if (v !== fx.current.version || fx.current.rig !== rig) {
+      const ghost = !!avatarEffect(info.id)?.ghost;
+      if (ghost !== fx.current.ghost || fx.current.rig !== rig) {
+        applyGhost(rig.root, ghost);
+        if (tag.current) tag.current.style.opacity = ghost ? "0.45" : "";
+      }
+      fx.current = { version: v, ghost, rig };
+    }
     const act = currentHandAction(info.id, now);
     st.handAct = act;
-    const shown = act?.item ?? held.current;
+    const shown = fx.current.ghost ? null : (act?.item ?? held.current);
     st.hold = shown;
     slot.show(shown);
     // Durante um gesto com alvo (regar a planta), o corpo vira para o alvo e depois volta.
@@ -152,7 +165,7 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   return (
     <primitive object={holder}>
       <Html position={[0, 1.72, 0]} center zIndexRange={[8, 1]} style={{ pointerEvents: "none" }}>
-        <div className="flex flex-col items-center gap-1" style={{ opacity: away ? 0.6 : 1 }}>
+        <div ref={tag} className="flex flex-col items-center gap-1" style={{ opacity: away ? 0.6 : 1 }}>
           <div ref={bubble} className="text-2xl drop-shadow-[0_2px_6px_rgb(0_0_0/0.5)] transition-all duration-300" style={{ opacity: 0 }} />
           {video && <VideoBubble el={video} speaking={speaking} mirror={isSelf} />}
           <div

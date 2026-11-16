@@ -1,3 +1,4 @@
+import { useThree } from "@react-three/fiber";
 import type { Lens } from "@infinity/world";
 import { Station } from "./Station.tsx";
 import { Avatars } from "./Avatars.tsx";
@@ -18,6 +19,14 @@ export function WorldScene({ lens }: { lens: Lens }) {
       <Avatars />
       <ScreenTVs />
       <ActivitiesScene lens={lens} />
+      {import.meta.env.DEV && <DevProbe />}
     </>
   );
+}
+
+/** Só em desenvolvimento: expõe o renderizador para medir desempenho (chamadas de desenho, triângulos). */
+function DevProbe() {
+  const gl = useThree((s) => s.gl);
+  (window as unknown as { __infinityGl?: unknown }).__infinityGl = gl;
+  return null;
 }
