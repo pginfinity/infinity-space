@@ -14,7 +14,7 @@ import {
   type RemoteTrack,
   type RemoteTrackPublication,
 } from "livekit-client";
-import { dirOfYaw, hearing, type Hearing } from "@infinity/world";
+import { dirOfYaw, hearing, type Hearing, type PrivacyRules } from "@infinity/world";
 import { world } from "../world/world.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { getHeading } from "../engine/movement.ts";
@@ -100,7 +100,11 @@ export async function joinRtc(url: string, token: string): Promise<void> {
       for (const s of speakers) speaking[s.identity] = true;
       useMedia.setState({ speaking });
     })
-    .on(RoomEvent.LocalTrackPublished, onLocalPublished)
+    .on(RoomEvent.LocalTrackPublished, (pub: LocalTrackPublication) => {
+      onLocalPublished(pub);
+      // Durante um sussurro, quem só te vê precisa das faixas novas (câmera ou tela ligada agora).
+      if (sightIds) applyAudience();
+    })
     .on(RoomEvent.LocalTrackUnpublished, (pub: LocalTrackPublication) => {
       if (pub.source === Track.Source.Camera) setVideo(r.localParticipant.identity, null);
     })
@@ -129,23 +133,98 @@ export async function leaveRtc(): Promise<void> {
   for (const el of screenAudio.values()) el.remove();
   screenAudio.clear();
   shareZone = null;
+  // Nova sessão, id novo no servidor: o sussurro (se houver) recomeça pelo pacote portas.
+  whisperTarget = null;
+  sightIds = null;
   useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, screen: false, screens: {} });
 }
 
 /** Lista do servidor: quem pode ouvir você agora. */
 export function setAudience(ids: string[]): void {
   audienceIds = ids;
-  // O gravador de reunião não conta como "pessoa que te ouve" (a sala já mostra o aviso de gravação).
-  useMedia.setState({ audience: ids.filter((id) => !id.startsWith("gravador-")).length });
+  updateAudienceCount();
   applyAudience();
 }
 
+function updateAudienceCount(): void {
+  // O gravador de reunião não conta como "pessoa que te ouve" (a sala já mostra o aviso de gravação).
+  const voice = whisperTarget === null ? audienceIds : audienceIds.filter((id) => id === whisperTarget);
+  useMedia.setState({ audience: voice.filter((id) => !id.startsWith("gravador-")).length });
+}
+
+// ---- sussurro (pacote portas) -------------------------------------------------------------------
+
+/** Para quem você está sussurrando agora (null = falando normalmente). Vale na hora, antes do servidor. */
+let whisperTarget: string | null = null;
+/** Durante um sussurro, quem continua vendo seu vídeo e sua tela (lista do servidor). */
+let sightIds: string[] | null = null;
+let preroll: number | undefined;
+
+/**
+ * Começa (alvo) ou termina (null) um sussurro. A voz fica restrita na hora, sem esperar o servidor,
+ * e o microfone manda silêncio por um instante enquanto o LiveKit aplica a permissão nova:
+ * nenhuma palavra dita logo depois de apertar a tecla chega a quem não deve.
+ */
+export function setWhisper(target: string | null): void {
+  if (target === whisperTarget) return;
+  const starting = whisperTarget === null && target !== null;
+  whisperTarget = target;
+  if (starting) {
+    const mic = micTrack()?.mediaStreamTrack;
+    if (mic && mic.enabled) {
+      mic.enabled = false;
+      window.clearTimeout(preroll);
+      preroll = window.setTimeout(() => {
+        // Só religa se a pessoa não desligou o microfone nesse meio-tempo.
+        const t = micTrack();
+        if (t && !t.isMuted) t.mediaStreamTrack.enabled = true;
+      }, 300);
+    }
+  }
+  updateAudienceCount();
+  applyAudience();
+}
+
+/** Lista do servidor durante um sussurro: quem continua vendo você (null = igual a quem te ouve). */
+export function setSight(ids: string[] | null): void {
+  sightIds = ids;
+  applyAudience();
+}
+
+/** Ids das suas faixas de vídeo e tela (o que quem só te vê pode receber durante um sussurro). */
+function visualTrackSids(): string[] {
+  const out: string[] = [];
+  if (!room) return out;
+  for (const pub of room.localParticipant.trackPublications.values()) {
+    if (pub.source !== Track.Source.Microphone && pub.trackSid) out.push(pub.trackSid);
+  }
+  return out;
+}
+
+/**
+ * Libera suas faixas no LiveKit só para quem o servidor disse que pode receber.
+ * Sussurrando: a voz só para a pessoa escolhida (se ela estiver na lista); os outros da lista de
+ * "quem vê" recebem só vídeo e tela.
+ */
 function applyAudience(): void {
   if (!room || room.state !== ConnectionState.Connected) return;
-  room.localParticipant.setTrackSubscriptionPermissions(
-    false,
-    audienceIds.map((id) => ({ participantIdentity: id, allowAll: true })),
-  );
+  const voice = whisperTarget === null ? audienceIds : audienceIds.filter((id) => id === whisperTarget);
+  const sight = sightIds ?? audienceIds;
+  const onlySee = sight.filter((id) => !voice.includes(id));
+  const visual = onlySee.length ? visualTrackSids() : [];
+  room.localParticipant.setTrackSubscriptionPermissions(false, [
+    ...voice.map((id) => ({ participantIdentity: id, allowAll: true })),
+    ...onlySee.map((id) => ({ participantIdentity: id, allowAll: false, allowedTrackSids: visual })),
+  ]);
+}
+
+// ---- regras de privacidade para o volume local (pacote portas) ---------------------------------
+
+let privacyRules: () => PrivacyRules | undefined = () => undefined;
+
+/** O pacote portas informa portas fechadas, rodas e sussurros recebidos (mesma regra do servidor). */
+export function setPrivacyRules(fn: () => PrivacyRules | undefined): void {
+  privacyRules = fn;
 }
 
 export async function setMic(on: boolean): Promise<void> {
@@ -440,13 +519,19 @@ export function subscribedAudio(): string[] {
   return [...chains.keys()];
 }
 
-/** Quanto eu ouço cada pessoa, com a mesma regra do servidor. */
+/** Quanto eu ouço cada pessoa, com a mesma regra do servidor (salas, portas, rodas e sussurros). */
 export function hearingOf(id: string): Hearing | null {
   const p = sampleRemote(id);
   if (!p) return null;
   const { map, zones } = world();
   const me = { x: self.x, z: self.z };
-  return hearing(map.walls, { pos: me, zone: zones.zoneAt(me) }, { pos: { x: p.x, z: p.z }, zone: zones.zoneAt({ x: p.x, z: p.z }) });
+  const myId = useApp.getState().selfId ?? undefined;
+  return hearing(
+    map.walls,
+    { pos: me, zone: zones.zoneAt(me), id: myId },
+    { pos: { x: p.x, z: p.z }, zone: zones.zoneAt({ x: p.x, z: p.z }), id },
+    { privacy: privacyRules() },
+  );
 }
 
 /** A cada ~80 ms: decide o que assinar e ajusta volume, direção e abafamento de cada voz. */

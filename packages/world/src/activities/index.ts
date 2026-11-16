@@ -10,3 +10,4 @@ export * from "./grupo/index.ts";
 export * from "./reuniao.ts";
 export * from "./rituais/index.ts";
 export * from "./chat/index.ts";
+export * from "./portas/index.ts";

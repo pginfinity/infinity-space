@@ -601,6 +601,16 @@ export function buildStationMap(): MapDef {
   b.put("plant-tall", 9.6, 21.4, N, { zoneId: aud.id });
   b.put("plant-tall", 22.4, 21.4, N, { zoneId: aud.id });
 
+  // pacote portas: uma porta no vão de cada sala fechada (reunião, suítes e cabines de foco).
+  // `rot` aponta de dentro para fora; `size.w` é a largura do vão; variante 1 = folha de vidro.
+  const door = (zoneId: string, x: number, z: number, out: number, w: number, glass: boolean) =>
+    b.put("door", x, z, out, { zoneId, size: { w, d: 0.08, h: 2.2 }, ...(glass ? { variant: 1 } : {}) });
+  door(orb.id, -17.4, -4, N, 1.6, false);
+  door(lua.id, -17.4, 9, S, 1.6, false);
+  door("diretoria-1", 16.25, -12.5, S, 1.4, true);
+  door("diretoria-2", 22.75, -12.5, S, 1.4, true);
+  for (let i = 0; i < 4; i++) door(`foco-${i + 1}`, 22, (pods[i]! + pods[i + 1]!) / 2, W, 1.1, true);
+
   return {
     id: "estacao",
     version: 1,

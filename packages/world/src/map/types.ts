@@ -160,7 +160,9 @@ export type ObjectType =
   | "chalkboard"
   | "watering-station"
   // estruturas
-  | "pod";
+  | "pod"
+  // pacote portas: porta de sala fechada (estado e visual vêm da atividade "portas")
+  | "door";
 
 export type InteractAction = "sit" | "play" | "watch" | "use";
 

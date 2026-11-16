@@ -1,0 +1,6 @@
+{
+  "porta-batida": { "prompt": "Three friendly knuckle knocks on a wooden office door, close and dry, no reverb tail, no voice", "seconds": 0.7 },
+  "porta-fecha": { "prompt": "Office door gently closing with a soft latch click, quiet and short, modern building, no slam", "seconds": 0.6 },
+  "porta-abre": { "prompt": "Office door handle turning and door opening softly, short latch release, quiet, no creak", "seconds": 0.6 },
+  "roda-fecha": { "prompt": "Soft two-note privacy chime, warm and muted, like a gentle glass bell, very short, office app style", "seconds": 0.6 }
+}
