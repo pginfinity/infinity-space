@@ -1,0 +1,12 @@
+{
+  "arcade-hockey-hit": { "prompt": "Air hockey mallet striking a plastic puck, sharp short plastic clack, close up, no music", "seconds": 0.3 },
+  "arcade-hockey-wall": { "prompt": "Air hockey puck bouncing off the table rail, short soft plastic knock, no music", "seconds": 0.3 },
+  "arcade-hockey-goal": { "prompt": "Air hockey puck dropping into the goal slot with a clunk followed by a short arcade buzzer, no music", "seconds": 1 },
+  "arcade-pong-hit": { "prompt": "Table tennis paddle hitting a ping pong ball, crisp single tok, close up, no music", "seconds": 0.3 },
+  "arcade-pong-bounce": { "prompt": "Ping pong ball bouncing once on a table, light high tick, no music", "seconds": 0.3 },
+  "arcade-duel-point": { "prompt": "Short friendly two note arcade chime for scoring a point, bright, no voice", "seconds": 0.6 },
+  "arcade-duel-count": { "prompt": "Single short retro countdown beep, clean, no music", "seconds": 0.3 },
+  "arcade-duel-go": { "prompt": "Single higher retro start beep, slightly longer, energetic, no music", "seconds": 0.5 },
+  "arcade-duel-win": { "prompt": "Short triumphant arcade victory jingle, four ascending notes, cheerful, no voice", "seconds": 1.2 },
+  "arcade-duel-lose": { "prompt": "Short gentle game over jingle, two descending notes, friendly not sad, no voice", "seconds": 0.8 }
+}

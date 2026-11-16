@@ -202,7 +202,7 @@ class Builder {
   }
 
   /** Mesa de jogo com duas cadeiras frente a frente (lugar 0 e 1 da partida). */
-  gameTable(type: "chess-table" | "connect4-table", x: number, z: number, axis: "x" | "z", gameId: string, zoneId: string): void {
+  gameTable(type: "chess-table" | "connect4-table" | "tictactoe-table", x: number, z: number, axis: "x" | "z", gameId: string, zoneId: string): void {
     this.put(type, x, z, axis === "x" ? E : N, { gameId, zoneId });
     const off = 0.78;
     if (axis === "x") {
@@ -519,6 +519,20 @@ export function buildStationMap(): MapDef {
   b.put("beanbag", -25.2, 17.1, E, { zoneId: arc.id, color: s.arcade.accent });
   b.put("beanbag", -25.2, 18.0, E, { zoneId: arc.id, color: "#E85D9A" });
   b.onWall("neon-sign", 12, -23.2, S, { zoneId: arc.id, text: "ARCADE", accent: s.arcade.accent });
+  // pacote arcade: jogo da velha, placar de recordes dos fliperamas e lixeiras da bolinha de papel
+  b.gameTable("tictactoe-table", -20.9, 17.6, "x", "arcade-velha-1", arc.id);
+  b.onWall("arcade-board", 12, -15.0, S, { zoneId: arc.id, label: "Recordes do Arcade" });
+  for (const [x, z, zoneId] of [
+    [-19.3, -14.2, "dev"],
+    [-8.6, -18.5, "design"],
+    [-6.4, -1.6, "marketing"],
+    [12.3, 2.5, "comercial"],
+    [1.5, 21.6, "gestao"],
+    [-11.55, 13.1, "cafe"],
+    [-5.1, 21.55, "cafe"],
+  ] as const) {
+    b.put("trash-bin", x, z, N, { zoneId });
+  }
 
   // ── Café & Copa ─────────────────────────────────────────────────────────────────────
   const cafe = b.room("cafe", "Café & Copa", "open", rect(-12, -2, 12, 22), s.cafe);

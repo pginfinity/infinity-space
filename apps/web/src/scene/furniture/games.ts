@@ -31,15 +31,7 @@ export const airhockey: ModelFn = ({ b, color, accent }) => {
     b.torus(C.signal, 0.2, 0.012, 0, y, s * (D / 2 - 0.06), { rx: Math.PI / 2, rz: s > 0 ? 0 : Math.PI, arc: Math.PI, seg: 24, tseg: 4 });
     b.box(C.signal, W - 0.14, 0.004, 0.02, 0, y, s * 0.5, { r: 0 });
   }
-  // rebatedores e disco
-  const mallet = (x: number, z: number, c: string) => {
-    b.cyl(c, 0.055, 0.03, x, y + 0.015, z, { seg: 16 });
-    b.cyl(c, 0.025, 0.05, x, y + 0.055, z, { seg: 10 });
-    b.sph(mix(c, C.offwhite, 0.3), 0.03, x, y + 0.085, z, { seg: 10 });
-  };
-  mallet(0.15, 0.62, railB);
-  mallet(-0.2, -0.55, railA);
-  b.cyl(C.ink, 0.04, 0.012, 0.06, y + 0.006, 0.18, { seg: 14 });
+  // disco e rebatedores ficam fora do molde: a cena do pacote arcade desenha a partida ao vivo
   // placar
   b.box(C.ink, 0.06, 0.14, 0.34, W / 2 + 0.02, 0.62, 0, { r: 0.02 });
   b.box(lit(railB), 0.006, 0.06, 0.09, W / 2 + 0.052, 0.63, -0.07, { r: 0 });
@@ -98,7 +90,7 @@ export const pool: ModelFn = ({ b, color }) => {
   b.box(C.signal, 0.03, 0.025, 0.03, 0.62, H + 0.012, -1.05, { r: 0.006 });
 };
 
-export const pingpong: ModelFn = ({ b, color, accent }) => {
+export const pingpong: ModelFn = ({ b, color }) => {
   const W = 1.5;
   const D = 2.7;
   const H = 0.76;
@@ -123,16 +115,7 @@ export const pingpong: ModelFn = ({ b, color, accent }) => {
   for (const s of [-1, 1]) b.box(C.graphite, 0.03, 0.17, 0.04, s * (W / 2 + 0.03), H + 0.065, 0, { r: 0.01 });
   b.box(clear(C.offwhite, 0.55), W + 0.04, 0.14, 0.008, 0, H + 0.075, 0, { r: 0 });
   b.box(C.offwhite, W + 0.04, 0.025, 0.014, 0, H + 0.145, 0, { r: 0.005 });
-  // raquetes e bolinha
-  const paddle = (x: number, z: number, ry: number, c: string) => {
-    b.at(x, y, z, { ry }, () => {
-      b.cyl(c, 0.075, 0.012, 0, 0.008, 0, { seg: 18 });
-      b.box(C.woodLight, 0.032, 0.022, 0.1, 0, 0.012, 0.11, { r: 0.01 });
-    });
-  };
-  paddle(0.35, 0.8, 0.5, C.red);
-  paddle(-0.4, -0.7, -2.4, C.ink);
-  ball(b, accent ?? C.orange, 0.02, 0.1, y, 0.35);
+  // raquetes e bolinha ficam fora do molde: a cena do pacote arcade desenha a partida ao vivo
 };
 
 export const chessTable: ModelFn = ({ b, color }) => {
@@ -147,45 +130,7 @@ export const chessTable: ModelFn = ({ b, color }) => {
   b.box(mix(wood, C.ink, 0.3), sq * 8 + 0.03, 0.006, sq * 8 + 0.03, 0, H + 0.001, 0, { r: 0 });
   for (let i = 0; i < 8; i++)
     for (let j = 0; j < 8; j++) b.box((i + j) % 2 ? C.wood : C.cream, sq, 0.006, sq, (i - 3.5) * sq, y, (j - 3.5) * sq, { r: 0 });
-  const yb = H + 0.006;
-  const piece = (file: number, rank: number, kind: string, white: boolean) => {
-    const c = white ? C.offwhite : C.navy;
-    const x = (file - 3.5) * sq;
-    const z = (3.5 - rank) * sq;
-    const base: [number, number][] = [
-      [0, 0],
-      [0.026, 0],
-      [0.026, 0.012],
-      [0.016, 0.022],
-    ];
-    if (kind === "p") {
-      b.lathe(c, [...base, [0.011, 0.04], [0, 0.04]], x, yb, z, { seg: 8 });
-      b.sph(c, 0.016, x, yb + 0.048, z, { seg: 10 });
-    } else if (kind === "r") {
-      b.lathe(c, [...base, [0.016, 0.05], [0.021, 0.052], [0.021, 0.068], [0, 0.068]], x, yb, z, { seg: 8 });
-    } else if (kind === "n") {
-      b.lathe(c, [...base, [0.015, 0.03], [0, 0.03]], x, yb, z, { seg: 8 });
-      b.box(c, 0.022, 0.05, 0.034, x, yb + 0.05, z + (white ? -0.004 : 0.004), { rx: white ? 0.35 : -0.35, r: 0.008 });
-    } else if (kind === "b") {
-      b.lathe(c, [...base, [0.011, 0.05], [0.016, 0.062], [0.006, 0.08], [0, 0.082]], x, yb, z, { seg: 8 });
-    } else {
-      const tall = kind === "k" ? 0.09 : 0.082;
-      b.lathe(c, [...base, [0.012, tall - 0.025], [0.02, tall - 0.012], [0.017, tall], [0, tall]], x, yb, z, { seg: 8 });
-      if (kind === "k") b.box(c, 0.012, 0.03, 0.012, x, yb + tall + 0.012, z, { r: 0.003 });
-      else b.sph(c, 0.011, x, yb + tall + 0.006, z, { seg: 8 });
-    }
-  };
-  const back = ["r", "n", "b", "q", "k", "b", "n", "r"];
-  back.forEach((k, f) => {
-    if (!(f === 6)) piece(f, 0, k, true);
-    if (!(f === 1)) piece(f, 7, k, false);
-  });
-  for (let f = 0; f < 8; f++) {
-    piece(f, f === 4 ? 3 : 1, "p", true);
-    piece(f, f === 4 ? 4 : 6, "p", false);
-  }
-  piece(5, 2, "n", true);
-  piece(2, 5, "n", false);
+  // as peças da partida aparecem ao vivo no plano do tampo (cena do pacote arcade)
 };
 
 export const connect4Table: ModelFn = ({ b, color, accent }) => {
@@ -205,23 +150,8 @@ export const connect4Table: ModelFn = ({ b, color, accent }) => {
     b.box(blue, 0.06, 0.03, 0.22, s * (gw / 2 + 0.02), H + 0.015, 0, { r: 0.012 });
   }
   b.box(blue, gw, gh, 0.036, 0, y0 + gh / 2, 0, { r: 0.012 });
+  // furos e fichas: a partida aparece ao vivo nas duas faces da grade (cena do pacote arcade)
   const chipA = accent ?? C.orange;
-  const board = [
-    "       ",
-    "       ",
-    "   A   ",
-    "  BAB  ",
-    " ABBA  ",
-    "BAABAB ",
-  ];
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++) {
-      const ch = board[r]?.[c] ?? " ";
-      const x = (c - (cols - 1) / 2) * sp;
-      const y = y0 + gh - 0.025 - (r + 0.5) * sp;
-      if (ch === " ") b.cyl(C.navyDeep, 0.026, 0.04, x, y, 0, { rx: Math.PI / 2, seg: 12 });
-      else b.cyl(ch === "A" ? chipA : C.offwhite, 0.029, 0.042, x, y, 0, { rx: Math.PI / 2, seg: 12 });
-    }
   // fichas soltas na mesa
   for (let i = 0; i < 3; i++) b.cyl(chipA, 0.03, 0.012, 0.3, H + 0.006 + i * 0.013, 0.2, { seg: 12 });
   for (let i = 0; i < 2; i++) b.cyl(C.offwhite, 0.03, 0.012, -0.3, H + 0.006 + i * 0.013, 0.22, { seg: 12 });
@@ -271,26 +201,8 @@ export const arcade: ModelFn = ({ b, color, accent, variant }) => {
   // tela inclinada com jogo
   b.push(0, 1.26, 0.21, { rx: -0.2 });
   b.box(C.graphite, 0.64, 0.5, 0.03, 0, 0, -0.02, { r: 0.02 });
+  // tela apagada: o título do jogo e o ranking são desenhados por cima (cena do pacote arcade)
   b.box(lit(C.navyDeep), 0.56, 0.42, 0.008, 0, 0, 0.0, { r: 0 });
-  b.box(lit(C.signal), 0.08, 0.03, 0.006, 0, -0.17, 0.006, { r: 0 });
-  b.box(lit(C.offwhite), 0.12, 0.02, 0.006, -0.18, 0.18, 0.006, { r: 0 });
-  b.box(lit(C.orange), 0.06, 0.02, 0.006, 0.2, 0.18, 0.006, { r: 0 });
-  const invaders: THREE.Matrix4[] = [];
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) invaders.push(at(-0.16 + c * 0.08, 0.1 - r * 0.07, 0.007));
-  b.anim(
-    (s) => {
-      s.box(lit("#FFFFFF"), 0.04, 0.03, 0.004, 0, 0, 0, { r: 0 });
-      s.box(lit("#FFFFFF"), 0.012, 0.012, 0.004, -0.018, -0.02, 0, { r: 0 });
-      s.box(lit("#FFFFFF"), 0.012, 0.012, 0.004, 0.018, -0.02, 0, { r: 0 });
-    },
-    {
-      copies: invaders,
-      pose: (t, seed, _k, out) => out.makeTranslation(Math.sin(t * 1.5 + seed * 6) * 0.04, -((Math.floor(t * 0.5 + seed * 4) % 3) * 0.01), 0),
-      tint: (_t, _seed, k, out) => {
-        out.set(k < 5 ? C.pink : k < 10 ? C.green : C.gold);
-      },
-    },
-  );
   b.pop();
   // letreiro iluminado
   b.box(C.ink, 0.72, 0.24, 0.1, 0, 1.68, 0.27, { r: 0.02 });

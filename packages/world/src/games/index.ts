@@ -9,11 +9,8 @@ export * from "./chess.ts";
 export * from "./connect4.ts";
 export * from "./tictactoe.ts";
 
-/** Tipos de mesa que ainda não estão no catálogo do mapa (entram quando a planta ganhar a mesa). */
-type FutureTable = "tictactoe-table";
-
 /** Mapeia o tipo de mesa do mapa para o tipo de jogo. */
-export const GAME_OF_TABLE: Partial<Record<ObjectType | FutureTable, string>> = {
+export const GAME_OF_TABLE: Partial<Record<ObjectType, string>> = {
   "chess-table": "chess",
   "connect4-table": "connect4",
   "tictactoe-table": "tictactoe",
