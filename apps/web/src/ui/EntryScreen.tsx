@@ -8,6 +8,7 @@ import { useApp } from "../state/store.ts";
 import { ACC_GROUP, ACCESSORIES, BOTTOM_STYLES, BROW_STYLES, EYE_STYLES, FACIAL_STYLES, HAIR_STYLES, MOUTH_STYLES, SHOE_STYLES, TOP_STYLES } from "../avatar/catalog.ts";
 import { Logo } from "./Logo.tsx";
 import { InstallApp } from "./install.tsx";
+import { logout, saveProfile, useAuth } from "../net/auth.ts";
 
 const AvatarStudio = lazy(() => import("./AvatarStudio.tsx"));
 
@@ -55,6 +56,7 @@ export function EntryScreen() {
   const setLens = useApp((s) => s.setLens);
   const enter = useApp((s) => s.enter);
   const [touched, setTouched] = useState(false);
+  const me = useAuth((s) => s.me);
   const [tab, setTab] = useState<Tab>("roupa");
   const look = profile.look;
   const nameOk = profile.name.trim().length > 0;
@@ -72,7 +74,8 @@ export function EntryScreen() {
     setTouched(true);
     if (!nameOk) return;
     setProfile({ name: profile.name.trim() });
-    enter();
+    // Com login, nome e visual ficam na conta (valem em qualquer computador); o servidor usa o nome dela.
+    void saveProfile(profile.name.trim(), look).finally(enter);
   };
 
   return (
@@ -83,6 +86,14 @@ export function EntryScreen() {
           <Logo size="lg" />
           <p className="mt-5 max-w-md text-balance text-lg leading-relaxed text-offwhite/80">{t("app.tagline")}</p>
           <InstallApp className="mt-4 self-start" />
+          {me && (
+            <p className="mt-4 text-sm text-slate">
+              Entrando como <span className="text-offwhite/90">{me.email}</span> ·{" "}
+              <button type="button" onClick={() => void logout()} className="underline-offset-4 hover:text-offwhite hover:underline">
+                Sair da conta
+              </button>
+            </p>
+          )}
           <div className="relative mt-6 aspect-square w-full max-w-[440px] self-center lg:self-start">
             <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(closest-side,rgb(0_183_255/0.22),transparent)]" />
             <Suspense fallback={<div className="grid h-full place-items-center text-sm text-slate">Preparando seu avatar…</div>}>

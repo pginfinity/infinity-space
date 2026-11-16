@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion } from "motion/react";
-import { Footprints, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Footprints, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useAuth } from "../net/auth.ts";
+import { InvitePanel } from "./InvitePanel.tsx";
 import { clsx } from "clsx";
 import { setPersonVolume, useMediaSettings } from "../media/settings.ts";
 import { useApp } from "../state/store.ts";
@@ -19,6 +22,8 @@ export function PeoplePanel() {
   const close = () => useApp.getState().togglePeople(false);
   const [, tick] = useState(0);
   const [volumeOf, setVolumeOf] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const isAdmin = useAuth((s) => s.me?.role === "admin");
   const volumes = useMediaSettings((s) => s.people);
 
   // Atualiza os lugares uma vez por segundo.
@@ -43,10 +48,19 @@ export function PeoplePanel() {
           <h2 className="font-display text-sm font-medium uppercase tracking-[0.1em]">{t("hud.people")}</h2>
           <p className="mt-0.5 text-xs text-slate">{t("hud.online", { count: list.length })}</p>
         </div>
-        <button type="button" onClick={close} className="rounded-lg p-2 text-slate hover:bg-offwhite/8 hover:text-offwhite" aria-label="Fechar">
-          <X className="size-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {isAdmin && (
+            <button type="button" onClick={() => setInviting(true)} className="flex items-center gap-1.5 rounded-lg border border-offwhite/10 px-2.5 py-1.5 text-xs hover:border-signal hover:text-signal">
+              <UserPlus className="size-3.5" />
+              Convidar
+            </button>
+          )}
+          <button type="button" onClick={close} className="rounded-lg p-2 text-slate hover:bg-offwhite/8 hover:text-offwhite" aria-label="Fechar">
+            <X className="size-4" />
+          </button>
+        </div>
       </header>
+      {createPortal(<AnimatePresence>{inviting && <InvitePanel onClose={() => setInviting(false)} />}</AnimatePresence>, document.body)}
       <ul className="flex-1 overflow-y-auto px-2 py-2">
         {list.map((p) => {
           const isSelf = p.id === selfId;

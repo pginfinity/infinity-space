@@ -4,6 +4,7 @@ import { useApp } from "../state/store.ts";
 import { clearRemote, playEmote, pushRemote, removeRemote, self, setSelf } from "../world/registry.ts";
 import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
 import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
+import { recheckSession } from "./auth.ts";
 
 // Mic e câmera ligados/desligados viram status visível para todos.
 onMediaInfo((patch) => sendInfo(patch));
@@ -90,9 +91,11 @@ function open(): void {
     handle(msg);
   };
 
-  ws.onclose = () => {
+  ws.onclose = (ev) => {
     window.clearInterval(pingTimer);
     if (socket !== ws) return;
+    // Recusado (sem sessão) ou removido pelo admin: volta para o login se a sessão acabou.
+    if (ev.code === 4001 || !welcomed) void recheckSession();
     welcomed = false;
     socket = null;
     if (!wanted) return;

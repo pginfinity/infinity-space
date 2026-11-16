@@ -29,6 +29,7 @@ import {
   type Vec2,
 } from "@infinity/world";
 import { decode, encode } from "./codec.ts";
+import { cleanLook, cleanName } from "./clean.ts";
 import { GamesManager } from "./games/manager.ts";
 import { RTC, rtcToken } from "./rtc.ts";
 import { ActivitiesManager } from "./activities/manager.ts";
@@ -38,6 +39,8 @@ import { hearing } from "@infinity/world";
 
 interface Member {
   info: PlayerInfo;
+  /** E-mail da conta (só com login ligado; nunca vai para os outros clientes). */
+  email?: string;
   socket: WebSocket;
   x: number;
   z: number;
@@ -53,7 +56,6 @@ interface Member {
 
 const EMOTE_SET: ReadonlySet<string> = new Set(EMOTES);
 
-const HEX = /^#[0-9a-fA-F]{6}$/;
 const STATUSES: ReadonlySet<Status> = new Set(["available", "listening", "focus", "away"]);
 const SIT = ANIMS.indexOf("sit");
 const HELD_SET: ReadonlySet<string> = new Set(HELD_ITEMS);
@@ -132,6 +134,11 @@ export class OfficeRoom {
     this.recording = rec as RecordingActivity;
   }
 
+  /** Derruba as conexões de uma conta (pessoa removida pelo admin). */
+  disconnectEmail(email: string): void {
+    for (const m of this.members.values()) if (m.email === email) m.socket.close(4001, "removed");
+  }
+
   /** Ids de quem está num grupo de salas (ex.: "aud" = auditório + palco). */
   membersIn(group: string): string[] {
     const ids: string[] = [];
@@ -160,7 +167,7 @@ export class OfficeRoom {
   }
 
   /** Uma conexão nova. A pessoa só entra na sala depois do "hello". */
-  accept(socket: WebSocket): void {
+  accept(socket: WebSocket, auth?: { email: string; name: string }): void {
     let member: Member | undefined;
     const send = (msg: ServerMsg) => socket.readyState === socket.OPEN && socket.send(encode(msg));
 
@@ -179,7 +186,7 @@ export class OfficeRoom {
           socket.close(4000, "version");
           return;
         }
-        member = this.join(socket, msg);
+        member = this.join(socket, msg, auth);
         return;
       }
       this.handle(member, msg);
@@ -191,14 +198,15 @@ export class OfficeRoom {
     socket.on("error", () => socket.terminate());
   }
 
-  private join(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>): Member {
+  private join(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>, auth?: { email: string; name: string }): Member {
     const id = randomUUID().slice(0, 8);
     const back = hello.at && Number.isFinite(hello.at.x) && Number.isFinite(hello.at.z) ? { x: hello.at.x, z: hello.at.z } : null;
     const spawn = back && this.nav.isWalkable(back) ? back : this.freeSpawn();
     const member: Member = {
       info: {
         id,
-        name: cleanName(hello.name),
+        // Com login, o nome vem da conta.
+        name: auth ? cleanName(auth.name) : cleanName(hello.name),
         look: cleanLook(hello.look),
         status: "available",
         lens: hello.lens === "3d" ? "3d" : "2d",
@@ -207,6 +215,7 @@ export class OfficeRoom {
         screen: false,
       },
       socket,
+      email: auth?.email,
       x: spawn.x,
       z: spawn.z,
       yaw: 0,
@@ -305,13 +314,13 @@ export class OfficeRoom {
 
   private onInfo(m: Member, patch: InfoPatch): void {
     const clean: InfoPatch = {};
-    if (typeof patch.name === "string") clean.name = cleanName(patch.name);
+    if (typeof patch.name === "string" && !m.email) clean.name = cleanName(patch.name);
     if (patch.look) clean.look = cleanLook(patch.look);
     if (patch.status && STATUSES.has(patch.status)) clean.status = patch.status;
     if (patch.lens === "2d" || patch.lens === "3d") clean.lens = patch.lens;
     for (const k of ["mic", "cam", "screen", "screenPaused"] as const) if (typeof patch[k] === "boolean") clean[k] = patch[k];
     // Status curto: texto livre e pequeno; vazio apaga.
-    if (typeof patch.note === "string") clean.note = patch.note.replace(/[ -]/g, "").trim().slice(0, NOTE_MAX);
+    if (typeof patch.note === "string") clean.note = patch.note.replace(/[\u0000-\u001f]/g, "").trim().slice(0, NOTE_MAX);
     // Item na mão: só da lista conhecida (as atividades também podem colocar pelo servidor).
     if ("held" in patch) clean.held = typeof patch.held === "string" && HELD_SET.has(patch.held) ? (patch.held as HeldItem) : undefined;
     if (Object.keys(clean).length === 0) return;
@@ -393,34 +402,3 @@ function pose(m: Member): PoseTuple {
 }
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
-
-function cleanName(name: unknown): string {
-  const s = typeof name === "string" ? name.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 32) : "";
-  return s || "Visitante";
-}
-
-/** Aceita só cores hex e índices pequenos; qualquer coisa estranha volta ao padrão. */
-function cleanLook(look: unknown): AvatarLook {
-  const l = (look ?? {}) as Partial<AvatarLook>;
-  const hex = (v: unknown, d: string) => (typeof v === "string" && HEX.test(v) ? v : d);
-  const idx = (v: unknown, d: number) => (typeof v === "number" && Number.isInteger(v) && v >= 0 && v < 32 ? v : d);
-  const D = DEFAULT_LOOK;
-  return {
-    skin: hex(l.skin, D.skin),
-    hair: idx(l.hair, D.hair),
-    hairColor: hex(l.hairColor, D.hairColor),
-    eyes: idx(l.eyes, D.eyes),
-    brows: idx(l.brows, D.brows),
-    mouth: idx(l.mouth, D.mouth),
-    facial: idx(l.facial, D.facial),
-    top: idx(l.top, D.top),
-    topColor: hex(l.topColor, D.topColor),
-    topColor2: hex(l.topColor2, D.topColor2),
-    bottom: idx(l.bottom, D.bottom),
-    bottomColor: hex(l.bottomColor, D.bottomColor),
-    shoes: idx(l.shoes, D.shoes),
-    shoesColor: hex(l.shoesColor, D.shoesColor),
-    acc: Array.isArray(l.acc) ? [...new Set(l.acc.filter((a) => typeof a === "number" && Number.isInteger(a) && a >= 0 && a < 32))].slice(0, 4) : [],
-    accColor: hex(l.accColor, D.accColor),
-  };
-}

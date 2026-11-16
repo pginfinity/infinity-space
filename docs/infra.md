@@ -43,7 +43,7 @@ Precisa ter Docker Engine e o plugin Docker Compose instalados.
 
 ## 4. E-mail para os convites
 
-O login é por convite com link mágico, então o servidor precisa mandar e-mail. Uma destas opções:
+O login é por convite com link mágico (sem senha), então o servidor precisa mandar e-mail. Quem administra (`ADMIN_EMAILS`) convida pelo painel Pessoas; cada convite chega com um link que vale 7 dias, e depois cada um entra pedindo um link na tela de entrada (vale 15 minutos, uma vez só). Todas as variáveis estão em `.env.example`. Para o envio, uma destas opções:
 - **SMTP da própria empresa** (Google Workspace, Microsoft 365 ou outro): host, porta, usuário, senha de app e o endereço remetente (ex.: `space@ai-infinity.io`).
 - **Serviço transacional com plano grátis** (ex.: Brevo ou Resend): conta, chave e domínio verificado (registros SPF/DKIM na Cloudflare).
 
@@ -82,4 +82,5 @@ Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração,
 3. Origin Certificate da Cloudflare (certificado e chave).
 4. Credenciais de e-mail (SMTP ou serviço transacional).
 5. Acesso ao repositório GitHub privado.
-6. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).
+6. Os e-mails de quem vai administrar o escritório (`ADMIN_EMAILS`).
+7. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).

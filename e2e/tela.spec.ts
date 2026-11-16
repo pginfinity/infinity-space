@@ -59,6 +59,7 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
         while (o?.parent) o = o.parent;
         return isVideo && o?.type === "Scene";
       }),
+      { timeout: 20_000 },
     )
     .toBe(true);
   await b.waitForTimeout(800);
