@@ -67,7 +67,7 @@ function RecOverlay() {
 
   if (!group) return null;
   return (
-    <div className="pointer-events-auto absolute left-3 top-[60px] z-10">
+    <div className="pointer-events-auto absolute left-3 top-[104px] z-10">
       <AnimatePresence mode="wait">
         {!session || session.status === "uploaded" || session.status === "saved" || session.status === "error" ? (
           <motion.div key="idle" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-start gap-1.5">
