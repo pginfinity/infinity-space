@@ -39,8 +39,8 @@ let petAt = 0;
 let callAt = 0;
 
 const targets: DynamicTarget[] = [];
-const petTarget: DynamicTarget = { key: "orbi:pet", point: { x: 0, z: 0 }, radius: ORBI_PET_RANGE - 0.3, label: T.orbi.pet, run: () => sendAct(ORBI_ID, "pet") };
-const callTarget: DynamicTarget = { key: "orbi:call", point: { x: 0, z: 0 }, radius: ORBI_CALL_RANGE - 1.2, label: T.orbi.call, run: () => sendAct(ORBI_ID, "call") };
+const petTarget: DynamicTarget = { key: "orbi:pet", point: { x: 0, z: 0 }, radius: ORBI_PET_RANGE - 0.3, priority: -1, label: T.orbi.pet, run: () => sendAct(ORBI_ID, "pet") };
+const callTarget: DynamicTarget = { key: "orbi:call", point: { x: 0, z: 0 }, radius: ORBI_CALL_RANGE - 1.2, priority: -1, label: T.orbi.call, run: () => sendAct(ORBI_ID, "call") };
 
 export const orbiClient: ActivityClient = {
   name: "vivo/orbi",

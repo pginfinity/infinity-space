@@ -86,8 +86,9 @@ function scan(): void {
     best = c;
     bestD = d;
   }
-  // Alvos dinâmicos das atividades (ganham de objetos quando estão mais perto).
+  // Alvos dinâmicos das atividades: ganha a maior prioridade (objetos valem 0) e, no empate, o mais perto.
   let dyn: DynamicTarget | null = null;
+  let bestPrio = best ? 0 : -Infinity;
   for (const client of activityClients()) {
     if (!client.targets) continue;
     let list: DynamicTarget[] = [];
@@ -98,9 +99,13 @@ function scan(): void {
     }
     for (const t of list) {
       const d = Math.hypot(t.point.x - self.x, t.point.z - self.z);
-      if (d > t.radius || d >= bestD || wallBetween(walls, self, t.point)) continue;
+      if (d > t.radius) continue;
+      const prio = t.priority ?? 0;
+      if (prio < bestPrio || (prio === bestPrio && d >= bestD)) continue;
+      if (wallBetween(walls, self, t.point)) continue;
       dyn = t;
       bestD = d;
+      bestPrio = prio;
     }
   }
   const cur = useInteract.getState().target;

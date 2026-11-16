@@ -69,7 +69,7 @@ export const greet: ActivityClient = {
       const d = Math.hypot(p.x - self.x, p.z - self.z);
       const r = p.anim === "sit" ? 1.2 : GREET_RANGE;
       if (d > r || wallBetween(walls, self, p)) continue;
-      out.push({ key: `greet:${id}`, point: { x: p.x, z: p.z }, radius: r, label: T.greet.target(nameOf(id)), run: () => useGreetUi.setState({ chooser: { id } }) });
+      out.push({ key: `greet:${id}`, point: { x: p.x, z: p.z }, radius: r, priority: -1, label: T.greet.target(nameOf(id)), run: () => useGreetUi.setState({ chooser: { id } }) });
     }
     return out;
   },

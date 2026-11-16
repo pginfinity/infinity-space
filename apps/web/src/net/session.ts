@@ -6,8 +6,6 @@ import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
 import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
 import { recheckSession } from "./auth.ts";
 
-// Mic e câmera ligados/desligados viram status visível para todos.
-onMediaInfo((patch) => sendInfo(patch));
 
 const packr = new Packr({ useRecords: false });
 
@@ -43,6 +41,10 @@ export function sendInfo(patch: InfoPatch): void {
 
 /** Entra no escritório e mantém a conexão viva, reconectando sozinho se cair. */
 export function connect(): void {
+  // Mic e câmera ligados/desligados viram status visível para todos. Registrado aqui (e não ao
+  // carregar o módulo) porque sessão, mídia e movimento se importam em ciclo: no carregamento,
+  // a mídia pode ainda não estar inicializada.
+  onMediaInfo((patch) => sendInfo(patch));
   wanted = true;
   attempt = 0;
   everConnected = false;

@@ -78,8 +78,8 @@ export const photoBooth: ActivityClient = {
     const r = rig();
     if (!r || actState<PhotoState>(PHOTO_ID)?.phase === "countdown") return [];
     const run = () => sendAct(PHOTO_ID, "start");
-    const list: DynamicTarget[] = [{ key: "cabine:tripe", point: r.tripod, radius: 1.8, label: T.photo.target, run }];
-    if (photoInFrame(r, self)) list.push({ key: "cabine:quadro", point: { x: self.x, z: self.z }, radius: 0.5, label: T.photo.target, run });
+    const list: DynamicTarget[] = [{ key: "cabine:tripe", point: r.tripod, radius: 1.8, priority: 1, label: T.photo.target, run }];
+    if (photoInFrame(r, self)) list.push({ key: "cabine:quadro", point: { x: self.x, z: self.z }, radius: 0.5, priority: 1, label: T.photo.target, run });
     return list;
   },
   onEvent: (e) => {

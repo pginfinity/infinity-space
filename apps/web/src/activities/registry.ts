@@ -40,6 +40,11 @@ export interface DynamicTarget {
   radius: number;
   label: string;
   run(): void;
+  /**
+   * Quem ganha quando há vários alvos ao alcance (depois desempata a distância). Objetos do mapa valem 0.
+   * 2 = ação de jogo em andamento · 1 = entrar num jogo · 0 = normal · -1 = ambiente (gestos, robô).
+   */
+  priority?: number;
 }
 
 export interface ActEvent {

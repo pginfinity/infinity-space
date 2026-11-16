@@ -95,7 +95,7 @@ export const impostorClient: ActivityClient = {
         if (role.done.includes(id)) continue;
         const spot = impSpots().get(id);
         if (!spot) continue;
-        out.push({ key: `imp-task-${id}`, point: spot.point, radius: IMP_TASK_RANGE - 0.2, label: working?.task === id ? T.imp.working(spot.label) : T.imp.taskLabel(spot.label), run: () => startTask(id) });
+        out.push({ key: `imp-task-${id}`, point: spot.point, radius: IMP_TASK_RANGE - 0.2, priority: 2, label: working?.task === id ? T.imp.working(spot.label) : T.imp.taskLabel(spot.label), run: () => startTask(id) });
       }
       // Infiltrado vivo e recarregado: congelar quem está bem perto.
       const ready = role.role === "impostor" && mePlayer?.alive && performance.now() >= role.at + role.tagIn;
@@ -105,12 +105,12 @@ export const impostorClient: ActivityClient = {
           if (p.id === me || !p.alive || p.away || role.partners.includes(p.name)) continue;
           const r = sampleRemote(p.id, now);
           if (!r) continue;
-          out.push({ key: `imp-tag-${p.id}`, point: { x: r.x, z: r.z }, radius: IMP_TAG_RANGE - 0.25, label: T.imp.tagTarget(p.name), run: () => send("tag", { target: p.id }) });
+          out.push({ key: `imp-tag-${p.id}`, point: { x: r.x, z: r.z }, radius: IMP_TAG_RANGE - 0.25, priority: 2, label: T.imp.tagTarget(p.name), run: () => send("tag", { target: p.id }) });
         }
       }
     }
     if (mePlayer?.alive)
-      for (const f of s.frozen) out.push({ key: `imp-body-${f.id}`, point: { x: f.x, z: f.z }, radius: IMP_REPORT_RANGE - 0.3, label: T.imp.report(f.name), run: () => send("report", { body: f.id }) });
+      for (const f of s.frozen) out.push({ key: `imp-body-${f.id}`, point: { x: f.x, z: f.z }, radius: IMP_REPORT_RANGE - 0.3, priority: 2, label: T.imp.report(f.name), run: () => send("report", { body: f.id }) });
     return out;
   },
   onEvent: (e) => {
