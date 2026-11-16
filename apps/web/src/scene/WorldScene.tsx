@@ -1,5 +1,7 @@
-import { useEffect } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import { officeLight, sunAt } from "./sun.ts";
 import type { Lens } from "@infinity/world";
 import { Station } from "./Station.tsx";
 import { Avatars } from "./Avatars.tsx";
@@ -11,8 +13,7 @@ import { ActivitiesScene } from "../activities/index.tsx";
 export function WorldScene({ lens }: { lens: Lens }) {
   return (
     <>
-      <hemisphereLight args={["#D8E8FF", "#2A3550", 1.15]} />
-      <directionalLight position={[28, 46, 22]} intensity={1.7} color="#FFF1DE" />
+      <SunLights />
       <directionalLight position={[-24, 18, -16]} intensity={0.35} color="#8FD0FF" />
       <ambientLight intensity={0.18} />
       <Space />
@@ -61,4 +62,25 @@ function BackgroundThrottle() {
     };
   }, [setFrameloop, invalidate]);
   return null;
+}
+
+/** Luz principal do escritório: dourada no fim de tarde, mais suave à noite (horário real de Florianópolis). */
+function SunLights() {
+  const key = useRef<THREE.DirectionalLight>(null);
+  const sky = useRef<THREE.HemisphereLight>(null);
+  const last = useRef(-Infinity);
+  useFrame((state) => {
+    if (state.clock.elapsedTime - last.current < 60 || !key.current || !sky.current) return;
+    last.current = state.clock.elapsedTime;
+    const l = officeLight(sunAt().altitude);
+    key.current.color.copy(l.color);
+    key.current.intensity = l.intensity;
+    sky.current.intensity = l.sky;
+  });
+  return (
+    <>
+      <hemisphereLight ref={sky} args={["#D8E8FF", "#2A3550", 1.15]} />
+      <directionalLight ref={key} position={[28, 46, 22]} intensity={1.7} color="#FFF1DE" />
+    </>
+  );
 }

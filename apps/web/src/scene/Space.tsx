@@ -2,10 +2,17 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Starfield } from "../lens3d/Starfield.tsx";
+import { sunAt, sunOnEarth } from "./sun.ts";
+
+/** Centro da Terra (a estação fica acima de Florianópolis). */
+const EARTH_AT = new THREE.Vector3(60, -760, -260);
+/** Direção do centro da Terra até a estação: o "pra cima" de Florianópolis na esfera. */
+const UP = EARTH_AT.clone().negate().normalize();
 
 /**
  * O lado de fora: estrelas e a Terra lá embaixo, vista pelas bordas da estação e pelas janelas.
- * A Terra é procedural (oceano, continentes, nuvens e atmosfera), sem baixar textura.
+ * A Terra é procedural (oceano, continentes, nuvens e atmosfera), sem baixar textura, e iluminada pelo
+ * Sol no horário real de Florianópolis (ver sun.ts): de dia o pedaço lá embaixo é claro; à noite, luzes das cidades.
  */
 
 const NOISE = /* glsl */ `
@@ -35,9 +42,12 @@ float snoise(vec3 v){
 float fbm(vec3 p){float f=0.0;float a=0.5;for(int i=0;i<5;i++){f+=a*snoise(p);p*=2.02;a*=0.5;}return f;}
 `;
 
+/** Direção do Sol no referencial da Terra (compartilhada pela superfície e pela atmosfera). */
+const SUN = { value: new THREE.Vector3(0.45, 0.55, 0.7).normalize() };
+
 function earthMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uSun: { value: new THREE.Vector3(0.45, 0.55, 0.7).normalize() } },
+    uniforms: { uTime: { value: 0 }, uSun: SUN },
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vP; varying vec3 vView;
       void main(){
@@ -63,7 +73,9 @@ function earthMaterial(): THREE.ShaderMaterial {
         vec3 night = vec3(1.0, 0.75, 0.4) * isLand * smoothstep(0.35, 0.5, fbm(n * 18.0)) * 0.5;
         col = col * light + night * (1.0 - smoothstep(0.0, 0.25, light));
         float rim = pow(1.0 - max(dot(normalize(vN), vView), 0.0), 3.0);
-        col += vec3(0.25, 0.55, 1.0) * rim * 0.9;
+        // A borda azul brilha no lado do dia; no lado da noite, só um contorno fraco.
+        float dayside = 0.12 + 0.88 * smoothstep(-0.25, 0.3, dot(normalize(vN), uSun));
+        col += vec3(0.25, 0.55, 1.0) * rim * 0.9 * dayside;
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -71,16 +83,22 @@ function earthMaterial(): THREE.ShaderMaterial {
 
 function atmosphereMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
+    uniforms: { uSun: SUN },
     transparent: true,
     side: THREE.BackSide,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */ `
-      varying vec3 vN; varying vec3 vView;
-      void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position,1.0); vView = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+      varying vec3 vN; varying vec3 vView; varying vec3 vObj;
+      void main(){ vObj = normalize(normal); vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position,1.0); vView = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
     fragmentShader: /* glsl */ `
-      varying vec3 vN; varying vec3 vView;
-      void main(){ float i = pow(0.72 - dot(vN, vView), 4.0); gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * i * 1.6; }`,
+      uniform vec3 uSun;
+      varying vec3 vN; varying vec3 vView; varying vec3 vObj;
+      void main(){
+        float i = pow(0.72 - dot(vN, vView), 4.0);
+        float dayside = 0.1 + 0.9 * smoothstep(-0.3, 0.3, dot(vObj, uSun));
+        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * i * 1.6 * dayside;
+      }`,
   });
 }
 
@@ -95,14 +113,19 @@ export function Space() {
     },
     [mat, atmo, geo],
   );
+  // Posição do Sol: na hora e a cada 30 s (muda devagar).
+  const lastSun = useRef(-Infinity);
   useFrame((state) => {
     mat.uniforms.uTime!.value = state.clock.elapsedTime;
-    if (earth.current) earth.current.rotation.y = state.clock.elapsedTime * 0.004;
+    if (state.clock.elapsedTime - lastSun.current > 30) {
+      lastSun.current = state.clock.elapsedTime;
+      SUN.value.copy(sunOnEarth(sunAt().enu, UP));
+    }
   });
   return (
     <group>
       <Starfield />
-      <group position={[60, -760, -260]}>
+      <group position={EARTH_AT.toArray()}>
         <mesh ref={earth} geometry={geo} material={mat} scale={560} />
         <mesh geometry={geo} material={atmo} scale={600} />
       </group>
