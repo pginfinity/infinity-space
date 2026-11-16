@@ -80,3 +80,28 @@ registerSynth("arcade-duel-count", (c, out) => tone(c, out, { type: "square", f0
 registerSynth("arcade-duel-go", (c, out) => tone(c, out, { type: "square", f0: 1320, dur: 0.28, gain: 0.08 }));
 registerSynth("arcade-duel-win", (c, out) => notes(c, out, [523, 659, 784, 1047], 0.1, "triangle", 0.22, 0.32));
 registerSynth("arcade-duel-lose", (c, out) => notes(c, out, [392, 311], 0.16, "triangle", 0.16, 0.3));
+
+// ---- fliperamas (8 bits)
+registerSynth("cab-shoot", (c, out) => tone(c, out, { type: "square", f0: 1400, f1: 500, dur: 0.07, gain: 0.08 }));
+registerSynth("cab-pop", (c, out) => noise(c, out, { freq: 2600, q: 1, dur: 0.08, gain: 0.3 }));
+registerSynth("cab-explode", (c, out) => {
+  noise(c, out, { freq: 700, q: 0.6, dur: 0.28, gain: 0.45, type: "lowpass" });
+  tone(c, out, { type: "square", f0: 180, f1: 60, dur: 0.22, gain: 0.07 });
+});
+registerSynth("cab-hit", (c, out) => tone(c, out, { type: "square", f0: 300, f1: 220, dur: 0.06, gain: 0.08 }));
+registerSynth("cab-coin", (c, out) => notes(c, out, [988, 1319], 0.05, "square", 0.06, 0.07));
+registerSynth("cab-power", (c, out) => notes(c, out, [523, 659, 784, 1047], 0.045, "square", 0.06, 0.06));
+registerSynth("cab-shield", (c, out) => tone(c, out, { type: "triangle", f0: 900, f1: 300, dur: 0.25, gain: 0.2 }));
+registerSynth("cab-death", (c, out) => {
+  tone(c, out, { type: "square", f0: 440, f1: 70, dur: 0.6, gain: 0.08 });
+  noise(c, out, { freq: 400, q: 0.5, dur: 0.4, gain: 0.25, type: "lowpass" });
+});
+registerSynth("cab-level", (c, out) => notes(c, out, [392, 523, 659, 784], 0.08, "square", 0.06, 0.1));
+registerSynth("cab-eat", (c, out) => tone(c, out, { type: "square", f0: 660, f1: 990, dur: 0.06, gain: 0.07 }));
+registerSynth("cab-bounce", (c, out) => tone(c, out, { type: "square", f0: 520, dur: 0.04, gain: 0.06 }));
+registerSynth("cab-wall", (c, out) => tone(c, out, { type: "square", f0: 260, dur: 0.03, gain: 0.05 }));
+registerSynth("cab-brick", (c, out) => tone(c, out, { type: "square", f0: 880, f1: 1100, dur: 0.05, gain: 0.06 }));
+registerSynth("cab-metal", (c, out) => tone(c, out, { type: "triangle", f0: 1800, dur: 0.08, gain: 0.12 }));
+registerSynth("cab-start", (c, out) => notes(c, out, [523, 784, 1047], 0.07, "square", 0.06, 0.09));
+registerSynth("cab-over", (c, out) => notes(c, out, [392, 330, 262], 0.14, "square", 0.06, 0.18));
+registerSynth("cab-record", (c, out) => notes(c, out, [523, 659, 784, 1047, 784, 1047], 0.08, "square", 0.07, 0.12));

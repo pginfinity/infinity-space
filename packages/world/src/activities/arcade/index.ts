@@ -5,3 +5,4 @@
 export * from "./realtime.ts";
 export * from "./hockey.ts";
 export * from "./pong.ts";
+export * from "./cabinets.ts";

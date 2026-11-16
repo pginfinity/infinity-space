@@ -169,8 +169,10 @@ function DuelScene({ lens }: { lens: Lens }) {
 
 // Gancho de inspeção para os testes de ponta a ponta (só em desenvolvimento).
 if (import.meta.env.DEV) {
-  Object.assign(window, {
-    __arcade: {
+  const w = window as unknown as { __arcade?: Record<string, unknown> };
+  w.__arcade = {
+    ...(w.__arcade ?? {}),
+    ...{
       /** Último quadro do servidor de uma mesa: { k, paused, pts: [disco/bola x, z, controle 0 x, z, controle 1 x, z] }. */
       frame(id: string) {
         const net = netOf(id);
@@ -181,5 +183,5 @@ if (import.meta.env.DEV) {
         return { k: f.k, paused: f.paused, pts: [...pts], seat: net.seat, tick: net.tick, rtt: Math.round(net.rtt) };
       },
     },
-  });
+  };
 }

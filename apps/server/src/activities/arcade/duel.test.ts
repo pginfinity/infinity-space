@@ -119,7 +119,7 @@ describe("mesa de tempo real", () => {
 
   it("levantar no meio da partida é abandono; ir embora da mesa também", () => {
     startMatch();
-    hockey.handle("ana", "stand");
+    hockey.handle("ana", "stand", undefined);
     expect(snap(hockey).winner).toBe(1);
     expect(snap(hockey).reason).toBe("left");
     // sentar de novo com o outro lugar ocupado já começa outra partida

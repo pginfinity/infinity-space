@@ -521,7 +521,7 @@ export function buildStationMap(): MapDef {
   b.onWall("neon-sign", 12, -23.2, S, { zoneId: arc.id, text: "ARCADE", accent: s.arcade.accent });
   // pacote arcade: jogo da velha, placar de recordes dos fliperamas e lixeiras da bolinha de papel
   b.gameTable("tictactoe-table", -20.9, 17.6, "x", "arcade-velha-1", arc.id);
-  b.onWall("arcade-board", 12, -15.0, S, { zoneId: arc.id, label: "Recordes do Arcade" });
+  b.onWall("arcade-board", 12, -14.6, S, { zoneId: arc.id, label: "Recordes do Arcade", interact: { point: { x: -14.3, z: 13.4 }, yaw: N, radius: 1.3, action: "use", label: "Ver recordes" } });
   for (const [x, z, zoneId] of [
     [-19.3, -14.2, "dev"],
     [-8.6, -18.5, "design"],
