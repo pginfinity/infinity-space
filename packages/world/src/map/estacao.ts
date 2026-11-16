@@ -327,6 +327,12 @@ export function buildStationMap(): MapDef {
   b.put("water-cooler", 6.4, 6.8, W, { zoneId: "atrio" });
   // pacote grupo: terminal de missões do Impostor na Estação, perto do lounge
   b.put("mission-console", 6.25, 2.3, W, { zoneId: "atrio", label: "Terminal de missões", interact: { point: { x: 5.4, z: 2.3 }, yaw: E, radius: 1.7, action: "use", label: "Impostor na Estação" } });
+  // pacote escritorio: mural de recados na parede norte, à esquerda da entrada.
+  b.onWall("notice-board", -4, -2.95, S, {
+    zoneId: "atrio",
+    label: "Mural de recados",
+    interact: { point: { x: -2.95, z: -3.1 }, yaw: N, radius: 1.9, action: "use", label: "Ver mural" },
+  });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],

@@ -8,7 +8,7 @@ const KEY = "escritorio/gongo";
  * Guarda só a contagem do mês do time inteiro.
  *
  * Operações: `ring` `{ msg?: string }`.
- * Eventos: `ring` `GongRing` (para todos).
+ * Eventos: `ring` `GongRing` (para todos), `busy` { ms } (só para quem tentou durante o intervalo).
  */
 export class GongActivity implements Activity {
   readonly id = GONG_ID;
@@ -30,8 +30,12 @@ export class GongActivity implements Activity {
   handle(from: string, op: string, data: unknown): void {
     if (op !== "ring") return;
     const now = Date.now();
-    if (now - this.lastAt < GONG_COOLDOWN_MS) return;
     if (!this.host.near(from, this.at, GONG_RANGE)) return;
+    if (now - this.lastAt < GONG_COOLDOWN_MS) {
+      // Avisa só quem tentou: o gongo ainda está vibrando.
+      this.host.event(this, "busy", { ms: this.lastAt + GONG_COOLDOWN_MS - now }, { to: [from] });
+      return;
+    }
     this.lastAt = now;
     const name = this.host.playerName(from) ?? "Alguém";
     const msg = gongCleanMsg((data as { msg?: unknown } | undefined)?.msg);

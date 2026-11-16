@@ -1,3 +1,14 @@
 {
-  "gong": { "prompt": "A single large brass gong hit, warm and celebratory, long shimmering decay, clean studio recording, no music", "seconds": 4 }
+  "gong": { "prompt": "A single large brass gong hit, warm and celebratory, long shimmering decay, clean studio recording, no music", "seconds": 4 },
+  "deploy-beep": { "prompt": "Short clean electronic countdown beep, mission control style, mid pitch, no reverb tail", "seconds": 0.4 },
+  "deploy-launch": { "prompt": "Small cartoon rocket ignition and liftoff: deep rumble rising into a whooshing roar that fades into the distance, playful not scary, no music", "seconds": 4 },
+  "plane-throw": { "prompt": "Paper airplane thrown through the air, soft quick whoosh of folded paper, light and playful", "seconds": 0.6 },
+  "plane-land": { "prompt": "Paper airplane landing softly in a hand, gentle paper rustle and tap", "seconds": 0.5 },
+  "board-pin": { "prompt": "Push pin pressed into a cork board with a small sticky note, short soft click and thud", "seconds": 0.4 },
+  "greet-invite": { "prompt": "Friendly two-note notification chime, warm and soft, office app style", "seconds": 0.5 },
+  "greet-highfive": { "prompt": "Crisp high five hand slap with a tiny sparkle shimmer after it, cheerful", "seconds": 0.7 },
+  "greet-toast": { "prompt": "Two glass champagne flutes clinking in a toast, bright ringing tone, short", "seconds": 1 },
+  "greet-hug": { "prompt": "Soft warm cozy whoosh with a gentle bell, like a cartoon hug, heartwarming, very short", "seconds": 0.9 },
+  "photo-tick": { "prompt": "Camera self-timer tick, small electronic blip, dry", "seconds": 0.2 },
+  "photo-shutter": { "prompt": "Classic camera shutter click with a short flash charge whine, crisp and clean", "seconds": 0.5 }
 }

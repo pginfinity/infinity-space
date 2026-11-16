@@ -12,6 +12,7 @@ import * as kitchen from "./kitchen.ts";
 import * as decor from "./decor.ts";
 import * as games from "./games.ts";
 import * as grupo from "./grupo.ts";
+import * as escritorio from "./escritorio.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -98,6 +99,8 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   jukebox: games.jukebox,
   "stop-board": grupo.stopBoard,
   "mission-console": grupo.missionConsole,
+  // pacote escritorio
+  "notice-board": escritorio.noticeBoard,
 };
 
 /** Quantas variantes (o.variant) cada tipo tem. Tipos ausentes têm só a 0. */
