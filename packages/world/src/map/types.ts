@@ -146,6 +146,9 @@ export type ObjectType =
   | "connect4-table"
   | "arcade"
   | "jukebox"
+  // jogos de grupo (pacote grupo)
+  | "stop-board"
+  | "mission-console"
   // estruturas
   | "pod";
 

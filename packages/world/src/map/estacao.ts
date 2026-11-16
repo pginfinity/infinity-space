@@ -325,6 +325,8 @@ export function buildStationMap(): MapDef {
   b.put("plant", -4.3, 8.3, N, { zoneId: "atrio", variant: 1 });
   b.put("plant", 6.3, 4.4, N, { zoneId: "atrio", variant: 2 });
   b.put("water-cooler", 6.4, 6.8, W, { zoneId: "atrio" });
+  // pacote grupo: terminal de missões do Impostor na Estação, perto do lounge
+  b.put("mission-console", 6.25, 2.3, W, { zoneId: "atrio", label: "Terminal de missões", interact: { point: { x: 5.4, z: 2.3 }, yaw: E, radius: 1.7, action: "use", label: "Impostor na Estação" } });
   for (const [x, z] of [
     [0, 7.5],
     [2, 7.5],
@@ -545,6 +547,8 @@ export function buildStationMap(): MapDef {
   b.put("coffee-table", -3.9, 16.2, E, { zoneId: cafe.id });
   b.onWall("neon-sign", 12, -9.6, S, { zoneId: cafe.id, text: "CAFÉ", accent: s.cafe.accent });
   b.put("plant-tall", -2.5, 12.6, N, { zoneId: cafe.id, variant: 1 });
+  // pacote grupo: cavalete do Stop (Adedonha), ponto de entrada do jogo no Café
+  b.put("stop-board", -4.4, 13.25, S, { zoneId: cafe.id, label: "Stop", interact: { point: { x: -4.4, z: 14.1 }, yaw: N, radius: 1.7, action: "use", label: "Jogar Stop" } });
 
   // ── Gestão & Projetos (Ordenar) ─────────────────────────────────────────────────────
   const ges = b.room("gestao", "Gestão & Projetos", "open", rect(-2, 9, 12, 22), s.gestao, { team: "Gestão & Projetos" });
