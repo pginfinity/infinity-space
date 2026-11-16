@@ -242,7 +242,7 @@ function VolumeRow({ vol, compact }: { vol: number; compact?: boolean }) {
             setVolume(0);
           } else setVolume(before || 0.7);
         }}
-        aria-label={vol > 0 ? "Silenciar a jukebox" : "Ligar o som da jukebox"}
+        aria-label={vol > 0 ? T.jukebox.mute : T.jukebox.unmute}
         className="grid size-7 shrink-0 place-items-center rounded-lg text-offwhite/80 hover:bg-offwhite/8 hover:text-offwhite"
       >
         <Icon className="size-4" />
@@ -254,7 +254,7 @@ function VolumeRow({ vol, compact }: { vol: number; compact?: boolean }) {
         step={0.05}
         value={vol}
         onChange={(e) => setVolume(Number(e.target.value))}
-        aria-label={`${T.jukebox.volume} da jukebox (só para você)`}
+        aria-label={T.jukebox.volumeHint}
         className={`${compact ? "w-20" : "w-full"} accent-signal`}
       />
     </div>

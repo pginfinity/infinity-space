@@ -76,7 +76,7 @@ export const orbiClient: ActivityClient = {
     }
     if (e.ev === "bye") {
       const reason = (e.data as { reason?: string } | undefined)?.reason;
-      toast(reason === "room" ? "O Orbi esperou do lado de fora." : "O Orbi voltou a passear.");
+      toast(reason === "room" ? T.orbi.waitedOutside : T.orbi.backToWander);
     }
   },
   Overlay: OrbiOverlay,

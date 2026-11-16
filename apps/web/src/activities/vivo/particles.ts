@@ -128,8 +128,10 @@ export class Particles {
     this.mesh.count = 0;
   }
 
+  /** Libera a malha e o material (as geometrias são compartilhadas e ficam). */
   dispose(): void {
     this.mesh.dispose();
+    (this.mesh.material as THREE.Material).dispose();
   }
 
   /** Remove a partícula i trazendo a última para o lugar dela. */

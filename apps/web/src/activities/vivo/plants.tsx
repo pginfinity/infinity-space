@@ -193,6 +193,7 @@ function PlantsScene({ lens }: { lens: Lens }) {
       fx.leaves.dispose();
       (fx.leaves.material as THREE.Material).dispose();
       fx.thirst.dispose();
+      (fx.thirst.material as THREE.Material).dispose();
       sign?.fb.dispose();
     },
     [fx, sign],
@@ -389,7 +390,7 @@ function drawSign(ctx: CanvasRenderingContext2D, w: number, h: number, happy: nu
   ctx.fillText(`${happy}`, w / 2 - 34 * u, h * 0.66);
   ctx.fillStyle = "#3B2A1E";
   ctx.font = `600 ${18 * u}px Geist, sans-serif`;
-  ctx.fillText(`de ${total}`, w / 2 + 26 * u, h * 0.68);
+  ctx.fillText(T.plants.ofTotal(total), w / 2 + 26 * u, h * 0.68);
   // barrinha de folhas
   const k = total ? happy / total : 0;
   ctx.fillStyle = "rgba(59,42,30,0.18)";

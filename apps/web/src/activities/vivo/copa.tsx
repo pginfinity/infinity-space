@@ -466,9 +466,9 @@ function drawChalk(ctx: CanvasRenderingContext2D, w: number, h: number, counts: 
   // linhas por item
   const total = COPA_ITEMS.reduce((n, i) => n + counts[i], 0);
   if (total === 0) {
-    chalkText(ctx, "Ninguém passou", w / 2, 250 * u, 30 * u, CHALK.white, { align: "center" });
-    chalkText(ctx, "por aqui ainda.", w / 2, 292 * u, 30 * u, CHALK.white, { align: "center" });
-    chalkText(ctx, "Inaugure o dia!", w / 2, 360 * u, 30 * u, CHALK.yellow, { align: "center", weight: 700 });
+    chalkText(ctx, T.copa.boardEmptyLines[0], w / 2, 250 * u, 32 * u, CHALK.white, { align: "center" });
+    chalkText(ctx, T.copa.boardEmptyLines[1], w / 2, 294 * u, 32 * u, CHALK.white, { align: "center" });
+    chalkText(ctx, T.copa.boardEmptyCall, w / 2, 364 * u, 32 * u, CHALK.yellow, { align: "center", weight: 700 });
     return;
   }
   ROWS.forEach(({ item, color }, i) => {

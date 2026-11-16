@@ -120,21 +120,20 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
 
 // ---- mobília montada na cena (para as atividades mudarem o visual de uma cópia) ----------------
 
-let mounted: FurnitureBuild | null = null;
-let mountedVersion = 0;
+const mounted: { build: FurnitureBuild | null; version: number } = { build: null, version: 0 };
 
 /** A Station registra a mobília que montou (igual ao registerScreens). Devolve a limpeza. */
 export function registerFurniture(b: FurnitureBuild): () => void {
-  mounted = b;
-  mountedVersion++;
+  mounted.build = b;
+  mounted.version++;
   return () => {
-    if (mounted === b) mounted = null;
+    if (mounted.build === b) mounted.build = null;
   };
 }
 
-/** Mobília montada agora (ou null) e um número que muda a cada montagem (troca de lente). */
-export function mountedFurniture(): { build: FurnitureBuild | null; version: number } {
-  return { build: mounted, version: mountedVersion };
+/** Mobília montada agora (ou null) e um número que muda a cada montagem (troca de lente). Lido a cada quadro: não aloca. */
+export function mountedFurniture(): Readonly<{ build: FurnitureBuild | null; version: number }> {
+  return mounted;
 }
 
 /** Quantas variantes (o.variant) cada tipo tem. Tipos ausentes têm só a 0. */

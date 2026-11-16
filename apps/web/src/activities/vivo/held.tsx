@@ -1,10 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { Citrus, Coffee, Droplets, FileText, Flower2, GlassWater, Leaf, Mic, Popcorn, Trophy, type LucideIcon } from "lucide-react";
 import { isHeldItem, type HeldItem } from "@infinity/world";
 import type { ActivityClient } from "../registry.ts";
 import { useApp } from "../../state/store.ts";
 import { sendInfo } from "../../net/session.ts";
+import { avatarRig } from "../../avatar/hands.ts";
+import { heldScale } from "../../avatar/held.ts";
+import { Particles, ballGeometry, flatMaterial } from "./particles.ts";
 import { T } from "./strings.ts";
 
 /**
@@ -92,4 +97,38 @@ function HeldChip() {
 export const heldClient: ActivityClient = {
   name: "vivo/mao",
   Overlay: HeldChip,
+  Scene: HeldSteam,
 };
+
+// ---- vapor das bebidas quentes -------------------------------------------------------------
+
+/** Boca da caneca, no referencial da mão (antes da escala do item). */
+const CUP_TOP = new THREE.Vector3(-0.012, 0.1, 0.05);
+const STEAM = new THREE.Color("#F4F7FA");
+const _v = new THREE.Vector3();
+
+/** Fiozinhos de vapor saindo do café e do chá de quem está segurando (nas duas lentes). */
+function HeldSteam() {
+  const camera = useThree((s) => s.camera);
+  const puffs = useMemo(() => new Particles(ballGeometry(), flatMaterial({ opacity: 0.5 }), 90), []);
+  const acc = useRef(0);
+  useEffect(() => () => puffs.dispose(), [puffs]);
+  useFrame((_, dt) => {
+    acc.current += dt;
+    if (acc.current > 0.32) {
+      acc.current = 0;
+      const players = useApp.getState().players;
+      for (const id in players) {
+        const h = players[id]!.held;
+        if (h !== "coffee" && h !== "tea") continue;
+        const rig = avatarRig(id);
+        if (!rig) continue;
+        _v.copy(CUP_TOP).multiplyScalar(heldScale(h));
+        rig.handR.localToWorld(_v);
+        puffs.spawn({ x: _v.x + (Math.random() - 0.5) * 0.03, y: _v.y + 0.02, z: _v.z + (Math.random() - 0.5) * 0.03, vx: (Math.random() - 0.5) * 0.05, vy: 0.22 + Math.random() * 0.1, vz: (Math.random() - 0.5) * 0.05, life: 1.1, size: 0.035, grow: 1.6, drag: 0.8, color: STEAM });
+      }
+    }
+    puffs.update(dt, camera);
+  });
+  return <primitive object={puffs.mesh} />;
+}

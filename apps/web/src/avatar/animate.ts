@@ -31,6 +31,8 @@ export interface AnimState {
   seed: number;
   /** Inclinação atual do item (suavizada). */
   tilt: number;
+  /** Em cima da prancha flutuante (0 a 1, suavizado por quem desenha). */
+  board: number;
 }
 
 export const newAnimState = (): AnimState => ({
@@ -46,6 +48,7 @@ export const newAnimState = (): AnimState => ({
   lastHold: null,
   seed: Math.random(),
   tilt: 0,
+  board: 0,
 });
 
 /** Duração de cada gesto parado com o item (ms). */
@@ -78,6 +81,10 @@ const smooth01 = (x: number) => {
 
 /** Envelope de um gesto: sobe no primeiro quarto, segura e desce no último. */
 const envelope = (k: number) => smooth01(Math.min(k / 0.25, (1 - k) / 0.25));
+
+/** Base de surfista na prancha flutuante. */
+const SURF = { hipL: -0.32, hipR: 0.28, knL: 0.42, knR: 0.5, shLx: -0.15, shRx: 0.1, shLz: 0.75, shRz: -0.6, elL: -0.35, elR: -0.4, bodyY: -0.03, spineX: 0.16, spineZ: 0, headX: -0.06 } as const;
+const SURF_KEYS = Object.keys(SURF) as Array<keyof typeof SURF>;
 
 const _qChain = new THREE.Quaternion();
 const _qTilt = new THREE.Quaternion();
@@ -255,6 +262,15 @@ export function animate(rig: AvatarRig, st: AnimState, anim: Anim, speed: number
     p.spineX = run ? 0.2 : 0.07;
     p.headY = 0;
     p.headX = run ? -0.1 : 0;
+    // na prancha: base de surfista (um pé à frente, joelhos dobrados, braços abertos), sem passadas
+    const k = st.board;
+    if (k > 0.01) {
+      const sway = Math.sin(st.phase * 0.35) * 0.06;
+      for (const key of SURF_KEYS) p[key] += (SURF[key] - p[key]) * k;
+      p.shLz += sway * k;
+      p.shRz += sway * k;
+      p.spineZ += sway * k;
+    }
   } else if (anim === "sit") {
     p.hipsY = seatHeight + 0.04;
     p.hipL = -1.5;
