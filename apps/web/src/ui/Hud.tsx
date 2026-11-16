@@ -16,6 +16,7 @@ import { ScreenShares } from "./ScreenShares.tsx";
 import { ActivitiesOverlay } from "../activities/index.tsx";
 import { SettingsPanel } from "./SettingsPanel.tsx";
 import { ChatDockButton, setChatOpen, useChatOpen } from "../activities/chat/dock.tsx";
+import { PresenceDock } from "../presence/Dock.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -39,6 +40,16 @@ export function Hud() {
   useEffect(() => {
     if (chatOpen) setSettingsOpen(false);
   }, [chatOpen]);
+  // A busca (Ctrl+K) e outros pacotes pedem os ajustes por evento.
+  useEffect(() => {
+    const open = () => {
+      setSettingsOpen(true);
+      useApp.getState().togglePeople(false);
+      setChatOpen(false);
+    };
+    window.addEventListener("infinity:settings", open);
+    return () => window.removeEventListener("infinity:settings", open);
+  }, []);
   const list = Object.values(players);
 
   return (
@@ -119,6 +130,7 @@ export function Hud() {
         <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
           <Smile className="size-[18px]" />
         </DockButton>
+        <PresenceDock />
         <div className="hidden sm:contents">
           <DockButton label={t("hud.recenter")} onClick={() => window.dispatchEvent(new Event("infinity:recenter"))}>
             <LocateFixed className="size-[18px]" />

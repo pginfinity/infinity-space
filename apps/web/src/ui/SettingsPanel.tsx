@@ -9,6 +9,7 @@ import { setMediaSettings, useMediaSettings, VIDEO_RES, type CamBackground, type
 import { applyBackground, backgroundSupported } from "../media/background.ts";
 import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
+import { PresenceSettings } from "../presence/PresenceSettings.tsx";
 
 /**
  * Áudio e vídeo de cada pessoa: dispositivos, supressão de ruído, teste do microfone com o filtro
@@ -142,6 +143,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <p className="mt-1.5 text-[11px] text-slate">A Econômica ajuda em internet ou computador mais fracos.</p>
           </div>
         </Section>
+
+        <PresenceSettings />
       </div>
     </motion.aside>
   );

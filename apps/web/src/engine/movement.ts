@@ -116,8 +116,21 @@ export function setMoveGuard(g: MoveGuard | null): void {
   guard = g;
 }
 
-/** Anda até um ponto do mundo pelo melhor caminho. `arrive` roda ao chegar. */
-export function walkTo(target: Vec2, arrive?: () => void): boolean {
+/** Velocidade da rota atual (m/s), quando quem pediu a rota escolheu uma (seguir, travessia rápida). */
+let pathSpeed = 0;
+const manualListeners = new Set<() => void>();
+
+/** Avisa quando a pessoa mexe no teclado para andar (seguir e travessias param na hora). */
+export function onManualMove(fn: () => void): () => void {
+  manualListeners.add(fn);
+  return () => manualListeners.delete(fn);
+}
+
+/**
+ * Anda até um ponto do mundo pelo melhor caminho. `arrive` roda ao chegar.
+ * `speed` (m/s) fixa a velocidade desta rota; sem ela, anda (ou corre com Shift).
+ */
+export function walkTo(target: Vec2, arrive?: () => void, opts?: { speed?: number }): boolean {
   if (seated) standUp();
   // Destino numa sala de porta fechada: vai até a porta.
   if (guard?.blocks(target)) {
@@ -129,6 +142,7 @@ export function walkTo(target: Vec2, arrive?: () => void): boolean {
   }
   const found = world().nav.findPath({ x: self.x, z: self.z }, target);
   path = found && found.length > 0 ? found : null;
+  pathSpeed = path ? (opts?.speed ?? 0) : 0;
   onArrive = path ? (arrive ?? null) : null;
   if (!path && arrive && Math.hypot(target.x - self.x, target.z - self.z) < 1.6) arrive();
   notify();
@@ -137,6 +151,15 @@ export function walkTo(target: Vec2, arrive?: () => void): boolean {
 
 export function currentPath(): readonly Vec2[] | null {
   return path;
+}
+
+/** Para a rota atual onde estiver (sem chamar o `arrive`). */
+export function cancelWalk(): void {
+  if (!path) return;
+  path = null;
+  pathSpeed = 0;
+  onArrive = null;
+  notify();
 }
 
 /** Avisos de mudança de rota (para a lente desenhar o destino). */
@@ -194,22 +217,27 @@ function step(dt: number): void {
       iz += k.z;
     }
   }
+  const manual = ix !== 0 || iz !== 0;
   const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
-  const speed = run ? RUN_SPEED : WALK_SPEED;
+  // Rota com velocidade própria (seguir, travessia rápida) vale enquanto ninguém mexe no teclado.
+  const speed = !manual && path && pathSpeed > 0 ? pathSpeed : run ? RUN_SPEED : WALK_SPEED;
   let move: Vec2 | null = null;
+
+  if (manual) for (const fn of manualListeners) fn();
 
   // Sentado: fica parado até alguém mexer no teclado.
   if (seated) {
-    if (ix === 0 && iz === 0) {
+    if (!manual) {
       self.anim = "sit";
       return;
     }
     standUp();
   }
 
-  if (ix !== 0 || iz !== 0) {
+  if (manual) {
     if (path) {
       path = null;
+      pathSpeed = 0;
       onArrive = null;
       notify();
     }
@@ -231,6 +259,7 @@ function step(dt: number): void {
       path.shift();
       if (path.length === 0) {
         path = null;
+        pathSpeed = 0;
         const done = onArrive;
         onArrive = null;
         notify();
@@ -250,12 +279,13 @@ function step(dt: number): void {
     if (moved > 1e-4) {
       const targetYaw = yawOf(move);
       self.yaw += angleDelta(self.yaw, targetYaw) * Math.min(1, dt * 14);
-      anim = run ? "run" : "walk";
+      anim = run || speed > WALK_SPEED + 0.01 ? "run" : "walk";
     } else if (path) {
       // Travou no caminho (alguém no meio, quina): desiste da rota, mas se já está perto, conta como chegada.
       const end = path.at(-1);
       const done = end && Math.hypot(end.x - self.x, end.z - self.z) < 1.2 ? onArrive : null;
       path = null;
+      pathSpeed = 0;
       onArrive = null;
       notify();
       if (done) queueMicrotask(done);

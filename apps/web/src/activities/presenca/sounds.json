@@ -1,0 +1,5 @@
+{
+  "presenca-chamado": { "prompt": "Soft friendly two-note chime like a gentle tap on the shoulder, warm marimba, discreet office app notification, no reverb tail", "seconds": 0.8 },
+  "presenca-seguir": { "prompt": "Single soft wooden blip notification, short, discreet and warm", "seconds": 0.3 },
+  "presenca-warp": { "prompt": "Short soft sci-fi shimmer whoosh, gentle teleport sparkle, airy and light, quiet", "seconds": 0.9 }
+}

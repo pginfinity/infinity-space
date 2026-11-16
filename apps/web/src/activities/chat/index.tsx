@@ -5,7 +5,8 @@ import { useApp } from "../../state/store.ts";
 import { registerSynth } from "../../audio/sfx.ts";
 import { ChatBalloonProjector, ChatBalloons } from "./balloons.tsx";
 import { ChatPanel } from "./Panel.tsx";
-import { onChatEvent, syncChat, toggleChat } from "./store.ts";
+import { onChatEvent, openConv, syncChat, toggleChat } from "./store.ts";
+import { registerPersonCommand } from "../../presence/store.ts";
 import { typing } from "./util.ts";
 
 /**
@@ -45,6 +46,16 @@ registerActivity({
   onEvent: onChatEvent,
   Overlay: ChatOverlay,
   Scene: ChatBalloonProjector,
+});
+
+// Na busca (Ctrl+K): "Mensagem para Fulano" ao lado de ir até, chamar e seguir.
+registerPersonCommand({
+  key: "mensagem",
+  label: (name) => `Mensagem para ${name}`,
+  run: (id) => {
+    const name = useApp.getState().players[id]?.name;
+    if (name) openConv(name, name);
+  },
 });
 
 // ---- sons de reserva (enquanto os arquivos do sounds.json não existem) ------------------------
