@@ -71,6 +71,27 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
   await b.getByRole("button", { name: "Aumentar zoom" }).click();
   await b.waitForTimeout(500);
   await b.screenshot({ path: "test-results/screens/v3-tela-cheia.png" });
+
+  // Caneta: a Ana abre a própria tela em tela cheia; o Bruno risca e o traço aparece para ela.
+  await a.getByRole("button", { name: /Sua tela/ }).click();
+  await b.getByRole("button", { name: "Caneta" }).click();
+  const pad = (await b.locator("canvas.cursor-crosshair").boundingBox())!;
+  await b.mouse.move(pad.x + pad.width * 0.3, pad.y + pad.height * 0.4);
+  await b.mouse.down();
+  for (let i = 1; i <= 8; i++) await b.mouse.move(pad.x + pad.width * (0.3 + i * 0.04), pad.y + pad.height * (0.4 + (i % 2) * 0.05));
+  await b.mouse.up();
+  const painted = (p: typeof a) =>
+    p.evaluate(() => {
+      const c = [...document.querySelectorAll("canvas")].find((x) => x.className.includes("rounded-lg") && x.getAttribute("aria-hidden") === "true") as HTMLCanvasElement | undefined;
+      if (!c || !c.width) return 0;
+      const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 3; i < d.length; i += 16) if (d[i]! > 40) n++;
+      return n;
+    });
+  await expect.poll(() => painted(a), { timeout: 5000, message: "traço do Bruno na tela da Ana" }).toBeGreaterThan(20);
+  await a.screenshot({ path: "test-results/screens/v3-tela-caneta.png" });
+  await a.keyboard.press("Escape");
   await b.keyboard.press("Escape");
 
   // Ana para: some do Bruno.
