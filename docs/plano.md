@@ -4,6 +4,21 @@ Cada etapa termina com algo que dá para abrir e testar. Uma etapa só fecha qua
 
 Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gravação, editor de mapa e controle remoto de tela ficam para a V2 ([v2.md](v2.md)).
 
+## Situação (16/11/2026)
+
+| Etapa | Situação | O que falta |
+|---|---|---|
+| 0. Fundação | Pronta | — |
+| 1. Áudio e vídeo | Pronta | Aperte-para-falar, desfoque e fundo da câmera, anel "quem te ouve" no chão |
+| 2. Tela compartilhada | Pronta | Anotação sobre a tela, TV parada com relógio e próxima reserva |
+| 3. Presença e convivência | Em andamento | Login, status, emotes e sentar prontos; chat, chamar/seguir/Ctrl+K, status automático, janela flutuante, portas e mesas em construção |
+| 4. Lente, avatar e arte | Parcial | Terra no horário real, luz do dia e escada de qualidade prontas; avatares melhores (adiado a pedido) e transição contínua 2D↔3D |
+| 5. Jogos e rituais | Parcial | 12 jogos prontos (ver interatividade.md); daily na sala do time, damas, dominó, baralho, palavra secreta |
+| 6. App, celular e som | Pronta | App instalável (PWA), celular, sons gerados; músicas da jukebox aguardando decisão |
+| 7. Produção | Preparada | Docker, LiveKit, HTTPS e deploy automático prontos; falta a VPS e as credenciais (docs/infra.md) |
+
+Gravação de reuniões (prevista para a V2) entrou na V1 a pedido do time: grava a sala e envia ao Google Drive.
+
 ## Etapa 0: Fundação
 - Monorepo, tokens da marca (cores, NORD, Geist), CLAUDE.md.
 - `packages/world`: formato do mapa, planta do Círculo de Evolução, colisão, rotas, regra de audição, com testes.
