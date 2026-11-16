@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Camera, Headphones, Mic, Volume2, X } from "lucide-react";
+import { Camera, Gauge, Headphones, Mic, Volume2, X } from "lucide-react";
+import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { audioContext } from "../media/rtc.ts";
 import { createNoiseNode, type NoiseNode } from "../media/noise.ts";
 import { setMediaSettings, useMediaSettings, VIDEO_RES, type NoiseMode, type VideoQuality } from "../media/settings.ts";
@@ -89,6 +90,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </button>
           <p className="text-[11px] text-slate">O volume de cada pessoa fica no painel Pessoas.</p>
         </Section>
+
+        <GraphicsSection />
 
         <Section icon={<Camera className="size-4" />} title="Câmera">
           <DeviceSelect label="Câmera" value={s.camId} options={devices.videoinput} onChange={(camId) => setMediaSettings({ camId })} />
@@ -336,5 +339,35 @@ function CamTest({ camId, quality }: { camId: string | null; quality: VideoQuali
         Parar teste
       </button>
     </div>
+  );
+}
+
+const QUALITY_OPTIONS: { id: Quality; title: string; hint: string }[] = [
+  { id: "auto", title: "Automática", hint: "Ajusta sozinha ao computador" },
+  { id: "leve", title: "Leve", hint: "Para PC mais fraco" },
+  { id: "alta", title: "Alta", hint: "Mais nitidez no 3D" },
+];
+
+/** Qualidade do 3D (o 2D já é leve). */
+function GraphicsSection() {
+  const mode = useQuality((s) => s.mode);
+  return (
+    <Section icon={<Gauge className="size-4" />} title="Gráficos do 3D">
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Qualidade do 3D">
+        {QUALITY_OPTIONS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.id}
+            onClick={() => setQuality(o.id)}
+            className={clsx("rounded-xl border px-2.5 py-2 text-left transition-colors", mode === o.id ? "border-signal bg-signal/10" : "border-offwhite/10 hover:border-offwhite/25")}
+          >
+            <span className="block text-sm font-medium">{o.title}</span>
+            <span className="block text-[11px] leading-snug text-slate">{o.hint}</span>
+          </button>
+        ))}
+      </div>
+    </Section>
   );
 }
