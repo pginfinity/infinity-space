@@ -22,12 +22,18 @@ export function PresenceSettings() {
   // Aberto pela busca ("Ajustes de presença"): rola até aqui.
   useEffect(() => {
     if (!focus) return;
-    // Espera o painel entrar; o pedido só é apagado depois de rolar.
-    const t = window.setTimeout(() => {
-      ref.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    // Espera o painel entrar (a animação de entrada leva 250 ms); rola sem animação, que um scroll
+    // suave em andamento é cancelado por qualquer nova medida do painel. Confere de novo logo depois.
+    const go = () => ref.current?.scrollIntoView({ block: "start" });
+    const t1 = window.setTimeout(go, 280);
+    const t2 = window.setTimeout(() => {
+      go();
       usePresence.setState({ focusSettings: false });
-    }, 120);
-    return () => window.clearTimeout(t);
+    }, 600);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [focus]);
 
   return (

@@ -2,9 +2,14 @@
 
 O escritório precisa ter coisa para fazer em todo canto, sem parecer genérico. Tudo aqui funciona igual no 2D e no 3D, com estado no servidor (todo mundo vê a mesma coisa) e, quando faz sentido, salvo de um dia para o outro.
 
-## Situação (15/11/2026)
+## Situação (16/11/2026)
 
 Pronto e integrado (base em `docs/atividades.md`):
+
+- **Conversa e encontro:** chat (Geral, Perto com balão sobre a cabeça, conversas diretas, menções), chamar alguém (com teleporte quando é longe), seguir com aceite, busca e comandos (Ctrl+K), ausente automático, janela flutuante com quem fala.
+- **Privacidade:** portas das salas (aberta, fechada com "bater", não perturbe com bilhete), roda fechada em área aberta e sussurro (segurar B).
+- **Mesas:** check-in até a meia-noite, mesas fixas (admin), até 3 objetos pessoais na mesa e recado deixado na mesa.
+- **Rituais:** daily na sala do time (roda sorteada, cronômetro suave, passa-a-vez).
 
 - **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos.
 - **Estação viva:** itens na mão, copa (café, chá, água, suco, pipoca) com contador do dia, plantas que murcham e estação de rega, Orbi (robô mascote), jukebox com fila, telescópio, prancha flutuante.
@@ -12,7 +17,7 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação.
 - **Reuniões:** gravação da sala com envio ao Google Drive.
 
-Ainda não: Pomodoro compartilhado (a daily já existe), TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
+Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no mural da copa, músicas reais da jukebox (hoje é música generativa de reserva).
 
 ## Jogos
 

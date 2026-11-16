@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "../../scene/Html.tsx";
 import * as THREE from "three";
 import {
   PLANTS_ID,

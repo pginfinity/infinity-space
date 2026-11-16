@@ -60,6 +60,19 @@ export interface ActivityHost {
   claimSeat(id: string, here: Activity): string | null;
   /** Aviso curto só para a pessoa (aparece como toast). */
   notify(id: string, text: string): void;
+  /**
+   * Quem ouve a voz da pessoa agora, com a regra completa da sala (distância, paredes, salas
+   * fechadas, palco, portas, roda fechada e sussurro). Para o que deve chegar só a quem ouve
+   * (chat Perto, por exemplo). Opcional só para os anfitriões de teste; a sala sempre tem.
+   */
+  hearers?(id: string): string[];
+  /**
+   * Muda a pessoa de lugar pelo servidor (andável e permitido pelas portas) e corrige o cliente.
+   * Devolve false se o ponto não serve. A atividade é quem garante que o salto foi autorizado.
+   */
+  teleport?(id: string, p: Vec2): boolean;
+  /** E-mail da conta (só com login ligado). Para conferir papéis sem depender do nome. */
+  playerEmail?(id: string): string | undefined;
 }
 
 export type ActivityFactory = (host: ActivityHost) => Activity[];

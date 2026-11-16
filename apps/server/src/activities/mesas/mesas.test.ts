@@ -292,6 +292,18 @@ describe("mesas no servidor: mesas fixas", () => {
     expect((act.snapshot() as MesasState).fixed).toEqual({});
   });
 
+  it("com login ligado e o e-mail da conexão, vale a conta (mesmo com nome repetido)", () => {
+    const host = new FakeHost();
+    host.mem.set("auth/usuarios", {
+      "dir@x.io": { email: "dir@x.io", name: "Diretora", role: "admin", createdAt: 0 },
+      "x@x.io": { email: "x@x.io", name: "Diretora", role: "member", createdAt: 0 },
+    });
+    const emails: Record<string, string> = { "1": "dir@x.io", "2": "x@x.io" };
+    const opts = mesasAdmin(host.store, { AUTH_REQUIRED: "true" }, (id) => emails[id]);
+    expect(opts.admin("1", "Diretora")).toBe(true);
+    expect(opts.admin("2", "Diretora")).toBe(false);
+  });
+
   it("sem login: MESAS_ADMINS por nome ou * para todos", () => {
     const host = new FakeHost();
     expect(mesasAdmin(host.store, { MESAS_ADMINS: "Ana, Bruno" }).admin("1", "ana")).toBe(true);

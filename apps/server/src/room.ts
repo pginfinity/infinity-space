@@ -120,6 +120,9 @@ export class OfficeRoom {
       objects: (type) => this.map.objects.filter((o) => o.type === type),
       claimSeat: (id, here) => this.claimSeat(id, here),
       notify: (id, text) => this.notify(id, text),
+      hearers: (id) => this.hearersOf(id),
+      teleport: (id, p) => this.teleport(id, p),
+      playerEmail: (id) => this.members.get(id)?.email,
       near: (id, p, range) => {
         const m = this.members.get(id);
         if (!m) return false;
@@ -347,7 +350,10 @@ export class OfficeRoom {
   private onPose(m: Member, p: Extract<ClientMsg, { t: "pose" }>): void {
     if (![p.x, p.z, p.yaw, p.anim].every(Number.isFinite)) return;
     const now = Date.now();
-    const dt = Math.max(0.001, (now - m.lastPoseAt) / 1000);
+    // Tempo desde a última pose aceita, com teto: sem ele, quem fica parado 10 s poderia "saltar"
+    // 100 m de uma vez com um cliente modificado. 2,5 s cobrem um engasgo de rede comum; saltos
+    // de verdade (chamado aceito) passam por `teleport`, autorizado pela atividade.
+    const dt = Math.min(2.5, Math.max(0.001, (now - m.lastPoseAt) / 1000));
     const target = { x: p.x, z: p.z };
     const moved = dist({ x: m.x, z: m.z }, target);
     const anim = p.anim >= 0 && p.anim < ANIMS.length ? Math.trunc(p.anim) : 0;
@@ -417,6 +423,31 @@ export class OfficeRoom {
         this.sendTo(speaker, { t: "audience", ids: voice });
       }
     });
+  }
+
+  /** Quem ouve a voz desta pessoa agora (mesma regra das listas de áudio, sem o gravador). */
+  private hearersOf(id: string): string[] {
+    const list = [...this.members.values()];
+    const people: AudiencePerson[] = list.map((m) => ({ id: m.info.id, pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
+    const speaker = people.find((p) => p.id === id);
+    if (!speaker) return [];
+    return audienceOf(this.map.walls, people, speaker, { privacy: this.privacy?.privacy() }).voice;
+  }
+
+  /** Salto autorizado por uma atividade (ex.: chamado aceito): só para lugar andável e permitido. */
+  private teleport(id: string, p: Vec2): boolean {
+    const m = this.members.get(id);
+    if (!m || !Number.isFinite(p.x) || !Number.isFinite(p.z)) return false;
+    if (!this.nav.isWalkable(p) || !this.mayStand(id, p)) return false;
+    m.x = p.x;
+    m.z = p.z;
+    m.anim = 0;
+    m.lastPoseAt = Date.now();
+    m.dirty = true;
+    this.sendTo(m, { t: "correct", x: m.x, z: m.z });
+    // As listas de áudio seguem a pessoa na hora (não espera o próximo ciclo).
+    this.updateAudiences();
+    return true;
   }
 
   /** Devolve a pessoa para o lado de fora da porta da sala. */

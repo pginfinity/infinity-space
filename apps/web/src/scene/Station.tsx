@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./Html.tsx";
 import * as THREE from "three";
 import type { Lens } from "@infinity/world";
 import { world } from "../world/world.ts";

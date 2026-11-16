@@ -193,6 +193,15 @@ describe("chat no servidor", () => {
     expect(host.of("near")[1]).toMatchObject({ to: ["b"], data: { heard: 0 } });
   });
 
+  it("Perto usa a regra completa da sala quando ela existe (roda fechada, sussurro)", () => {
+    // A sala diz que só a Carla ouve a Ana agora (ex.: as duas numa roda fechada).
+    (host as unknown as { hearers: (id: string) => string[] }).hearers = (id) => (id === "a" ? ["c"] : []);
+    host.put("c", "Carla", { x: 1, z: 0 });
+    chat.handle("a", "send", { ch: "perto", text: "só entre nós" });
+    expect(host.of("near")[0]!.to).toEqual(["c"]);
+    expect(host.of("near")[1]).toMatchObject({ to: ["a"], data: { heard: 1 } });
+  });
+
   it("conversa direta: só as duas pessoas recebem, e fica guardada pelo nome", () => {
     chat.handle("a", "send", { ch: "dm", to: "bruno", text: "segredo", cid: "d1" });
     const dms = host.of("dm");

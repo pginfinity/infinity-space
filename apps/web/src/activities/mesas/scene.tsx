@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "../../scene/Html.tsx";
 import * as THREE from "three";
 import { MESAS_LABEL_RANGE, mesasDeskOf, mesasKey, mesasOwner, type MapObject, type MesasDesk, type MesasItem } from "@infinity/world";
 import { objectMatrix } from "../../scene/furniture/index.ts";

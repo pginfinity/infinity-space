@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "../../scene/Html.tsx";
 import * as THREE from "three";
 import { DoorClosed, Ear, Lock, StickyNote } from "lucide-react";
 import { PORTAS, PORTAS_ID, dirOfYaw, type DoorDef, type DoorState, type Lens, type PortasState } from "@infinity/world";

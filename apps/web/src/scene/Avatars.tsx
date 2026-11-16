@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./Html.tsx";
 import * as THREE from "three";
 import { isHeldItem, pointInPolygon, type AvatarLook, type Emote, type HeldItem, type PlayerInfo, type Vec2 } from "@infinity/world";
 import { useApp } from "../state/store.ts";

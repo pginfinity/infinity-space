@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Html } from "@react-three/drei";
+import { Html } from "../../scene/Html.tsx";
 import { Circle, ExternalLink, Square } from "lucide-react";
 import { REC_ID, REC_KIND, recGroup, recordable, type RecSession, type RecState, type Zone } from "@infinity/world";
 import { registerActivity, sendAct, useAct } from "../registry.ts";

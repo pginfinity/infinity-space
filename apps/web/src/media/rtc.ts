@@ -63,6 +63,23 @@ export function onScreenNotice(fn: (text: string) => void): void {
   onShareNotice = fn;
 }
 const chains = new Map<string, { track: RemoteAudioTrack; lowpass: BiquadFilterNode; pan: StereoPannerNode; el: HTMLMediaElement }>();
+/** Quem o LiveKit diz que está falando (a sala inteira, inclusive quem você não ouve). */
+let rawSpeakers: string[] = [];
+
+/**
+ * "Falando" só para quem você ouve agora (a voz chega até você) e para você mesmo. O LiveKit avisa
+ * a sala inteira; sem esse filtro, quem está fora de uma roda fechada, de um sussurro ou de uma
+ * sala veria que alguém fala ali dentro.
+ */
+function publishSpeaking(): void {
+  const me = room?.localParticipant.identity;
+  const speaking: Record<string, true> = {};
+  for (const id of rawSpeakers) if (id === me || chains.has(id)) speaking[id] = true;
+  const prev = useMedia.getState().speaking;
+  const keys = Object.keys(speaking);
+  if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k])) return;
+  useMedia.setState({ speaking });
+}
 /** O contexto de áudio do escritório (vozes, supressão de ruído, medidores). 48 kHz: o RNNoise exige. */
 export function audioContext(): AudioContext {
   if (!ctx) {
@@ -96,9 +113,8 @@ export async function joinRtc(url: string, token: string): Promise<void> {
     .on(RoomEvent.TrackUnsubscribed, onUnsubscribed)
     .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => dropParticipant(p.identity))
     .on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-      const speaking: Record<string, true> = {};
-      for (const s of speakers) speaking[s.identity] = true;
-      useMedia.setState({ speaking });
+      rawSpeakers = speakers.map((s) => s.identity);
+      publishSpeaking();
     })
     .on(RoomEvent.LocalTrackPublished, (pub: LocalTrackPublication) => {
       onLocalPublished(pub);
@@ -136,6 +152,7 @@ export async function leaveRtc(): Promise<void> {
   // Nova sessão, id novo no servidor: o sussurro (se houver) recomeça pelo pacote portas.
   whisperTarget = null;
   sightIds = null;
+  rawSpeakers = [];
   useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, screen: false, screens: {} });
 }
 
@@ -456,6 +473,7 @@ function onSubscribed(track: RemoteTrack, _pub: RemoteTrackPublication, p: Remot
     el.style.display = "none";
     document.body.appendChild(el);
     chains.set(p.identity, { track, lowpass, pan, el });
+    publishSpeaking();
   } else if (track.kind === Track.Kind.Video && track.source === Track.Source.Camera) {
     const el = track.attach() as HTMLVideoElement;
     el.playsInline = true;
@@ -480,6 +498,7 @@ function onUnsubscribed(track: RemoteTrack, _pub: RemoteTrackPublication, p: Rem
     if (c) {
       c.track.detach().forEach((el) => el.remove());
       chains.delete(p.identity);
+      publishSpeaking();
     }
   } else if (track.source === Track.Source.Camera) {
     track.detach();
@@ -492,6 +511,7 @@ function dropParticipant(id: string): void {
   if (c) {
     c.track.detach().forEach((el) => el.remove());
     chains.delete(id);
+    publishSpeaking();
   }
   setVideo(id, null);
   setScreen(id, null);

@@ -235,6 +235,8 @@ export class ChatActivity implements Activity {
 
   /** Quem lê uma mensagem do Perto de `from` agora (mesma regra da voz). */
   private hearersOf(from: string): string[] {
+    // Na sala: a regra completa (inclui portas, roda fechada e sussurro, do pacote portas).
+    if (this.host.hearers) return this.host.hearers(from);
     const pos = this.host.playerPos(from);
     if (!pos) return [];
     const others: ChatHearer[] = [];

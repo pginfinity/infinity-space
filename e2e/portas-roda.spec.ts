@@ -44,6 +44,13 @@ test("roda fechada isola quem está de fora, e entra quem é aceito", async ({ b
   await expect.poll(() => prompt(caio)).toBe("Pedir para entrar na roda");
   await caio.screenshot({ path: "test-results/screens/portas-roda-fora.png" });
 
+  // O chat Perto segue a mesma regra: o Bruno lê, o Caio (a 1 m, mas fora da roda) não.
+  const segredo = `só na roda ${Date.now()}`;
+  await ana.evaluate((text) => (window as unknown as { __infinity: { acts: { send(id: string, op: string, d: unknown): void } } }).__infinity.acts.send("chat", "send", { ch: "perto", text, cid: "roda1" }), segredo);
+  const perto = (p: typeof ana) => p.evaluate(() => (window as unknown as { __infinityChat: { state: { getState(): { perto: Array<{ text: string }> } } } }).__infinityChat.state.getState().perto.map((m) => m.text));
+  await expect.poll(() => perto(bruno), { timeout: 10_000 }).toContain(segredo);
+  expect(await perto(caio)).not.toContain(segredo);
+
   // Pede para entrar; Ana aceita; Caio passa a ouvir.
   await caio.keyboard.press("KeyE");
   const card = ana.getByRole("alertdialog", { name: "Caio quer entrar na roda" });

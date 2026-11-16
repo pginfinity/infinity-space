@@ -47,8 +47,19 @@ export async function enter(browser: Browser, name: string, mic = true): Promise
     if (attempt >= 3) throw new Error(`${name}: a mídia não conectou (${status})`);
   }
   if (mic) {
-    await page.keyboard.press("KeyM");
-    await expect.poll(() => page.evaluate(() => (window as unknown as W).__infinity.media.state.getState().mic), { timeout: 10_000 }).toBe(true);
+    // Publicar o microfone espera a conexão de envio do LiveKit; com três navegadores e o LiveKit
+    // de desenvolvimento compartilhado, às vezes ela demora: dá mais tempo e tenta uma segunda vez.
+    const micOn = () => page.evaluate(() => (window as unknown as W).__infinity.media.state.getState().mic);
+    for (let attempt = 1; ; attempt++) {
+      await page.keyboard.press("KeyM");
+      const ok = await expect
+        .poll(micOn, { timeout: 20_000 })
+        .toBe(true)
+        .then(() => true)
+        .catch(() => false);
+      if (ok) break;
+      if (attempt >= 2) throw new Error(`${name}: o microfone não ligou`);
+    }
   }
   return page;
 }

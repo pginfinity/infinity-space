@@ -43,6 +43,8 @@ export async function enter(browser: Browser, name: string, lens: "2d" | "3d", o
   await page.waitForFunction(() => !!(window as unknown as Partial<W>).__infinity?.store.getState().selfId && !!(window as unknown as Partial<W>).__infinityChat, null, { timeout: 30_000 });
   // O chat já recebeu o Geral (a primeira sincronia terminou).
   await page.waitForFunction(() => (window as unknown as W).__infinityChat.state.getState().geralLoaded, null, { timeout: 30_000 });
+  // No 3D, espera os shaders compilarem (no Chrome de teste, sem placa de vídeo, isso trava a página por segundos).
+  if (lens === "3d") await page.locator('[role="application"][data-ready="true"]').waitFor({ timeout: 30_000 });
   return page;
 }
 

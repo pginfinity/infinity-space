@@ -39,6 +39,9 @@ test("Conversas: DM pelo painel Pessoas, privada, não lidas e histórico", asyn
   expect(cs.convs.flatMap((x) => x.texts)).not.toContain(secret);
   expect(cs.convs.some((x) => x.key === "bruno" || x.key === "ana")).toBe(false);
   expect((await unread(c)).dm).toBe(0);
+  // A Carla já cumpriu o papel; o 3D dela (desenhado por software no Chrome de teste) disputaria
+  // a CPU com o recarregamento do Bruno lá embaixo.
+  await c.context().close();
 
   // Mais uma, para a lista mostrar a última e duas não lidas.
   const last = `Me liga quando puder ${RUN}`;

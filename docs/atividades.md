@@ -25,11 +25,13 @@ interface Activity {
 }
 ```
 
-O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(this, ev, data, { to, from })` (acontecimento pontual), `players()`, `playerName`, `playerPos`, `playerZone`, `near(id, ponto, metros)` (perto e sem parede no meio), `emote(id, e)`, `setHeld(id, item)`, `objects(tipo)`, `map`, `nav`, `zones` e `store`.
+O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(this, ev, data, { to, from })` (acontecimento pontual), `players()`, `playerName`, `playerPos`, `playerZone`, `near(id, ponto, metros)` (perto e sem parede no meio), `emote(id, e)`, `setHeld(id, item)`, `objects(tipo)`, `map`, `nav`, `zones` e `store`. Também: `hearers(id)` (quem ouve a pessoa agora, com a regra completa da sala: paredes, salas, palco, portas, roda fechada e sussurro; use para qualquer coisa que deva chegar só a quem ouve), `teleport(id, ponto)` (salto autorizado pela atividade, conferido pela sala) e `playerEmail(id)` (com login ligado, para conferir papéis pela conta e não pelo nome).
 
 - **Um jogo por vez:** jogos com lugar implementam `seatLabel`, `inMatchFor` e `releaseSeat`, e chamam `host.claimSeat(id, this)` antes de sentar alguém: quem estava só esperando em outro jogo sai de lá; quem está no meio de uma partida recebe um aviso (`host.notify`).
 - **Persistência:** `host.store.get(chave, padrão)` e `host.store.set(chave, valor)`. A chave começa pelo pacote (`"escritorio/gongo"`). Os arquivos JSON vão para `DATA_DIR`, que fica fora do Git.
 - **Limite:** cada pessoa manda no máximo 90 pedidos por segundo para as atividades.
+- **Rótulos na cena:** use o `Html` de `apps/web/src/scene/Html.tsx`, não o do drei (o do drei quebrava a troca de lente com `removeChild`).
+- **Privacidade:** o que é "perto" segue `host.hearers`. O indicador de quem fala, no cliente, só acende para quem a pessoa ouve.
 - **Estado grande ou frequente:** o snapshot vai inteiro a cada mudança. Física a 30 Hz vai por `event` (`"frame"`), só para quem joga ou assiste.
 
 ## Cliente (`apps/web/src/activities/registry.ts`)
@@ -76,4 +78,6 @@ Pedidas pelos pacotes, ao construir os jogos e interações:
 - **Avatar:** `faceTowards(yaw)` no movimento e um ponto de ancoragem para balões acima da etiqueta de nome.
 - **Áudio:** um contexto de áudio compartilhado entre `sfx`, jukebox e vozes.
 - **TVs:** API para uma atividade ocupar a tela de uma TV (hoje cada pacote desenha um plano na frente).
-- **Host:** `playerHeld(id)`, `flush()` imediato para timers próprios, e um jeito de reunir jogadores (chamada/teleporte) para reuniões de jogo.
+- **Host:** `playerHeld(id)` e `flush()` imediato para timers próprios. (Chamar e teleportar já existem pelo pacote presença e por `host.teleport`.)
+- **Paleta (Ctrl+K):** hoje só aceita ações por pessoa (`registerPersonCommand`); falta um gancho para ações gerais ("Minha mesa", por exemplo).
+- **Portas:** readmitir pelo e-mail depois de uma reconexão (com o login ligado, o id muda mas a conta é a mesma).
