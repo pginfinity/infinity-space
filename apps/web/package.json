@@ -8,10 +8,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "prebuild": "node ../../scripts/mediapipe.mjs",
+    "predev": "node ../../scripts/mediapipe.mjs"
   },
   "dependencies": {
     "@infinity/world": "*",
+    "@livekit/track-processors": "0.8.2",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@sapphi-red/web-noise-suppressor": "0.4.1",

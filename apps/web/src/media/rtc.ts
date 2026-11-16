@@ -8,6 +8,7 @@ import {
   Track,
   VideoPresets,
   type LocalAudioTrack,
+  type LocalVideoTrack,
   type LocalTrackPublication,
   type RemoteParticipant,
   type RemoteTrack,
@@ -20,6 +21,7 @@ import { getHeading } from "../engine/movement.ts";
 import { useApp } from "../state/store.ts";
 import { personVolumeOf, useMediaSettings, VIDEO_RES, type MediaSettings } from "./settings.ts";
 import { noiseProcessor } from "./noise.ts";
+import { applyBackground } from "./background.ts";
 
 /**
  * Áudio e vídeo por proximidade (LiveKit).
@@ -162,6 +164,7 @@ export async function setCam(on: boolean): Promise<void> {
   if (!room) return;
   try {
     await room.localParticipant.setCameraEnabled(on, camCapture());
+    if (on) await applyCamBackground();
     useMedia.setState({ cam: on });
     pendingInfo?.({ cam: on });
   } catch (e) {
@@ -180,6 +183,14 @@ function micCapture(s: MediaSettings = useMediaSettings.getState()) {
     noiseSuppression: s.noise === "browser",
     channelCount: 1,
   };
+}
+
+/** Desfoque ou fundo da Infinity na câmera publicada (troca na hora, sem desligar a câmera). */
+async function applyCamBackground(): Promise<void> {
+  const cam = room?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
+  if (!cam) return;
+  const ok = await applyBackground(cam, useMediaSettings.getState().camBg);
+  if (!ok) useMedia.setState({ error: "Não deu para aplicar o fundo da câmera neste navegador." });
 }
 
 function camCapture(s: MediaSettings = useMediaSettings.getState()) {
@@ -228,6 +239,7 @@ async function applySettings(s: MediaSettings, prev: MediaSettings): Promise<voi
       await track.restartTrack(micCapture(s));
     }
     if (s.noise !== prev.noise || s.micId !== prev.micId) await applyNoise();
+    if (s.camBg !== prev.camBg) await applyCamBackground();
     if (s.camId !== prev.camId || s.video !== prev.video) {
       const cam = lp.getTrackPublication(Track.Source.Camera)?.track;
       if (cam) await cam.restartTrack(camCapture(s));

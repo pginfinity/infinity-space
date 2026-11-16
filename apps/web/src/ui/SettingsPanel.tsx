@@ -5,7 +5,9 @@ import { Camera, Gauge, Headphones, Mic, Volume2, X } from "lucide-react";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { audioContext } from "../media/rtc.ts";
 import { createNoiseNode, type NoiseNode } from "../media/noise.ts";
-import { setMediaSettings, useMediaSettings, VIDEO_RES, type NoiseMode, type VideoQuality } from "../media/settings.ts";
+import { setMediaSettings, useMediaSettings, VIDEO_RES, type CamBackground, type NoiseMode, type VideoQuality } from "../media/settings.ts";
+import { applyBackground, backgroundSupported } from "../media/background.ts";
+import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 
 /**
@@ -95,7 +97,26 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <Section icon={<Camera className="size-4" />} title="Câmera">
           <DeviceSelect label="Câmera" value={s.camId} options={devices.videoinput} onChange={(camId) => setMediaSettings({ camId })} />
-          <CamTest camId={s.camId} quality={s.video} />
+          <div>
+            <p className="mb-2 text-xs font-medium text-offwhite/85">Fundo</p>
+            <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label="Fundo da câmera">
+              {BG_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={s.camBg === o.id}
+                  disabled={o.id !== "none" && !backgroundSupported()}
+                  onClick={() => setMediaSettings({ camBg: o.id })}
+                  className={clsx("flex-1 rounded-[10px] px-2 py-1.5 text-xs transition-colors disabled:opacity-40", s.camBg === o.id ? "bg-offwhite/12 text-offwhite" : "text-slate hover:text-offwhite")}
+                >
+                  {o.title}
+                </button>
+              ))}
+            </div>
+            {!backgroundSupported() && <p className="mt-1.5 text-[11px] text-slate">Este navegador não aplica fundo na câmera.</p>}
+          </div>
+          <CamTest camId={s.camId} quality={s.video} bg={s.camBg} />
           <div>
             <p className="mb-2 text-xs font-medium text-offwhite/85">Qualidade</p>
             <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label="Qualidade da câmera">
@@ -125,6 +146,12 @@ const NOISE_OPTIONS: { id: NoiseMode; title: string; hint: string }[] = [
   { id: "browser", title: "Navegador", hint: "Filtro padrão do Chrome." },
   { id: "strong", title: "Forte", hint: "Corta teclado, ventilador e ruído de fundo." },
   { id: "max", title: "Máxima", hint: "IA que limpa até vozes ao fundo. Usa mais CPU." },
+];
+
+const BG_OPTIONS: { id: CamBackground; title: string }[] = [
+  { id: "none", title: "Nenhum" },
+  { id: "blur", title: "Desfocar" },
+  { id: "infinity", title: "Infinity" },
 ];
 
 const VIDEO_OPTIONS: { id: VideoQuality; title: string }[] = [
@@ -293,34 +320,31 @@ function MicTest() {
   );
 }
 
-/** Prévia da câmera só quando a pessoa pede (a luz da câmera não acende de surpresa). */
-function CamTest({ camId, quality }: { camId: string | null; quality: VideoQuality }) {
+/** Prévia da câmera só quando a pessoa pede (a luz da câmera não acende de surpresa), já com o fundo escolhido. */
+function CamTest({ camId, quality, bg }: { camId: string | null; quality: VideoQuality; bg: CamBackground }) {
   const [on, setOn] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     if (!on) return;
-    let stream: MediaStream | null = null;
+    let track: LocalVideoTrack | null = null;
     let stopped = false;
     const r = VIDEO_RES[quality];
-    void navigator.mediaDevices
-      .getUserMedia({ video: { deviceId: camId ? { exact: camId } : undefined, width: r.width, height: r.height, frameRate: r.frameRate } })
-      .then((st) => {
-        if (stopped) return st.getTracks().forEach((t) => t.stop());
-        stream = st;
+    void createLocalVideoTrack({ deviceId: camId ?? undefined, resolution: { width: r.width, height: r.height, frameRate: r.frameRate } })
+      .then(async (t) => {
+        if (stopped) return t.stop();
+        track = t;
         setBlocked(false);
-        if (video.current) {
-          video.current.srcObject = st;
-          void video.current.play().catch(() => undefined);
-        }
+        await applyBackground(t, bg);
+        if (video.current && !stopped) t.attach(video.current);
       })
       .catch(() => setBlocked(true));
     return () => {
       stopped = true;
-      stream?.getTracks().forEach((t) => t.stop());
+      track?.stop();
     };
-  }, [on, camId, quality]);
+  }, [on, camId, quality, bg]);
 
   if (!on) {
     return (
@@ -332,7 +356,7 @@ function CamTest({ camId, quality }: { camId: string | null; quality: VideoQuali
   return (
     <div className="space-y-2">
       <div className="relative aspect-video overflow-hidden rounded-xl bg-deep">
-        <video ref={video} muted playsInline className="size-full -scale-x-100 object-cover" />
+        <video ref={video} muted playsInline autoPlay className="size-full -scale-x-100 object-cover" />
         {blocked && <p className="absolute inset-0 grid place-items-center p-4 text-center text-xs text-slate">O navegador bloqueou a câmera.</p>}
       </div>
       <button type="button" onClick={() => setOn(false)} className="rounded-lg border border-offwhite/10 px-3 py-1.5 text-xs hover:border-offwhite/25">

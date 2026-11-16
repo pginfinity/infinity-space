@@ -7,6 +7,7 @@ import { create } from "zustand";
 
 export type NoiseMode = "off" | "browser" | "strong" | "max";
 export type VideoQuality = "low" | "standard" | "high";
+export type CamBackground = "none" | "blur" | "infinity";
 
 export interface MediaSettings {
   micId: string | null;
@@ -16,6 +17,8 @@ export interface MediaSettings {
   echo: boolean;
   autoGain: boolean;
   video: VideoQuality;
+  /** Fundo da câmera: nenhum, desfocado ou o fundo da Infinity (processado no próprio navegador). */
+  camBg: CamBackground;
   /** Volume geral de quem você ouve (0 a 1.5). */
   master: number;
   /** Volume por pessoa, pelo nome (0 a 1.5). O id muda a cada conexão; o nome não. */
@@ -32,6 +35,7 @@ const DEFAULTS: MediaSettings = {
   echo: true,
   autoGain: true,
   video: "standard",
+  camBg: "none",
   master: 1,
   people: {},
 };

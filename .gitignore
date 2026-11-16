@@ -33,3 +33,6 @@ apps/server/data/
 
 # Worktrees dos agentes paralelos
 .agentes/
+
+# WebAssembly do MediaPipe (copiado do node_modules por scripts/mediapipe.mjs)
+apps/web/public/mediapipe/wasm/
