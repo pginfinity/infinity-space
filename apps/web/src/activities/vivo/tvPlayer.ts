@@ -37,10 +37,15 @@ export interface TvPlayer {
   destroy(): void;
 }
 
-/** Player falso nos testes automatizados (ou com ?tv=falsa em desenvolvimento). */
+/**
+ * Player falso nos testes automatizados (ou com ?tv=falsa em desenvolvimento). `?tv=real` força o
+ * YouTube de verdade mesmo no navegador automatizado (e2e/vivo-tv-youtube.spec.ts, com internet).
+ */
 export function fakePlayerOn(): boolean {
   if (!import.meta.env.DEV || typeof navigator === "undefined") return false;
-  return navigator.webdriver || new URLSearchParams(location.search).get("tv") === "falsa";
+  const q = new URLSearchParams(location.search).get("tv");
+  if (q === "real") return false;
+  return navigator.webdriver || q === "falsa";
 }
 
 export function createTvPlayer(host: HTMLElement): TvPlayer {

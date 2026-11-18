@@ -26,6 +26,11 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
+          # Sem os secrets (VPS ainda não configurada): não há para onde publicar, sem erro.
+          if [ -z "$HOST" ] || [ -z "$USER" ] || [ -z "$KEY" ]; then
+            echo "::notice::Deploy pulado: configure DEPLOY_HOST, DEPLOY_USER e DEPLOY_SSH_KEY."
+            exit 0
+          fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
