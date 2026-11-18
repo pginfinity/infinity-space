@@ -33,9 +33,12 @@ export interface DailyState {
   rooms: Record<string, DailyRoom>;
 }
 
-/** Dá para fazer daily nesta sala? (salas de time e salas de reunião) */
+/** A sala da daily: a Sala Eclipse (antes Órbita e Lua), com a roda no tapete. */
+export const DAILY_ROOM = "eclipse";
+
+/** Dá para fazer daily nesta sala? Só na Sala Eclipse: é lá que o time se encontra todo dia. */
 export function dailyAllowed(zone: Zone | undefined): zone is Zone {
-  return !!zone && (!!zone.team || zone.kind === "meeting");
+  return !!zone && zone.id === DAILY_ROOM;
 }
 
 /** Embaralha (Fisher-Yates) com o gerador dado. */

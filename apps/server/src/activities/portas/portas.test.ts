@@ -6,7 +6,7 @@ import { PortasActivity } from "./portas.ts";
 
 const MAP: MapDef = buildStationMap();
 const ZONES = new ZoneIndex(MAP.zones);
-const ORBITA = doorsOf(MAP).find((d) => d.zoneId === "orbita")!;
+const ECLIPSE = doorsOf(MAP).find((d) => d.zoneId === "eclipse")!;
 const DENTRO = { x: -19, z: -2 };
 const DENTRO_2 = { x: -18.5, z: 1 };
 
@@ -79,69 +79,69 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-const door = () => act.snapshot().doors.orbita!;
+const door = () => act.snapshot().doors.eclipse!;
 const zoneOf = (p: Vec2) => ZONES.zoneAt(p);
 
 describe("porta da sala", () => {
   it("só quem está dentro troca o estado; fechar admite quem está dentro", () => {
     host.put("ana", DENTRO);
     host.put("bia", DENTRO_2);
-    host.put("caio", ORBITA.outside);
-    act.handle("caio", "porta", { zone: "orbita", state: "closed" });
+    host.put("caio", ECLIPSE.outside);
+    act.handle("caio", "porta", { zone: "eclipse", state: "closed" });
     expect(door().state).toBe("open");
-    act.handle("ana", "porta", { zone: "orbita", state: "closed" });
+    act.handle("ana", "porta", { zone: "eclipse", state: "closed" });
     expect(door()).toMatchObject({ state: "closed" });
     expect(door().admitted.sort()).toEqual(["ana", "bia"]);
     expect(refreshes).toBeGreaterThan(0);
     expect(act.mayStand("caio", zoneOf(DENTRO))).toBe(false);
     expect(act.mayStand("ana", zoneOf(DENTRO))).toBe(true);
     // Estado inválido e sala inexistente: nada muda.
-    act.handle("ana", "porta", { zone: "orbita", state: "escancarada" });
+    act.handle("ana", "porta", { zone: "eclipse", state: "escancarada" });
     act.handle("ana", "porta", { zone: "nao-existe", state: "open" });
     expect(door().state).toBe("closed");
   });
 
   it("bater: quem está dentro recebe o pedido; deixar entrar admite; agora não avisa", () => {
     host.put("ana", DENTRO);
-    host.put("caio", ORBITA.outside);
-    host.put("duda", { x: ORBITA.outside.x + 0.5, z: ORBITA.outside.z });
-    act.handle("ana", "porta", { zone: "orbita", state: "closed" });
-    act.handle("caio", "bater", { zone: "orbita" });
+    host.put("caio", ECLIPSE.outside);
+    host.put("duda", { x: ECLIPSE.outside.x + 0.5, z: ECLIPSE.outside.z });
+    act.handle("ana", "porta", { zone: "eclipse", state: "closed" });
+    act.handle("caio", "bater", { zone: "eclipse" });
     expect(host.events.find((e) => e.ev === "bateu")?.to).toEqual(["ana"]);
     expect(door().knocks.map((k) => k.id)).toEqual(["caio"]);
     // Bater de novo logo em seguida não repete o pedido.
     host.events = [];
-    act.handle("caio", "bater", { zone: "orbita" });
+    act.handle("caio", "bater", { zone: "eclipse" });
     expect(host.events.filter((e) => e.ev === "bateu")).toHaveLength(0);
     // Quem não está dentro não pode atender.
-    act.handle("duda", "atender", { zone: "orbita", who: "caio", ok: true });
+    act.handle("duda", "atender", { zone: "eclipse", who: "caio", ok: true });
     expect(door().admitted).not.toContain("caio");
-    act.handle("ana", "atender", { zone: "orbita", who: "caio", ok: true });
+    act.handle("ana", "atender", { zone: "eclipse", who: "caio", ok: true });
     expect(door().admitted).toContain("caio");
     expect(host.to("caio")).toContain("entrar");
     expect(act.mayStand("caio", zoneOf(DENTRO))).toBe(true);
-    act.handle("duda", "bater", { zone: "orbita" });
-    act.handle("ana", "atender", { zone: "orbita", who: "duda", ok: false });
+    act.handle("duda", "bater", { zone: "eclipse" });
+    act.handle("ana", "atender", { zone: "eclipse", who: "duda", ok: false });
     expect(host.to("duda")).toContain("agora-nao");
     expect(act.mayStand("duda", zoneOf(DENTRO))).toBe(false);
   });
 
   it("bater de longe ou de dentro não vale", () => {
     host.put("ana", DENTRO);
-    host.put("caio", { x: ORBITA.outside.x + PORTAS.knockRange + 1, z: ORBITA.outside.z });
-    act.handle("ana", "porta", { zone: "orbita", state: "closed" });
-    act.handle("caio", "bater", { zone: "orbita" });
-    act.handle("ana", "bater", { zone: "orbita" });
+    host.put("caio", { x: ECLIPSE.outside.x + PORTAS.knockRange + 1, z: ECLIPSE.outside.z });
+    act.handle("ana", "porta", { zone: "eclipse", state: "closed" });
+    act.handle("caio", "bater", { zone: "eclipse" });
+    act.handle("ana", "bater", { zone: "eclipse" });
     expect(door().knocks).toEqual([]);
   });
 
   it("não perturbe: quem bate recebe o aviso (com o bilhete) e ninguém de dentro é incomodado", () => {
     host.put("ana", DENTRO);
-    host.put("caio", ORBITA.outside);
-    act.handle("ana", "bilhete", { zone: "orbita", text: "Em entrevista\naté 15h" });
-    act.handle("ana", "porta", { zone: "orbita", state: "locked" });
-    act.handle("caio", "bater", { zone: "orbita" });
-    expect(host.events.find((e) => e.ev === "nao-perturbe")).toMatchObject({ to: ["caio"], data: { zone: "orbita", note: "Em entrevista até 15h" } });
+    host.put("caio", ECLIPSE.outside);
+    act.handle("ana", "bilhete", { zone: "eclipse", text: "Em entrevista\naté 15h" });
+    act.handle("ana", "porta", { zone: "eclipse", state: "locked" });
+    act.handle("caio", "bater", { zone: "eclipse" });
+    expect(host.events.find((e) => e.ev === "nao-perturbe")).toMatchObject({ to: ["caio"], data: { zone: "eclipse", note: "Em entrevista até 15h" } });
     expect(host.events.filter((e) => e.ev === "bateu")).toHaveLength(0);
     expect(door().knocks).toEqual([]);
   });
@@ -149,25 +149,25 @@ describe("porta da sala", () => {
   it("trancar recomeça a lista: quem tinha saído um instante perde o acesso", () => {
     host.put("ana", DENTRO);
     host.put("bia", DENTRO_2);
-    act.handle("ana", "porta", { zone: "orbita", state: "closed" });
-    host.put("bia", ORBITA.outside);
+    act.handle("ana", "porta", { zone: "eclipse", state: "closed" });
+    host.put("bia", ECLIPSE.outside);
     expect(act.mayStand("bia", zoneOf(DENTRO))).toBe(true); // fechada: entra e sai livremente
-    act.handle("ana", "porta", { zone: "orbita", state: "locked" });
+    act.handle("ana", "porta", { zone: "eclipse", state: "locked" });
     expect(door().admitted).toEqual(["ana"]);
     expect(act.mayStand("bia", zoneOf(DENTRO))).toBe(false);
   });
 
   it("quem está fora não escreve bilhete", () => {
-    host.put("caio", ORBITA.outside);
-    act.handle("caio", "bilhete", { zone: "orbita", text: "invasão" });
+    host.put("caio", ECLIPSE.outside);
+    act.handle("caio", "bilhete", { zone: "eclipse", text: "invasão" });
     expect(door().note).toBe("");
   });
 
   it("sala vazia volta a aberta, sem bilhete, depois de um instante", () => {
     host.put("ana", DENTRO);
-    act.handle("ana", "porta", { zone: "orbita", state: "locked" });
-    act.handle("ana", "bilhete", { zone: "orbita", text: "Foco" });
-    host.put("ana", ORBITA.outside);
+    act.handle("ana", "porta", { zone: "eclipse", state: "locked" });
+    act.handle("ana", "bilhete", { zone: "eclipse", text: "Foco" });
+    host.put("ana", ECLIPSE.outside);
     act.tick();
     now += PORTAS.emptyMs - 100;
     act.tick();
@@ -179,8 +179,8 @@ describe("porta da sala", () => {
 
   it("regras de audição: porta fechada vira lista de admitidos", () => {
     host.put("ana", DENTRO);
-    act.handle("ana", "porta", { zone: "orbita", state: "closed" });
-    expect([...(act.privacy().doors?.get("orbita") ?? [])]).toEqual(["ana"]);
+    act.handle("ana", "porta", { zone: "eclipse", state: "closed" });
+    expect([...(act.privacy().doors?.get("eclipse") ?? [])]).toEqual(["ana"]);
     expect(act.privacy()).toBe(act.privacy()); // mesmo objeto até mudar
   });
 });

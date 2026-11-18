@@ -3,7 +3,7 @@ import type { DailyState, Zone } from "@infinity/world";
 import type { Activity, ActivityHost } from "../types.ts";
 import { DailyActivity } from "./index.ts";
 
-const DEV = { id: "dev", name: "Dev Lab", kind: "open", team: "Desenvolvimento", polygon: [] } as unknown as Zone;
+const DEV = { id: "eclipse", name: "Sala Eclipse", kind: "meeting", polygon: [] } as unknown as Zone;
 const CORR = { id: "corredor", name: "Corredor", kind: "open", polygon: [] } as unknown as Zone;
 
 /** Sala de mentira: pessoas, onde cada uma está e os eventos enviados. */
@@ -23,7 +23,7 @@ function setup() {
     where.set(id, z);
     names.set(id, name);
   };
-  const room = () => (act.snapshot() as DailyState).rooms["dev"];
+  const room = () => (act.snapshot() as DailyState).rooms["eclipse"];
   return { act, put, where, events, room };
 }
 

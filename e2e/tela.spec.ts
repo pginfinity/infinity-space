@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "./setup.ts";
 
 /**
- * Compartilhamento de tela: a Ana compartilha dentro da Sala Órbita, o Bruno (na mesma sala)
+ * Compartilhamento de tela: a Ana compartilha dentro da Sala Eclipse, o Bruno (na mesma sala)
  * recebe a tela, vê na faixa do topo e abre em tela cheia. Precisa do LiveKit rodando.
  */
 
@@ -33,7 +33,7 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
   await enter(a, "Ana");
   await enter(b, "Bruno");
 
-  // Os dois entram na Sala Órbita.
+  // Os dois entram na Sala Eclipse.
   await Promise.all([walk(a, -21, 1.6), walk(b, -23, 1.6)]);
 
   // Ana abre o menu, escolhe "Documento" e o navegador (falso) entrega a tela.
@@ -54,7 +54,7 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
   await expect
     .poll(() =>
       b.evaluate(() => {
-        let o = (window as any).__infinity.tvs.mesh("orbita");
+        let o = (window as any).__infinity.tvs.mesh("eclipse");
         const isVideo = o?.material?.map?.isVideoTexture === true;
         while (o?.parent) o = o.parent;
         return isVideo && o?.type === "Scene";

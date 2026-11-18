@@ -247,7 +247,7 @@ describe("Orbi (servidor)", () => {
     const at = orbiPoseAt(orbi.snapshot() as OrbiState, Date.now());
     h.put("ana", h.nav.nearestWalkable({ x: at.x + 2, z: at.z }, 2)!);
     orbi.handle("ana", "call", undefined);
-    h.put("ana", { x: -21, z: 1 }); // Sala Órbita
+    h.put("ana", { x: -21, z: 1 }); // Sala Eclipse
     runFor(orbi, 1000);
     expect((orbi.snapshot() as OrbiState).follow).toBeNull();
     expect(h.events.at(-1)).toMatchObject({ ev: "bye", data: { reason: "room" }, to: ["ana"] });
@@ -292,7 +292,7 @@ describe("Orbi: boas-vindas", () => {
   it("não entra em sala fechada para dar boas-vindas", () => {
     const h = fakeHost();
     const orbi = new OrbiActivity(h.host);
-    h.put("ana", { x: -21, z: 1 }, "Ana"); // Sala Órbita
+    h.put("ana", { x: -21, z: 1 }, "Ana"); // Sala Eclipse
     orbi.handle("ana", "welcome", undefined);
     expect((orbi.snapshot() as OrbiState).follow).toBeNull();
   });

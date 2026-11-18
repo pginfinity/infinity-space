@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test, type Page } from "./setup.ts";
 
 /**
- * Gravação de reunião: Ana e Bruno na Sala Órbita com microfone (tom falso do Chrome).
+ * Gravação de reunião: Ana e Bruno na Sala Eclipse com microfone (tom falso do Chrome).
  * Ana grava; os dois veem o aviso; Ana para; o arquivo Opus fica salvo no servidor
  * (sem conta do Google configurada, fica na fila para o Drive).
  */
@@ -31,7 +31,7 @@ async function walk(page: Page, x: number, z: number) {
   await expect.poll(() => page.evaluate(([x, z]) => Math.hypot((window as unknown as W).__infinity.self.x - x!, (window as unknown as W).__infinity.self.z - z!), [x, z]), { timeout: 30_000 }).toBeLessThan(0.6);
 }
 
-const session = (p: Page) => p.evaluate(() => (window as unknown as W).__infinity.acts.state.getState().acts["gravacao"]?.state.sessions["orbita"] ?? null);
+const session = (p: Page) => p.evaluate(() => (window as unknown as W).__infinity.acts.state.getState().acts["gravacao"]?.state.sessions["eclipse"] ?? null);
 
 test("grava a reunião da sala e salva o áudio", async ({ browser }) => {
   test.setTimeout(120_000);
@@ -60,7 +60,7 @@ test("grava a reunião da sala e salva o áudio", async ({ browser }) => {
   // Para: o arquivo é salvo (sem Drive configurado, fica no servidor).
   await b.getByRole("button", { name: "Parar a gravação" }).click();
   await expect.poll(async () => (await session(a))?.status, { timeout: 30_000 }).toMatch(/saved|uploaded/);
-  const created = readdirSync(DIR).filter((f) => f.startsWith("orbita-") && f.endsWith(".ogg") && !before.has(f));
+  const created = readdirSync(DIR).filter((f) => f.startsWith("eclipse-") && f.endsWith(".ogg") && !before.has(f));
   expect(created.length).toBe(1);
   expect(statSync(join(DIR, created[0]!)).size).toBeGreaterThan(10_000);
   await a.screenshot({ path: "test-results/screens/v3-gravacao-salva.png" });

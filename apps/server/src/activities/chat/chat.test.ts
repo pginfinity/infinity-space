@@ -182,9 +182,9 @@ describe("chat no servidor", () => {
   });
 
   it("Perto respeita sala fechada", () => {
-    host.put("a", "Ana", { x: -21, z: -1 }); // Sala Órbita
+    host.put("a", "Ana", { x: -21, z: -1 }); // Sala Eclipse
     host.put("b", "Bruno", { x: -15, z: -1 }); // Marketing, do outro lado da parede
-    host.put("c", "Carla", { x: -24.5, z: 1.5 }); // também na Órbita, a 4,6 m
+    host.put("c", "Carla", { x: -24.5, z: 1.5 }); // também na Eclipse, a 4,6 m
     chat.handle("a", "send", { ch: "perto", text: "reunião começando" });
     expect(host.of("near")[0]!.to).toEqual(["c"]);
     host.events = [];

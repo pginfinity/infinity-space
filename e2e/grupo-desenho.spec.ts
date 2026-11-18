@@ -2,7 +2,7 @@ import { expect, test, type Page } from "./setup.ts";
 import { actState, enter, inkPixels, scribble, shot, walkNear, zoneOf } from "./grupo-comum.ts";
 
 /**
- * Desenhe e adivinhe no quadro da Sala Órbita: Ana abre pelo quadro (E), Bruno entra pelo convite.
+ * Desenhe e adivinhe no quadro da Sala Eclipse: Ana abre pelo quadro (E), Bruno entra pelo convite.
  * Cada um desenha uma vez; o outro vê o desenho ao vivo, recebe "quase!" e acerta. Termina no pódio.
  */
 
@@ -15,7 +15,7 @@ interface DrawState {
 async function boardId(page: Page): Promise<string> {
   return page.evaluate(() => {
     const h = (window as unknown as { __infinity: { world(): { map: { objects: Array<{ id: string; type: string; zoneId?: string }> } } } }).__infinity;
-    const o = h.world().map.objects.find((x) => x.type === "whiteboard" && x.zoneId === "orbita")!;
+    const o = h.world().map.objects.find((x) => x.type === "whiteboard" && x.zoneId === "eclipse")!;
     return `desenho-${o.id}`;
   });
 }
@@ -45,10 +45,11 @@ test("Desenhe e adivinhe: desenho ao vivo, 'quase!', acerto e pódio", async ({ 
   const id = await boardId(ana);
 
   // Ana vai até o quadro; Bruno entra na sala.
-  await walkNear(ana, { x: -21, z: 1.88 }, 0.4);
-  await walkNear(bruno, { x: -23.5, z: -2.6 });
-  expect(await zoneOf(ana)).toBe("orbita");
-  expect(await zoneOf(bruno)).toBe("orbita");
+  // O quadro fica na parede norte da Sala Eclipse (x = -24,6).
+  await walkNear(ana, { x: -24.6, z: -3.05 }, 0.4);
+  await walkNear(bruno, { x: -23.2, z: -1.6 });
+  expect(await zoneOf(ana)).toBe("eclipse");
+  expect(await zoneOf(bruno)).toBe("eclipse");
   await expect.poll(async () => (await actState<DrawState>(ana, id))?.phase, { timeout: 15_000 }).toBe("idle");
 
   await expect(ana.getByText("Desenhe e adivinhe").first()).toBeVisible({ timeout: 8000 });

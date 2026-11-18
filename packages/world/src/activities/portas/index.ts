@@ -77,6 +77,24 @@ export function doorsOf(map: MapDef): DoorDef[] {
   return out;
 }
 
+/**
+ * Uma sala pode ter mais de uma entrada (a Sala Eclipse tem duas): o estado da porta é da sala,
+ * e cada entrada física usa esse estado. Esta é a entrada da sala mais perto de `p`.
+ */
+export function nearestDoor(defs: readonly DoorDef[], zoneId: string, p?: Vec2): DoorDef | undefined {
+  let best: DoorDef | undefined;
+  let bestD = Infinity;
+  for (const d of defs) {
+    if (d.zoneId !== zoneId) continue;
+    const dd = p ? Math.hypot(p.x - d.pos.x, p.z - d.pos.z) : 0;
+    if (dd < bestD) {
+      bestD = dd;
+      best = d;
+    }
+  }
+  return best;
+}
+
 export interface PortasRequest {
   id: string;
   name: string;

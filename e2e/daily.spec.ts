@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "./setup.ts";
 
-/** Daily no Dev Lab: começar, ver quem fala, passar a vez e concluir. */
+/** Daily na Sala Eclipse (a sala da daily): começar, ver quem fala, passar a vez e concluir. */
 
 interface Hook {
   store: { getState(): { selfId: string | null; zoneName: string } };
@@ -9,18 +9,19 @@ interface Hook {
 }
 type W = { __infinity: Hook };
 
-async function enterDev(page: Page, name: string, at: { x: number; z: number }) {
+async function enterEclipse(page: Page, name: string, at: { x: number; z: number }) {
   await page.goto(`/?nome=${name}&lente=2d`);
   await page.waitForFunction(() => !!(window as unknown as Partial<W>).__infinity?.store.getState().selfId, null, { timeout: 30_000 });
   await page.evaluate((p) => (window as unknown as W).__infinity.walkTo(p), at);
-  await expect.poll(() => page.evaluate(() => (window as unknown as W).__infinity.store.getState().zoneName), { timeout: 30_000 }).toContain("Dev Lab");
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__infinity.store.getState().zoneName), { timeout: 30_000 }).toContain("Sala Eclipse");
 }
 
 test("daily do time: roda sorteada, passar a vez e concluir", async ({ browser }) => {
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
-  await enterDev(a, "Ana", { x: -19, z: -13 });
-  await enterDev(b, "Bruno", { x: -17.5, z: -13 });
+  // Na roda do tapete, na metade sul da sala.
+  await enterEclipse(a, "Ana", { x: -21.9, z: 5.4 });
+  await enterEclipse(b, "Bruno", { x: -20.1, z: 5.4 });
 
   await a.getByRole("button", { name: "Começar a daily" }).click();
   await a.getByRole("dialog", { name: "Começar a daily" }).getByRole("button", { name: "Começar" }).click();

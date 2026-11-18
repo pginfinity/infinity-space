@@ -9,7 +9,7 @@ import type { Desk, FloorArea, FloorStyle, MapDef, MapLabel, MapObject, ObjectTy
  *
  *   z=-19 ┌─ Dev Lab ─┬─ Produto & Design ─┬─ Automação & IA ─┬─ Diretoria ─┐
  *   z=-7  ├────────────────────── corredor norte ─────────────────────────┤
- *   z=-4  │ Órbita/Lua │ Marketing │      Átrio      │ Comercial │ Foco ×4  │
+ *   z=-4  │  Eclipse   │ Marketing │      Átrio      │ Comercial │ Foco ×4  │
  *   z=9   ├────────────────────── corredor sul ───────────────────────────┤
  *   z=12  │  Arcade   │ Café & Copa │ Gestão & Projetos │    Auditório      │
  *   z=22  └───────────────────────────────────────────────────────────────┘
@@ -42,8 +42,7 @@ const STYLE = {
   design: { accent: "#E85D9A", icon: "pen-tool", floor: "wood-light", wall: "#F4EEE8" },
   ia: { accent: "#00B7FF", icon: "cpu", floor: "tile-dark", wall: "#163A63" },
   diretoria: { accent: "#E8B44A", icon: "crown", floor: "wood-warm", wall: "#E9DFD0" },
-  orbita: { accent: "#4C7DFF", icon: "orbit", floor: "carpet-navy", wall: "#DCE6F2" },
-  lua: { accent: "#C9D2DE", icon: "moon", floor: "carpet-warm", wall: "#E3E6EC" },
+  eclipse: { accent: "#6F7CFF", icon: "moon", floor: "carpet-navy", wall: "#DCE3EE" },
   marketing: { accent: "#EE5C29", icon: "megaphone", floor: "wood-light", wall: "#F6EFE6" },
   atrio: { accent: "#F2F0EF", icon: "sparkles", floor: "marble", wall: "#EFEBE6" },
   comercial: { accent: "#FF6B57", icon: "trending-up", floor: "carpet-warm", wall: "#F3E1DC" },
@@ -274,19 +273,18 @@ export function buildStationMap(): MapDef {
   b.vwall(19.5, -19, -12.5, [], "solid", s.diretoria.wall, s.diretoria.wall);
 
   // Fileira do meio, face norte (corredor norte) e face sul (corredor sul).
-  b.hwall(-4, -26, -16, [[-17.4, 1.6]], "solid", HALL, s.orbita.wall);
+  b.hwall(-4, -26, -16, [[-17.4, 1.6]], "solid", HALL, s.eclipse.wall);
   b.hwall(-4, -16, -5, [[-10.5, DOOR]], "solid", HALL, s.marketing.wall);
   b.hwall(-4, -5, 7, [[1, 4.4]], "solid", HALL, s.atrio.wall);
   b.hwall(-4, 7, 19, [[13, DOOR]], "solid", HALL, s.comercial.wall);
   b.hwall(-4, 22, 26, [], "solid", HALL, s.foco.wall);
-  b.hwall(9, -26, -16, [[-17.4, 1.6]], "solid", s.lua.wall, HALL);
+  b.hwall(9, -26, -16, [[-17.4, 1.6]], "solid", s.eclipse.wall, HALL);
   b.hwall(9, -16, -5, [[-10.5, DOOR]], "solid", s.marketing.wall, HALL);
   b.hwall(9, -5, 7, [[1, 4.4]], "solid", s.atrio.wall, HALL);
   b.hwall(9, 7, 19, [[13, DOOR]], "solid", s.comercial.wall, HALL);
   b.hwall(9, 22, 26, [], "solid", s.foco.wall, HALL);
   // Divisórias verticais da fileira do meio.
-  b.hwall(2.5, -26, -16, [], "solid", s.orbita.wall, s.lua.wall);
-  b.vwall(-16, -4, 9, [], "glass", s.orbita.wall, s.marketing.wall);
+  b.vwall(-16, -4, 9, [], "glass", s.eclipse.wall, s.marketing.wall);
   b.vwall(-5, -4, 9, [[2.5, DOOR]], "solid", s.marketing.wall, s.atrio.wall);
   b.vwall(7, -4, 9, [[2.5, DOOR]], "solid", s.atrio.wall, s.comercial.wall);
   b.vwall(19, -4, 9, [[2.5, DOOR]], "solid", s.comercial.wall, s.foco.wall);
@@ -434,24 +432,23 @@ export function buildStationMap(): MapDef {
   // pacote vivo: telescópio apontado para a janela leste
   b.put("telescope", 25.1, -11.7, E, { zoneId: dirL.id, label: "Telescópio" });
 
-  // ── Salas de reunião Órbita e Lua ───────────────────────────────────────────────────
-  const orb = b.room("orbita", "Sala Órbita", "meeting", rect(-26, -16, -4, 2.5), s.orbita, { glass: true, capacity: 10 });
-  b.sign(orb.id, "Sala Órbita", -17.4, -4.15, N, s.orbita.accent);
-  b.put("meeting-table", -21, -0.2, N, { zoneId: orb.id, size: { w: 1.3, d: 3.6, h: 0.75 } });
+  // ── Sala Eclipse: a sala da daily (antes Órbita e Lua) ──────────────────────────────
+  // Metade norte: mesa de reunião e TV. Metade sul: a roda da daily, em pé, no tapete do eclipse.
+  const ecl = b.room("eclipse", "Sala Eclipse", "meeting", rect(-26, -16, -4, 9), s.eclipse, { glass: true, capacity: 16 });
+  b.sign(ecl.id, "Sala Eclipse", -17.4, -4.15, N, s.eclipse.accent);
+  b.sign(ecl.id, "Sala Eclipse", -17.4, 9.15, S, s.eclipse.accent);
+  b.put("meeting-table", -21, -0.2, N, { zoneId: ecl.id, size: { w: 1.3, d: 3.6, h: 0.75 } });
   for (const z of [-1.3, -0.2, 0.9]) {
-    b.put("office-chair", -22.08, z, E, { zoneId: orb.id, color: s.orbita.accent });
-    b.put("office-chair", -19.92, z, W, { zoneId: orb.id, color: s.orbita.accent });
+    b.put("office-chair", -22.08, z, E, { zoneId: ecl.id, color: s.eclipse.accent });
+    b.put("office-chair", -19.92, z, W, { zoneId: ecl.id, color: s.eclipse.accent });
   }
-  b.onWall("tv", -4, -21, S, { zoneId: orb.id, screenId: orb.id, size: { w: 2.2, d: 0.08, h: 1.24 } });
-  b.onWall("whiteboard", 2.5, -21, N, { zoneId: orb.id });
-  b.put("plant", -16.6, -3.4, N, { zoneId: orb.id, variant: 1 });
-
-  const lua = b.room("lua", "Sala Lua", "meeting", rect(-26, -16, 2.5, 9), s.lua, { glass: true, capacity: 6 });
-  b.sign(lua.id, "Sala Lua", -17.4, 9.15, S, s.lua.accent);
-  b.put("round-table", -21, 6.0, N, { zoneId: lua.id, size: { w: 1.7, d: 1.7, h: 0.75 } });
-  b.around("chair", -21, 6.0, 1.3, 6, Math.PI / 6, { zoneId: lua.id, color: "#8A93A3" });
-  b.onWall("tv", 2.5, -21, S, { zoneId: lua.id, screenId: lua.id });
-  b.put("plant", -16.6, 8.4, N, { zoneId: lua.id, variant: 2 });
+  b.onWall("tv", -4, -21, S, { zoneId: ecl.id, screenId: ecl.id, size: { w: 2.2, d: 0.08, h: 1.24 } });
+  b.onWall("whiteboard", -4, -24.6, S, { zoneId: ecl.id });
+  b.put("rug", -21, 5.4, N, { zoneId: ecl.id, variant: 3, size: { w: 3.8, d: 3.8, h: 0.02 }, color: "#0A1630", accent: s.eclipse.accent });
+  b.onWall("tv", 9, -21, N, { zoneId: ecl.id, screenId: "eclipse-roda", size: { w: 2.2, d: 0.08, h: 1.24 } });
+  b.put("plant", -16.6, -3.4, N, { zoneId: ecl.id, variant: 1 });
+  b.put("plant", -16.6, 8.4, N, { zoneId: ecl.id, variant: 2 });
+  b.put("plant-tall", -25.4, 8.4, N, { zoneId: ecl.id });
 
   // ── Marketing Studio (Visualizar) ───────────────────────────────────────────────────
   const mkt = b.room("marketing", "Marketing Studio", "open", rect(-16, -5, -4, 9), s.marketing, { team: "Marketing & Criação" });
@@ -605,8 +602,9 @@ export function buildStationMap(): MapDef {
   // `rot` aponta de dentro para fora; `size.w` é a largura do vão; variante 1 = folha de vidro.
   const door = (zoneId: string, x: number, z: number, out: number, w: number, glass: boolean) =>
     b.put("door", x, z, out, { zoneId, size: { w, d: 0.08, h: 2.2 }, ...(glass ? { variant: 1 } : {}) });
-  door(orb.id, -17.4, -4, N, 1.6, false);
-  door(lua.id, -17.4, 9, S, 1.6, false);
+  // A Sala Eclipse tem duas entradas com o mesmo estado (fechar uma fecha as duas).
+  door(ecl.id, -17.4, -4, N, 1.6, false);
+  door(ecl.id, -17.4, 9, S, 1.6, false);
   door("diretoria-1", 16.25, -12.5, S, 1.4, true);
   door("diretoria-2", 22.75, -12.5, S, 1.4, true);
   for (let i = 0; i < 4; i++) door(`foco-${i + 1}`, 22, (pods[i]! + pods[i + 1]!) / 2, W, 1.1, true);

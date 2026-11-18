@@ -15,7 +15,7 @@ export const REC_EMPTY_MS = 60 * 1000;
 export type RecStatus = "starting" | "recording" | "saving" | "uploaded" | "saved" | "error";
 
 export interface RecSession {
-  /** Grupo de salas gravado (ex.: "orbita", "aud" = auditório + palco). */
+  /** Grupo de salas gravado (ex.: "eclipse", "aud" = auditório + palco). */
   group: string;
   /** Nome da sala, para os avisos. */
   room: string;

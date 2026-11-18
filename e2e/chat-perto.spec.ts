@@ -47,10 +47,7 @@ test("Perto: distância, balão nas duas lentes e sala fechada", async ({ browse
   await expect(balloon(c, ida)).toHaveCount(0);
 
   // Bruno responde com status definido: o balão do chat fica acima do balão de status, sem cobrir.
-  await b.evaluate(async () => {
-    const mod = await import("/src/net/session.ts");
-    mod.sendInfo({ note: "☕ Café" });
-  });
+  await b.evaluate(() => (window as unknown as { __infinity: { net: { sendInfo(i: { note: string }): void } } }).__infinity.net.sendInfo({ note: "☕ Café" }));
   await expect.poll(() => a.evaluate((id) => (window as unknown as { __infinity: { store: { getState(): { players: Record<string, { note?: string }> } } } }).__infinity.store.getState().players[id]?.note, idb)).toBe("☕ Café");
   await openByKey(b);
   await tab(b, "Perto");
@@ -67,7 +64,7 @@ test("Perto: distância, balão nas duas lentes e sala fechada", async ({ browse
   // O balão some depois de ~6 s.
   await expect(balloon(a, ida)).toHaveCount(0, { timeout: 8000 });
 
-  // Sala fechada: Ana e Carla na Sala Órbita; Bruno do lado de fora da parede (a 4,7 m).
+  // Sala fechada: Ana e Carla na Sala Eclipse; Bruno do lado de fora da parede (a 4,7 m).
   await Promise.all([walk(a, { x: -19, z: 0.5 }), walk(c, { x: -23.5, z: 1 }), walk(b, { x: -14.5, z: -1 })]);
   await settle(a);
   await expect(near(a)).toContainText("Carla", { timeout: 5000 });

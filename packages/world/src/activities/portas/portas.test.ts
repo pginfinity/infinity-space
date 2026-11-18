@@ -10,6 +10,7 @@ import {
   circleShape,
   doorBars,
   doorsOf,
+  nearestDoor,
   hearing,
   portasCleanNote,
   portasPrivacy,
@@ -38,11 +39,11 @@ const hears = (listener: AudiencePerson, speaker: AudiencePerson, privacy?: Priv
   hearing(map.walls, listener, speaker, { privacy, megaphone }).mode;
 
 // Lugares conhecidos da planta.
-const ORBITA_A = { x: -22, z: -1 };
-const ORBITA_B = { x: -19.5, z: 1.5 };
-const ORBITA_C = { x: -22, z: 0.9 };
-const ORBITA_FORA = { x: -17.4, z: -4.9 }; // logo do lado de fora da porta da Órbita
-const LUA = { x: -21, z: 5 };
+const ECLIPSE_A = { x: -22, z: -1 };
+const ECLIPSE_B = { x: -19.5, z: 1.5 };
+const ECLIPSE_C = { x: -22, z: 0.9 };
+const ECLIPSE_FORA = { x: -17.4, z: -4.9 }; // logo do lado de fora da porta da Eclipse
+const MARKETING = { x: -10.5, z: 2 }; // do outro lado do vidro da Sala Eclipse
 const CORREDOR = { x: 0, z: -5.5 };
 const PALCO = { x: 24.5, z: 17 };
 const PLATEIA = { x: 11.6, z: 20 };
@@ -53,12 +54,19 @@ const doorsClosed = (zone: string, admitted: string[]): PrivacyRules => ({ doors
 const recording = (group: string) => (z: Zone) => (recGroup(z) === group ? recIdentity(group) : null);
 
 describe("portas no mapa", () => {
-  it("toda sala fechada (reunião, suíte, cabine) tem exatamente uma porta", () => {
+  it("toda sala fechada (reunião, suíte, cabine) tem porta; a Sala Eclipse tem duas entradas", () => {
     const doors = doorsOf(map);
     for (const z of map.zones.filter((z) => z.kind === "meeting" || z.kind === "office" || z.kind === "focus")) {
-      expect(doors.filter((d) => d.zoneId === z.id).length, z.name).toBe(1);
+      expect(doors.filter((d) => d.zoneId === z.id).length, z.name).toBe(z.id === "eclipse" ? 2 : 1);
     }
     expect(doors.length).toBe(8);
+  });
+
+  it("entrada mais perto: quem está ao sul da Sala Eclipse usa a porta sul", () => {
+    const doors = doorsOf(map);
+    expect(nearestDoor(doors, "eclipse", { x: -17.4, z: 11 })!.pos.z).toBe(9);
+    expect(nearestDoor(doors, "eclipse", { x: -17.4, z: -6 })!.pos.z).toBe(-4);
+    expect(nearestDoor(doors, "atrio", { x: 0, z: 0 })).toBeUndefined();
   });
 
   it("a porta fica no vão: fora e dentro são andáveis, cada um na sua zona, e há caminho até a porta", () => {
@@ -75,18 +83,18 @@ describe("portas no mapa", () => {
   it("estado do snapshot vira regra: só porta fechada ou trancada isola, e só quem não foi admitido", () => {
     const state: PortasState = {
       doors: {
-        orbita: { state: "closed", admitted: ["ana"], note: "", knocks: [] },
-        lua: { state: "open", admitted: [], note: "", knocks: [] },
+        eclipse: { state: "closed", admitted: ["ana"], note: "", knocks: [] },
+        "diretoria-2": { state: "open", admitted: [], note: "", knocks: [] },
         "diretoria-1": { state: "locked", admitted: ["bia"], note: "", knocks: [] },
       },
       circles: [{ id: "r1", members: ["caio", "duda"], center: { x: 0, z: 0 }, radius: 2, asks: [] }],
     };
     const p = portasPrivacy(state);
-    expect([...p.doors!.keys()].sort()).toEqual(["diretoria-1", "orbita"]);
+    expect([...p.doors!.keys()].sort()).toEqual(["diretoria-1", "eclipse"]);
     expect(p.circles!.get("duda")).toBe("r1");
-    expect(doorBars(state, "orbita", "ana")).toBe(false);
-    expect(doorBars(state, "orbita", "eva")).toBe(true);
-    expect(doorBars(state, "lua", "eva")).toBe(false);
+    expect(doorBars(state, "eclipse", "ana")).toBe(false);
+    expect(doorBars(state, "eclipse", "eva")).toBe(true);
+    expect(doorBars(state, "diretoria-2", "eva")).toBe(false);
     expect(doorBars(state, "diretoria-1", "ana")).toBe(true);
   });
 
@@ -99,19 +107,19 @@ describe("portas no mapa", () => {
 
 describe("audição com portas", () => {
   it("sala fechada continua isolada de quem está do lado de fora da porta, aberta ou fechada", () => {
-    const ana = who("ana", ORBITA_A);
-    const fora = who("eva", ORBITA_FORA);
-    for (const p of [undefined, doorsClosed("orbita", ["ana"])]) {
+    const ana = who("ana", ECLIPSE_A);
+    const fora = who("eva", ECLIPSE_FORA);
+    for (const p of [undefined, doorsClosed("eclipse", ["ana"])]) {
       expect(hears(fora, ana, p)).toBe("none");
       expect(hears(ana, fora, p)).toBe("none");
     }
   });
 
   it("quem foi admitido ouve todos lá dentro; quem entrou sem ser admitido não ouve nem é ouvido", () => {
-    const ana = who("ana", ORBITA_A);
-    const bia = who("bia", ORBITA_B);
-    const intruso = who("eva", ORBITA_C);
-    const p = doorsClosed("orbita", ["ana", "bia"]);
+    const ana = who("ana", ECLIPSE_A);
+    const bia = who("bia", ECLIPSE_B);
+    const intruso = who("eva", ECLIPSE_C);
+    const p = doorsClosed("eclipse", ["ana", "bia"]);
     expect(hears(bia, ana, p)).toBe("clear");
     expect(hears(intruso, ana, p)).toBe("none");
     expect(hears(ana, intruso, p)).toBe("none");
@@ -120,9 +128,9 @@ describe("audição com portas", () => {
   });
 
   it("pessoa sem id numa sala de porta fechada é tratada como intrusa", () => {
-    const ana = who("ana", ORBITA_A);
-    const anon = { pos: ORBITA_B, zone: zones.zoneAt(ORBITA_B) };
-    expect(hearing(map.walls, anon, ana, { privacy: doorsClosed("orbita", ["ana"]) }).mode).toBe("none");
+    const ana = who("ana", ECLIPSE_A);
+    const anon = { pos: ECLIPSE_B, zone: zones.zoneAt(ECLIPSE_B) };
+    expect(hearing(map.walls, anon, ana, { privacy: doorsClosed("eclipse", ["ana"]) }).mode).toBe("none");
   });
 
   it("cabine trancada: o colega encostado na porta não ouve", () => {
@@ -164,7 +172,7 @@ describe("audição com roda fechada", () => {
   });
 
   it("quem da roda entra numa sala fechada deixa de ser ouvido pela roda (mesmo antes de sair dela)", () => {
-    expect(hears(who("bia", ORBITA_FORA), who("ana", ORBITA_A), roda("ana", "bia"))).toBe("none");
+    expect(hears(who("bia", ECLIPSE_FORA), who("ana", ECLIPSE_A), roda("ana", "bia"))).toBe("none");
   });
 });
 
@@ -192,17 +200,17 @@ describe("audição com sussurro", () => {
   it("não atravessa parede nem porta de sala", () => {
     // Dev Lab e Produto & Design, lado a lado, separados por parede.
     expect(hears(who("bia", { x: -11.2, z: -11 }), who("ana", { x: -12.8, z: -11 }), whisper("ana", "bia"))).toBe("none");
-    // De fora da porta da Órbita para alguém logo do lado de dentro.
-    const dentro = doorsOf(map).find((d) => d.zoneId === "orbita")!.inside;
-    expect(hears(who("bia", dentro), who("ana", ORBITA_FORA), whisper("ana", "bia"))).toBe("none");
+    // De fora da porta da Eclipse para alguém logo do lado de dentro.
+    const dentro = doorsOf(map).find((d) => d.zoneId === "eclipse")!.inside;
+    expect(hears(who("bia", dentro), who("ana", ECLIPSE_FORA), whisper("ana", "bia"))).toBe("none");
   });
 
   it("dentro da sala de reunião, os outros da sala param de ouvir quem sussurra", () => {
-    const p = whisper("ana", "bia", doorsClosed("orbita", ["ana", "bia", "caio"]));
+    const p = whisper("ana", "bia", doorsClosed("eclipse", ["ana", "bia", "caio"]));
     const ana = who("ana", { x: -21, z: -1.3 });
     const bia = who("bia", { x: -21, z: -0.3 });
     expect(hears(bia, ana, p)).toBe("clear");
-    expect(hears(who("caio", ORBITA_B), ana, p)).toBe("none");
+    expect(hears(who("caio", ECLIPSE_B), ana, p)).toBe("none");
   });
 
   it("no palco, a plateia para de ouvir quem sussurra", () => {
@@ -218,7 +226,7 @@ describe("audição com sussurro", () => {
 });
 
 describe("quem recebe a voz (lista do servidor)", () => {
-  const people = () => [who("ana", ORBITA_A), who("bia", ORBITA_B), who("caio", CORREDOR), who("duda", LUA), who("eva", PALCO), who("fabi", PLATEIA)];
+  const people = () => [who("ana", ECLIPSE_A), who("bia", ECLIPSE_B), who("caio", CORREDOR), who("duda", MARKETING), who("eva", PALCO), who("fabi", PLATEIA)];
 
   it("sem privacidade nem gravação, igual à regra de audição", () => {
     const list = people();
@@ -227,16 +235,16 @@ describe("quem recebe a voz (lista do servidor)", () => {
 
   it("gravador de reunião recebe só a sala gravada", () => {
     const list = people();
-    const opts = { recorderFor: recording("orbita") };
-    expect(audienceOf(map.walls, list, list[0]!, opts).voice).toEqual(["bia", recIdentity("orbita")]);
-    expect(audienceOf(map.walls, list, list[2]!, opts).voice).not.toContain(recIdentity("orbita"));
-    expect(audienceOf(map.walls, list, list[3]!, opts).voice).not.toContain(recIdentity("orbita"));
+    const opts = { recorderFor: recording("eclipse") };
+    expect(audienceOf(map.walls, list, list[0]!, opts).voice).toEqual(["bia", recIdentity("eclipse")]);
+    expect(audienceOf(map.walls, list, list[2]!, opts).voice).not.toContain(recIdentity("eclipse"));
+    expect(audienceOf(map.walls, list, list[3]!, opts).voice).not.toContain(recIdentity("eclipse"));
   });
 
   it("gravador continua com a sala gravada de porta fechada, mas não grava quem não foi admitido", () => {
-    const list = [...people(), who("gil", ORBITA_C)];
-    const opts = { recorderFor: recording("orbita"), privacy: doorsClosed("orbita", ["ana", "bia"]) };
-    expect(audienceOf(map.walls, list, list[0]!, opts).voice).toEqual(["bia", recIdentity("orbita")]);
+    const list = [...people(), who("gil", ECLIPSE_C)];
+    const opts = { recorderFor: recording("eclipse"), privacy: doorsClosed("eclipse", ["ana", "bia"]) };
+    expect(audienceOf(map.walls, list, list[0]!, opts).voice).toEqual(["bia", recIdentity("eclipse")]);
     expect(audienceOf(map.walls, list, list[6]!, opts).voice).toEqual([]);
   });
 
@@ -247,11 +255,11 @@ describe("quem recebe a voz (lista do servidor)", () => {
   });
 
   it("sussurro: a voz vai só para a pessoa (nem para o gravador), mas quem sussurra continua sendo visto", () => {
-    const list = [...people(), who("gil", ORBITA_C)];
-    const opts = { recorderFor: recording("orbita"), privacy: { whispers: new Map([["ana", "gil"]]) } };
+    const list = [...people(), who("gil", ECLIPSE_C)];
+    const opts = { recorderFor: recording("eclipse"), privacy: { whispers: new Map([["ana", "gil"]]) } };
     const a = audienceOf(map.walls, list, list[0]!, opts);
     expect(a.voice).toEqual(["gil"]);
-    expect(a.sight).toEqual(["bia", "gil", recIdentity("orbita")]);
+    expect(a.sight).toEqual(["bia", "gil", recIdentity("eclipse")]);
   });
 
   it("roda fechada: a lista de quem está na roda só tem a roda", () => {
@@ -277,7 +285,7 @@ describe("roda fechada: quem entra e quem fica", () => {
 
   it("quem se afasta de todos sai; quem entra numa sala sai", () => {
     expect(circleKeep(map.walls, [P("ana", 0, -5.5), P("bia", 1.5, -5.5), P("caio", 9, -5.5)])).toEqual(["ana", "bia"]);
-    expect(circleKeep(map.walls, [P("ana", 0, -5.5), P("bia", ORBITA_A.x, ORBITA_A.z)])).toEqual(["ana"]);
+    expect(circleKeep(map.walls, [P("ana", 0, -5.5), P("bia", ECLIPSE_A.x, ECLIPSE_A.z)])).toEqual(["ana"]);
   });
 
   it("se a roda se divide em dois grupos, fica o maior (no empate, o de quem fechou)", () => {

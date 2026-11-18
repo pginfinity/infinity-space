@@ -43,19 +43,19 @@ describe("seguir", () => {
   });
 
   it("sala fechada só com quem é seguido lá dentro; cabine individual nunca", () => {
-    const lua = zone("lua");
+    const lua = zone("eclipse");
     const cabine = zone("foco-1");
     const atrio = zone("atrio");
     expect(seguirCanEnter(atrio, undefined, undefined)).toBe(true);
     expect(seguirCanEnter(undefined, undefined, undefined)).toBe(true);
     expect(seguirCanEnter(lua, "atrio", "atrio")).toBe(false);
-    expect(seguirCanEnter(lua, "lua", "atrio")).toBe(true);
+    expect(seguirCanEnter(lua, "eclipse", "atrio")).toBe(true);
     expect(seguirCanEnter(cabine, "foco-1", "foco-hall")).toBe(false);
     // Já estava lá dentro: pode andar para sair.
-    expect(seguirCanEnter(lua, "atrio", "lua")).toBe(true);
+    expect(seguirCanEnter(lua, "atrio", "eclipse")).toBe(true);
   });
 
-  it("corta a rota antes da porta da Sala Lua quando quem é seguido não está lá", () => {
+  it("corta a rota antes da porta da Sala Eclipse quando quem é seguido não está lá", () => {
     const from = { x: -17.4, z: 10.6 };
     const to = { x: -19, z: 5 };
     const path = NAV.findPath(from, to)!;
@@ -63,10 +63,10 @@ describe("seguir", () => {
     const fora = seguirClip(from, path, zoneAt, "corredor-sul", zoneAt(from)?.id);
     expect(fora.clipped).toBe(true);
     const end = fora.path.at(-1) ?? from;
-    expect(zoneAt(end)?.id).not.toBe("lua");
+    expect(zoneAt(end)?.id).not.toBe("eclipse");
     expect(end.z).toBeGreaterThan(9);
     // Com a pessoa lá dentro, entra.
-    const dentro = seguirClip(from, path, zoneAt, "lua", zoneAt(from)?.id);
+    const dentro = seguirClip(from, path, zoneAt, "eclipse", zoneAt(from)?.id);
     expect(dentro.clipped).toBe(false);
     expect(dentro.path.at(-1)).toEqual(path.at(-1));
   });
@@ -101,7 +101,7 @@ describe("lugar livre perto de alguém", () => {
   });
 
   it("dentro de uma sala de reunião, fica do lado de dentro", () => {
-    const lua = zone("lua");
+    const lua = zone("eclipse");
     const center = { x: -18, z: 4 };
     const p = presencaFreeSpot(NAV, MAP.walls, center, [center], { x: 0, z: 10 })!;
     expect(pointInPolygon(p, lua.polygon)).toBe(true);

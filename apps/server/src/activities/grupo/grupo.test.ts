@@ -231,17 +231,17 @@ describe("Quiz Show no servidor", () => {
 });
 
 describe("Desenhe e adivinhe no servidor", () => {
-  const ORBITA = (i: number) => ({ x: -23 + i, z: -2.5 });
+  const ECLIPSE = (i: number) => ({ x: -23 + i, z: -2.5 });
   let id: string;
   const draw = () => get(id);
   const st = () => draw().snapshot() as DrawState;
 
   beforeEach(() => {
-    const board = h.map.objects.find((o) => o.type === "whiteboard" && o.zoneId === "orbita")!;
+    const board = h.map.objects.find((o) => o.type === "whiteboard" && o.zoneId === "eclipse")!;
     id = `desenho-${board.id}`;
-    h.add("a", "Ana", ORBITA(0));
-    h.add("b", "Bruno", ORBITA(1));
-    h.add("c", "Caio", ORBITA(2));
+    h.add("a", "Ana", ECLIPSE(0));
+    h.add("b", "Bruno", ECLIPSE(1));
+    h.add("c", "Caio", ECLIPSE(2));
     h.add("x", "Xavier", LOBBY);
   });
 
@@ -251,7 +251,7 @@ describe("Desenhe e adivinhe no servidor", () => {
     expect(st().phase).toBe("idle");
     draw().handle("a", "join", {});
     draw().handle("b", "join", {});
-    expect(st()).toMatchObject({ phase: "lobby", owner: "a", zone: "orbita" });
+    expect(st()).toMatchObject({ phase: "lobby", owner: "a", zone: "eclipse" });
     expect(st().players.map((p) => p.name)).toEqual(["Ana", "Bruno"]);
   });
 

@@ -39,9 +39,9 @@ test("paleta: Ctrl+K, busca sem acento, setas, Enter e Esc", async ({ browser })
   await a.keyboard.press("ArrowUp");
   expect(await active.getAttribute("id")).toBe(first);
 
-  // Sem acento: "orbita" acha a Sala Órbita; Enter leva até lá.
-  await input.fill("orbita");
-  await expect(active).toContainText("Sala Órbita");
+  // Sem acento: "eclipse" acha a Sala Eclipse; Enter leva até lá.
+  await input.fill("eclipse");
+  await expect(active).toContainText("Sala Eclipse");
   await a.screenshot({ path: `${SHOTS}/presenca-paleta-busca.png` });
   const moved = await pos(a);
   expect(Math.hypot(moved.x - start.x, moved.z - start.z)).toBeLessThan(0.2);
@@ -49,7 +49,7 @@ test("paleta: Ctrl+K, busca sem acento, setas, Enter e Esc", async ({ browser })
   await expect(dialog).toBeHidden();
   await expect
     .poll(() => a.evaluate(() => (window as unknown as W).__infinity.world().zones.zoneAt((window as unknown as W).__infinity.self)?.id ?? null), { timeout: 25_000 })
-    .toBe("orbita");
+    .toBe("eclipse");
 
   // "chamar bru" acha a ação de chamar o Bruno.
   await a.keyboard.press("Control+KeyK");

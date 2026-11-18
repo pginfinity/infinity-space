@@ -16,8 +16,9 @@ if (import.meta.env.DEV) {
     import("./media/rtc.ts"),
     import("./scene/tvs.ts"),
     import("./activities/registry.ts"),
+    import("./net/session.ts"),
   ]).then(
-    ([store, registry, movement, interact, w, media, tvs, acts]) => {
+    ([store, registry, movement, interact, w, media, tvs, acts, net]) => {
       Object.assign(window, {
         __infinity: {
           store: store.useApp,
@@ -29,6 +30,8 @@ if (import.meta.env.DEV) {
           media: { state: media.useMedia, audio: media.subscribedAudio, debug: media.rtcDebug, processor: media.micProcessorName },
           tvs: { tvFor: tvs.tvFor, mesh: tvs.screenMesh },
           acts: { state: acts.useActs, send: acts.sendAct },
+          // A mesma cópia do módulo que o app usa (importar /src/net/session.ts no teste pode criar outra).
+          net: { sendInfo: net.sendInfo },
         },
       });
     },

@@ -5,6 +5,7 @@ import {
   circleCandidates,
   doorBars,
   doorsOf,
+  nearestDoor,
   hearing,
   portasPrivacy,
   wallBetween,
@@ -49,8 +50,9 @@ export function doors(): DoorDef[] {
   return doorList;
 }
 
-export function doorOf(zoneId: string | undefined): DoorDef | undefined {
-  return zoneId ? doors().find((d) => d.zoneId === zoneId) : undefined;
+/** A entrada da sala mais perto de `near` (padrão: você). A Sala Eclipse tem duas. */
+export function doorOf(zoneId: string | undefined, near: Vec2 = self): DoorDef | undefined {
+  return zoneId ? nearestDoor(doors(), zoneId, near) : undefined;
 }
 
 /** Zona onde um ponto está. */
@@ -201,7 +203,7 @@ export function installPortas(): void {
       return !!id && doorBars(portas(), zoneAt(p)?.id, id);
     },
     redirect: (target) => {
-      const d = doorOf(zoneAt(target)?.id);
+      const d = doorOf(zoneAt(target)?.id, self);
       if (!d) return null;
       toast(T.door.redirected);
       return d.outside;

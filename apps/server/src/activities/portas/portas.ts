@@ -8,6 +8,7 @@ import {
   circleKeep,
   circleShape,
   doorsOf,
+  nearestDoor,
   portasCleanNote,
   type CircleSnap,
   type DoorDef,
@@ -30,8 +31,8 @@ export interface PrivacySource {
   privacy(): PrivacyRules;
   /** A pessoa pode estar nesta zona? (sala de porta fechada ou trancada só para quem foi admitido) */
   mayStand(id: string, zone: Zone | undefined): boolean;
-  /** Ponto andável do lado de fora da porta de uma sala. */
-  exitOf(zoneId: string): Vec2 | undefined;
+  /** Ponto andável do lado de fora da porta de uma sala (a entrada mais perto de `from`, se houver mais de uma). */
+  exitOf(zoneId: string, from?: Vec2): Vec2 | undefined;
   /** Chamado quando a privacidade muda (porta, roda, sussurro), para as audiências não esperarem o tique. */
   onPrivacyChange(fn: () => void): void;
 }
@@ -42,7 +43,9 @@ interface Request {
 }
 
 interface DoorLive {
-  def: DoorDef;
+  zoneId: string;
+  /** Entradas físicas da sala (uma ou mais), todas com o mesmo estado. */
+  defs: DoorDef[];
   state: DoorState;
   admitted: Set<string>;
   note: string;
@@ -92,7 +95,9 @@ export class PortasActivity implements Activity, PrivacySource {
 
   constructor(private readonly host: ActivityHost) {
     for (const def of doorsOf(host.map)) {
-      this.doors.set(def.zoneId, { def, state: "open", admitted: new Set(), note: "", knocks: new Map(), emptySince: null });
+      const d = this.doors.get(def.zoneId);
+      if (d) d.defs.push(def);
+      else this.doors.set(def.zoneId, { zoneId: def.zoneId, defs: [def], state: "open", admitted: new Set(), note: "", knocks: new Map(), emptySince: null });
     }
   }
 
@@ -114,8 +119,15 @@ export class PortasActivity implements Activity, PrivacySource {
     return !d || d.state === "open" || d.admitted.has(id);
   }
 
-  exitOf(zoneId: string): Vec2 | undefined {
-    return this.doors.get(zoneId)?.def.outside;
+  exitOf(zoneId: string, from?: Vec2): Vec2 | undefined {
+    const d = this.doors.get(zoneId);
+    return d ? nearestDoor(d.defs, zoneId, from)?.outside : undefined;
+  }
+
+  /** Distância até a entrada mais perto da sala. */
+  private doorDistance(d: DoorLive, p: Vec2): number {
+    const n = nearestDoor(d.defs, d.zoneId, p);
+    return n ? Math.hypot(p.x - n.pos.x, p.z - n.pos.z) : Infinity;
   }
 
   onPrivacyChange(fn: () => void): void {
@@ -195,7 +207,7 @@ export class PortasActivity implements Activity, PrivacySource {
       for (const [id, k] of d.knocks) {
         const pos = this.host.playerPos(id);
         const expired = now - k.at > PORTAS.knockTtlMs;
-        if (!pos || expired || Math.hypot(pos.x - d.def.pos.x, pos.z - d.def.pos.z) > 8) {
+        if (!pos || expired || this.doorDistance(d, pos) > 8) {
           d.knocks.delete(id);
           if (pos && expired) this.tell(id, "sem-resposta", { zone });
           changed = true;
@@ -268,7 +280,7 @@ export class PortasActivity implements Activity, PrivacySource {
 
   /** Está dentro da sala e pode estar lá. */
   private isInside(id: string, d: DoorLive): boolean {
-    return this.host.playerZone(id)?.id === d.def.zoneId && (d.state === "open" || d.admitted.has(id));
+    return this.host.playerZone(id)?.id === d.zoneId && (d.state === "open" || d.admitted.has(id));
   }
 
   private setDoor(from: string, zone: string | null, state: unknown): void {
@@ -276,7 +288,7 @@ export class PortasActivity implements Activity, PrivacySource {
     if (!d || !DOOR_STATES.includes(state as DoorState) || !this.isInside(from, d)) return;
     const next = state as DoorState;
     if (next === d.state) return;
-    const inside = this.insiders(d.def.zoneId);
+    const inside = this.insiders(d.zoneId);
     if (next === "open") {
       for (const id of d.knocks.keys()) this.tell(id, "aberta", { zone });
       d.knocks.clear();
@@ -308,8 +320,8 @@ export class PortasActivity implements Activity, PrivacySource {
 
   private knock(from: string, zone: string | null): void {
     const d = zone ? this.doors.get(zone) : undefined;
-    if (!d || this.host.playerZone(from)?.id === d.def.zoneId) return;
-    if (!this.host.near(from, d.def.pos, PORTAS.knockRange)) return;
+    if (!d || this.host.playerZone(from)?.id === d.zoneId) return;
+    if (!d.defs.some((def) => this.host.near(from, def.pos, PORTAS.knockRange))) return;
     if (d.state === "open") return this.tell(from, "aberta", { zone });
     if (d.state === "locked") return this.tell(from, "nao-perturbe", { zone, note: d.note });
     if (d.admitted.has(from)) return this.tell(from, "entrar", { zone, by: "" });
@@ -319,7 +331,7 @@ export class PortasActivity implements Activity, PrivacySource {
     const name = this.host.playerName(from) ?? "Alguém";
     d.knocks.set(from, { name, at: now });
     this.tell(from, "batida", { zone });
-    this.host.event(this, "bateu", { zone, name }, { to: this.insiders(d.def.zoneId).filter((id) => d.admitted.has(id)), from });
+    this.host.event(this, "bateu", { zone, name }, { to: this.insiders(d.zoneId).filter((id) => d.admitted.has(id)), from });
     this.host.changed(this);
   }
 

@@ -256,7 +256,7 @@ export class OfficeRoom {
     // Voltando de uma reconexão: no mesmo lugar se for andável. Sala de porta fechada não: o id é novo,
     // então a pessoa volta do lado de fora da porta e bate de novo.
     const barred = back && !this.mayStand(id, back) ? this.zones.zoneAt(back) : undefined;
-    const door = barred ? this.privacy?.exitOf(barred.id) : undefined;
+    const door = barred ? this.privacy?.exitOf(barred.id, back ?? undefined) : undefined;
     const spawn = back && !barred && this.nav.isWalkable(back) ? back : ((door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn());
     const member: Member = {
       info: {
@@ -452,7 +452,7 @@ export class OfficeRoom {
 
   /** Devolve a pessoa para o lado de fora da porta da sala. */
   private putOutside(m: Member, zone: Zone): void {
-    const door = this.privacy?.exitOf(zone.id);
+    const door = this.privacy?.exitOf(zone.id, { x: m.x, z: m.z });
     const spot = (door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn();
     m.x = spot.x;
     m.z = spot.z;

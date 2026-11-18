@@ -29,7 +29,7 @@ describe("planta Estação Infinity", () => {
   it("tem todas as áreas da empresa", () => {
     const teams = new Set(map.zones.map((z) => z.team).filter(Boolean));
     for (const t of ["Desenvolvimento", "Produto & Design", "Automação & IA", "Diretoria", "Marketing & Criação", "Comercial", "Gestão & Projetos"]) expect(teams.has(t), t).toBe(true);
-    for (const id of ["atrio", "orbita", "lua", "arcade", "cafe", "auditorio"]) expect(zone(id), id).toBeDefined();
+    for (const id of ["atrio", "eclipse", "arcade", "cafe", "auditorio"]) expect(zone(id), id).toBeDefined();
   });
 
   it("cada sala listada tem placa e identidade visual", () => {
