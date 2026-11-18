@@ -218,11 +218,29 @@ export class OrbiActivity implements Activity {
       if (!path || path.length === 0) continue;
       const len = orbiPathLength(at, path);
       if (len < 3 || len > WANDER_MAX_PATH) continue;
+      // Passeio não corta caminho por sala de reunião, escritório nem cabine (a Sala Eclipse tem duas
+      // portas alinhadas: a rota mais curta às vezes passava pelo meio da daily).
+      if (this.crossesClosed(at, path)) continue;
       this.state = { ...this.state, mode: "wander", from: { x: at.x, z: at.z }, path, speed: ORBI_WANDER_SPEED, startAt: now };
       this.host.changed(this);
       return;
     }
     this.restUntil = now + 3000;
+  }
+
+  /** O caminho (de `from` pelos pontos) entra em alguma área fechada? Confere a cada meio metro. */
+  private crossesClosed(from: Vec2, path: readonly Vec2[]): boolean {
+    let a = from;
+    for (const b of path) {
+      const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.5));
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        const kind = this.host.zones.zoneAt({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t })?.kind;
+        if (kind && CLOSED.has(kind)) return true;
+      }
+      a = b;
+    }
+    return false;
   }
 
   /** Ponto andável sorteado nas áreas comuns (salas maiores saem mais). */

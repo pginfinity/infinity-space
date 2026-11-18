@@ -14,6 +14,7 @@ import { ActivitiesScene } from "../activities/index.tsx";
 import { LookRig } from "./look/LookRig.tsx";
 import { LOOK } from "./look/looks.ts";
 import { useQuality } from "./quality.ts";
+import { perfFrame, perfStart } from "./perfWatch.ts";
 import { patchShadowFade, SHADOW_FADE, snapToTexels, stepSize, viewFootprint, type Footprint } from "./sunShadow.ts";
 
 /** O mundo: luzes, espaço, estação e pessoas. A lente só muda a câmera e o tratamento da imagem. */
@@ -31,9 +32,22 @@ export function WorldScene({ lens }: { lens: Lens }) {
       <HearingRing />
       <ActivitiesScene lens={lens} />
       <BackgroundThrottle />
+      <FrameWatch />
       {import.meta.env.DEV && <DevProbe />}
     </>
   );
+}
+
+/** Mede os primeiros segundos de desenho para sugerir o modo leve a quem precisa (ver perfWatch.ts). */
+function FrameWatch() {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const ctx = gl.getContext();
+    const ext = ctx.getExtension("WEBGL_debug_renderer_info");
+    perfStart(String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) ?? ""));
+  }, [gl]);
+  useFrame((_, dt) => perfFrame(dt));
+  return null;
 }
 
 /** Só em desenvolvimento: expõe o renderizador para medir desempenho (chamadas de desenho, triângulos). */

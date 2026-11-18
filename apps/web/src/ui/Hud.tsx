@@ -18,6 +18,7 @@ import { SettingsPanel } from "./SettingsPanel.tsx";
 import { ChatDockButton, setChatOpen, useChatOpen } from "../activities/chat/dock.tsx";
 import { PresenceDock } from "../presence/Dock.tsx";
 import { openShortcuts, ShortcutsSheet, startTour, Tutorial } from "../onboarding/index.ts";
+import { PerfSuggestion } from "./PerfSuggestion.tsx";
 import { HudStacks } from "./HudStack.tsx";
 
 /** Camada de interface sobre o mundo. */
@@ -91,6 +92,7 @@ export function Hud() {
       <ActivitiesOverlay />
       <InteractPrompt />
       <Tutorial />
+      <PerfSuggestion />
       <ShortcutsSheet />
 
       {/* Barra de emotes, aberta pela doca. */}

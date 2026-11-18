@@ -254,5 +254,13 @@
       "O",
       "NO"
     ]
+  },
+  "perf": {
+    "title": "O escritório está pesado neste computador",
+    "slow": "Com o visual completo ficou em uns {{fps}} quadros por segundo. O modo leve tira sombras e efeitos e deixa andar, conversar e jogar mais fluido.",
+    "software": "O navegador está desenhando sem a placa de vídeo, então o visual completo fica travado. O modo leve ajuda. Se puder, ative a aceleração de hardware nas configurações do navegador.",
+    "where": "Dá para mudar quando quiser em Ajustes › Gráficos.",
+    "accept": "Usar o modo leve",
+    "keep": "Manter assim"
   }
 }
