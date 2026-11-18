@@ -72,6 +72,14 @@ const NAMES: Record<string, string> = {
   "connect4-table": "Lig 4",
   arcade: "Fliperama",
   jukebox: "Jukebox",
+  "lens-rack": "Rack da lente",
+  "crooked-book": "Livro torto",
+  "pill-dish": "Pílula",
+  "brick-pillar": "Pilastra 9¾",
+  "fancy-pen": "Caneta",
+  barrel: "Barril",
+  "ramen-bowl": "Lámen",
+  "duck-family": "Patinhos",
 };
 
 const GROUPS: { id: string; name: string; types: ObjectType[] }[] = [
@@ -83,6 +91,7 @@ const GROUPS: { id: string; name: string; types: ObjectType[] }[] = [
   { id: "copa", name: "Copa", types: ["counter", "kitchen-counter", "coffee-machine", "fridge", "water-cooler"] },
   { id: "decoracao", name: "Decoração e palco", types: ["plant", "plant-tall", "plant-small", "bookshelf", "lamp-floor", "rug", "gong", "lectern"] },
   { id: "jogos", name: "Jogos", types: ["airhockey", "pool", "pingpong", "chess-table", "connect4-table", "arcade", "jukebox"] },
+  { id: "homenagens", name: "Homenagens", types: ["lens-rack", "brick-pillar", "barrel", "crooked-book", "pill-dish", "fancy-pen", "ramen-bowl", "duck-family"] },
 ];
 
 /** Variações de cor para a seção "variantes". */

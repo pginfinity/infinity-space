@@ -44,6 +44,7 @@ export function Toasts() {
             className="glass rounded-full px-4 py-2 text-sm text-offwhite"
           >
             {t.text}
+            {t.sub && <span className="ml-3 text-[12.5px] font-semibold tracking-[0.14em] text-offwhite/55">{t.sub}</span>}
           </motion.div>
         ))}
       </AnimatePresence>

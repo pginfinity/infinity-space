@@ -163,7 +163,16 @@ export type ObjectType =
   // estruturas
   | "pod"
   // pacote portas: porta de sala fechada (estado e visual vêm da atividade "portas")
-  | "door";
+  | "door"
+  // pacote easter: homenagens discretas a filmes e séries (arte original, sem personagens nem logos)
+  | "lens-rack"
+  | "crooked-book"
+  | "pill-dish"
+  | "brick-pillar"
+  | "fancy-pen"
+  | "barrel"
+  | "ramen-bowl"
+  | "duck-family";
 
 export type InteractAction = "sit" | "play" | "watch" | "use";
 

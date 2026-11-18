@@ -58,6 +58,8 @@ registerActivity({
 - **Objetos de parede no 2D:** quem desenha sobre um objeto de parede usa `useWallVisible(id)` (de `scene/wallFacing.ts`), porque no 2D o objeto de costas para a câmera some.
 - **Pessoas:** `self`, `sampleRemote(id)` e `remoteIds()` vêm de `world/registry.ts`. Nomes e status ficam em `useApp` (`state/store.ts`). O campo `held` da pessoa é o item na mão; `note` é o status curto.
 - **Avisos e cartões do lado esquerdo:** nada de posição fixa (`absolute left-3 top-[...]`), que um cobre o outro. Use `<InStack side="top-left" | "bottom-left" order={n}>` de `ui/HudStack.tsx`: a pilha de cima desce a partir do status; a de baixo sobe a partir das dicas de controle. Ordem atual em cima: presença (0), gravação (1), daily (2), primeiros passos (3), aviõezinhos (4); embaixo: item na mão (0), Orbi (1), última mesa (2).
+- **Toast com complemento:** `toast(texto, ms, { sub })` (de `ui/toasts.ts`) mostra um complemento pequeno e apagado depois do texto.
+- **Mensagens que não saem do cliente:** `registerChatInterceptor(fn)` (de `activities/chat/intercept.ts`); se `fn(texto)` devolver true, o campo limpa e nada vai para a rede.
 - **Busca (Ctrl+K):** `registerPersonCommand` (ação por pessoa, ex.: "Mensagem para Ana") e `registerCommand` (ação geral, ex.: "Minha mesa", "Primeiros passos"), ambos de `presence/store.ts`.
 - **Atalho novo:** acrescente na lista de atalhos (`onboarding/Shortcuts.tsx`, tecla ?). Se for algo essencial, pense se entra nos primeiros passos (`onboarding/steps.ts`).
 
