@@ -1,18 +1,26 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Eye, Flag, LoaderCircle, LogOut, X } from "lucide-react";
-import type { ChessState, Connect4State, TicTacToeState } from "@infinity/world";
+import { Eye, Flag, LoaderCircle, LogOut, Trophy, X } from "lucide-react";
+import { GAMES, canAct, gamePlayerCounts, winnersOf, type CheckersState, type ChessState, type Connect4State, type DominoState, type TicTacToeState, type TrucoState } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
 import { closeGame, leaveSeat, mySeat, seatPlayerName, sendGame, tableKind, useGamesUi, useTable, type Table } from "./api.ts";
 import { ChessBoard, Captured } from "./ChessBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
-import { SeatToken } from "./tokens.tsx";
-import { GAME_TITLE, S, SEAT_NAME, endReasonText } from "./strings.ts";
+import { CheckersBoard, CheckersLost } from "./CheckersBoard.tsx";
+import { DominoBoard } from "./DominoBoard.tsx";
+import { TrucoBoard } from "./TrucoBoard.tsx";
+import { GameIcon, SeatToken } from "./tokens.tsx";
+import { GAME_TITLE, PLAYERS_HINT, S, SEAT_NAME, endReasonText } from "./strings.ts";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+/** Mesa de mais de dois lugares (dominó, truco): outro arranjo de lugares, começar e revanche em grupo. */
+const isMulti = (kind: string) => (GAMES[kind]?.seats ?? 2) > 2;
+/** Lugares ocupados agora. */
+const seatedOf = (t: Table) => t.seats.flatMap((id, i) => (id ? [i] : []));
 
 /** Painel da mesa de jogo: lugares, vez, tabuleiro interativo e fim de jogo. */
 export function GamePanel({ table }: { table: string }) {
@@ -42,7 +50,7 @@ export function GamePanel({ table }: { table: string }) {
     >
       <Header title={title} kind={kind} t={t} seat={seat} />
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1 sm:pb-4">
-        {t ? <Body t={t} kind={kind} seat={seat} /> : <p className="py-10 text-center text-sm text-slate">{S.noTable}</p>}
+        {t ? isMulti(kind) ? <MultiBody t={t} kind={kind} seat={seat} /> : <Body t={t} kind={kind} seat={seat} /> : <p className="py-10 text-center text-sm text-slate">{S.noTable}</p>}
       </div>
     </motion.aside>
   );
@@ -51,7 +59,7 @@ export function GamePanel({ table }: { table: string }) {
 function Header({ title, kind, t, seat }: { title: string; kind: string; t: Table | null; seat: number }) {
   return (
     <header className="flex items-start gap-3 px-4 pb-2 pt-3.5">
-      <SeatToken kind={kind} seat={0} className="mt-0.5 size-8 shrink-0" />
+      <GameIcon kind={kind} className="mt-0.5 size-8 shrink-0" />
       <div className="min-w-0 flex-1">
         <h2 className="font-display text-[15px] font-bold uppercase leading-tight tracking-[0.1em]">{title}</h2>
         {t && <StatusLine t={t} seat={seat} kind={kind} />}
@@ -68,7 +76,8 @@ function StatusLine({ t, seat, kind }: { t: Table; seat: number; kind: string })
   const s = t.state;
   let text: ReactNode;
   if (t.phase === "playing") {
-    const mine = seat >= 0 && s.turn === seat;
+    // Minha vez, ou entre quem responde agora (truco: a dupla que recebeu o pedido).
+    const mine = canAct(s, seat);
     const check = kind === "chess" && (s as unknown as ChessState).check;
     text = (
       <>
@@ -121,6 +130,7 @@ function Body({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
         {kind === "chess" && <ChessBoard t={t as Table<ChessState>} seat={seat} canMove={canMove} />}
         {kind === "connect4" && <Connect4Board t={t as Table<Connect4State>} seat={seat} canMove={canMove} />}
         {kind === "tictactoe" && <TicTacToeBoard t={t as Table<TicTacToeState>} seat={seat} canMove={canMove} />}
+        {kind === "checkers" && <CheckersBoard t={t as Table<CheckersState>} seat={seat} canMove={canMove} />}
       </div>
       <SeatStrip t={t} kind={kind} seat={bottom} me={seat} primary={freeSeats === 1} />
       {notice && (
@@ -132,6 +142,99 @@ function Body({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
         {t.phase === "finished" ? <EndBanner key={`end-${t.state.round}`} t={t} kind={kind} seat={seat} /> : <Footer key="footer" t={t} seat={seat} />}
       </AnimatePresence>
     </>
+  );
+}
+
+/** Corpo das mesas de quatro lugares: lugares em grade, a mesa do jogo e o rodapé. */
+function MultiBody({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
+  const canMove = t.phase === "playing" && canAct(t.state, seat);
+  const notice = useGamesUi((s) => s.notice);
+  return (
+    <>
+      {/* No truco, durante a partida, os lugares aparecem em volta da mesa (nome, cartas e vez). */}
+      {!(kind === "truco" && t.phase === "playing") && <SeatGrid t={t} kind={kind} me={seat} />}
+      {kind === "domino" && <DominoBoard t={t as Table<DominoState>} seat={seat} canMove={canMove} />}
+      {kind === "truco" && <TrucoBoard t={t as Table<TrucoState>} seat={seat} canMove={canMove} />}
+      {notice && (
+        <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
+          {notice}
+        </p>
+      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {t.phase === "finished" ? <EndBanner key={`end-${t.state.round}`} t={t} kind={kind} seat={seat} /> : <Footer key="footer" t={t} seat={seat} kind={kind} />}
+      </AnimatePresence>
+    </>
+  );
+}
+
+/** Os quatro lugares em grade: quem está, quantas pedras ou cartas tem, de quem é a vez; ou o botão de sentar. */
+function SeatGrid({ t, kind, me }: { t: Table; kind: string; me: number }) {
+  const pending = useGamesUi((s) => s.pending);
+  const { requestSeat, cancelSeat } = useGamesUi.getState();
+  const players = useApp((s) => s.players);
+  const st = t.state as unknown as { counts?: number[]; active?: number[]; teamOf?: number[] };
+  const teams = (st.active?.length ?? 0) === 4 || (t.phase !== "playing" && kind === "truco");
+  return (
+    <div className="grid grid-cols-2 gap-1.5" role="list">
+      {t.seats.map((id, seat) => {
+        const player = id ? players[id] : undefined;
+        const name = id ? (player?.name ?? t.state.names?.[seat] ?? "—") : null;
+        const isMe = me === seat;
+        const active = t.phase === "playing" && canAct(t.state, seat);
+        const winner = t.phase === "finished" && winnersOf(t.state).includes(seat);
+        const count = t.phase !== "waiting" && st.active?.includes(seat) ? st.counts?.[seat] : undefined;
+        const walking = pending?.table === t.table && pending.seat === seat;
+        const canSit = !id && me < 0 && t.phase !== "playing";
+        const seatName = SEAT_NAME[kind]?.[seat] ?? S.seatFallback(seat);
+        return (
+          <div
+            key={seat}
+            role="listitem"
+            data-seat={seat}
+            className={clsx("flex min-h-[46px] min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 ring-1 transition-colors duration-300", active ? "bg-signal/10 ring-signal/45" : "bg-offwhite/[0.035] ring-offwhite/8")}
+          >
+            <SeatToken kind={kind} seat={seat} className={clsx("size-6 shrink-0", !id && "opacity-45")} />
+            <div className="min-w-0 flex-1">
+              {id ? (
+                <p className="flex min-w-0 items-center gap-1 text-[13px] font-medium">
+                  <span className="size-1.5 shrink-0 rounded-full" style={{ background: player ? STATUS_COLOR[player.status] : "#8A93A3" }} aria-hidden />
+                  <span className="truncate">{name}</span>
+                  {isMe && <span className="shrink-0 text-[11px] font-normal text-slate">({S.you})</span>}
+                </p>
+              ) : (
+                <p className="text-[13px] text-slate">{S.emptySeat}</p>
+              )}
+              <p className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10px] uppercase tracking-[0.12em] text-slate">
+                <span className="shrink-0">{teams ? S.team(seat % 2) : seatName}</span>
+                {count !== undefined && <span className="truncate normal-case tracking-normal">· {kind === "truco" ? S.cards(count) : S.tiles(count)}</span>}
+              </p>
+            </div>
+            {active && <span className="size-2 shrink-0 animate-pulse rounded-full bg-signal" aria-label={S.turnShort} />}
+            {winner && (
+              <span className="shrink-0" title={S.winnerTag}>
+                <Trophy className="size-3.5 text-offwhite" aria-hidden />
+                <span className="sr-only">{S.winnerTag}</span>
+              </span>
+            )}
+            {canSit &&
+              (walking ? (
+                <button type="button" onClick={cancelSeat} className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-offwhite/80 ring-1 ring-offwhite/15 hover:bg-offwhite/8" title={S.cancel} aria-label={S.walking}>
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => requestSeat(t.table, seat)}
+                  aria-label={S.sitAt(seatName)}
+                  className="shrink-0 rounded-lg bg-offwhite/8 px-2.5 py-1.5 text-[11px] font-semibold text-offwhite ring-1 ring-offwhite/15 transition-colors hover:bg-signal hover:text-space hover:ring-signal"
+                >
+                  {S.sitShort}
+                </button>
+              ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -171,6 +274,7 @@ function SeatStrip({ t, kind, seat, me, primary }: { t: Table; kind: string; sea
         <p className="mt-0.5 flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate">
           <span>{seatName}</span>
           {kind === "chess" && id && <Captured s={t.state as unknown as ChessState} color={seat === 0 ? "w" : "b"} />}
+          {kind === "checkers" && id && <CheckersLost s={t.state as unknown as CheckersState} seat={seat} />}
         </p>
       </div>
 
@@ -206,7 +310,7 @@ function SeatStrip({ t, kind, seat, me, primary }: { t: Table; kind: string; sea
 }
 
 /** Rodapé durante a espera e a partida: desistir, levantar ou o aviso de quem assiste. */
-function Footer({ t, seat }: { t: Table; seat: number }) {
+function Footer({ t, seat, kind }: { t: Table; seat: number; kind?: string }) {
   const [confirm, setConfirm] = useState(false);
   useEffect(() => setConfirm(false), [t.phase, t.state.round]);
 
@@ -235,6 +339,28 @@ function Footer({ t, seat }: { t: Table; seat: number }) {
         </GhostButton>
       </>
     );
+  } else if (kind && isMulti(kind)) {
+    // Mesa de vários lugares: quem está sentado começa quando a quantidade de gente vale para o jogo.
+    const ok = gamePlayerCounts(GAMES[kind]!).includes(seatedOf(t).length);
+    content = (
+      <div className="flex w-full flex-col gap-2">
+        <span className="text-xs text-slate">{PLAYERS_HINT[kind] ?? S.waitingStartMulti}</span>
+        <div className="flex items-center justify-end gap-2">
+          <GhostButton onClick={() => leaveSeat(t.table)}>
+            <LogOut className="size-3.5" />
+            {S.stand}
+          </GhostButton>
+          <button
+            type="button"
+            disabled={!ok}
+            onClick={() => sendGame(t.table, "start")}
+            className="rounded-lg bg-orange px-4 py-2 text-xs font-semibold text-offwhite transition-colors hover:bg-[#ff6d39] disabled:cursor-not-allowed disabled:bg-offwhite/10 disabled:text-slate"
+          >
+            {S.start}
+          </button>
+        </div>
+      </div>
+    );
   } else {
     content = (
       <div className="flex w-full items-center justify-between gap-3">
@@ -256,23 +382,33 @@ function Footer({ t, seat }: { t: Table; seat: number }) {
 /** Fim de jogo. Vitória é um "momento especial": aqui o gradiente oficial da marca aparece. */
 function EndBanner({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
   const s = t.state;
+  const multi = isMulti(kind);
   const winner = s.winner;
-  const loser = winner === null ? null : winner === 0 ? 1 : 0;
+  const winners = winnersOf(s);
+  // Quem desistiu ou saiu: nas mesas de dois, quem não venceu; nas de vários, o servidor diz.
+  const loser = s.quit ?? (multi || winner === null ? null : winner === 0 ? 1 : 0);
   // Quem jogou a partida (o servidor guarda o nome mesmo se a pessoa já levantou).
   const playedBy = (seat: number) => s.players?.[seat] ?? seatPlayerName(t, seat) ?? SEAT_NAME[kind]?.[seat] ?? null;
   const loserName = loser === null ? null : playedBy(loser);
   const winnerName = winner === null ? null : playedBy(winner);
-  const iWon = seat >= 0 && winner === seat;
-  const iLost = seat >= 0 && loser === seat;
+  const team = winners.length > 1;
+  const iWon = seat >= 0 && winners.includes(seat);
+  const iPlayed = seat >= 0 && !!s.players?.[seat];
+  const iLost = seat >= 0 && !s.draw && winners.length > 0 && !iWon && (multi ? iPlayed : true);
   const celebrate = winner !== null && !iLost;
-  const title = s.draw ? (kind === "tictactoe" ? S.drawTicTacToe : S.draw) : iWon ? S.youWon : iLost ? S.youLost : S.won(winnerName ?? "");
+  const winnersText = team ? S.wonMany(S.and(winners.map((w) => playedBy(w) ?? ""))) : S.won(winnerName ?? "");
+  const title = s.draw ? (kind === "tictactoe" ? S.drawTicTacToe : S.draw) : iWon ? (team ? S.teamWon : S.youWon) : iLost ? (team ? S.teamLost : S.youLost) : winnersText;
   const reason = endReasonText(s.reason, s.reason === "resign" || s.reason === "left" ? loserName : null);
 
-  const other = seat >= 0 ? (seat === 0 ? 1 : 0) : -1;
-  const otherHere = other >= 0 && t.seats[other] !== null;
-  const otherName = other >= 0 ? (seatPlayerName(t, other) ?? "") : "";
+  // Revanche: nas mesas de dois, com quem está do outro lado; nas de vários, com todos os sentados.
+  const others = seatedOf(t).filter((x) => x !== seat);
+  const other = seat >= 0 && !multi ? (seat === 0 ? 1 : 0) : -1;
+  const otherHere = multi ? others.length > 0 && gamePlayerCounts(GAMES[kind]!).includes(others.length + 1) : other >= 0 && t.seats[other] !== null;
+  const otherName = multi ? "" : other >= 0 ? (seatPlayerName(t, other) ?? "") : "";
   const iAsked = seat >= 0 && !!s.rematch?.[seat];
-  const theyAsked = other >= 0 && !!s.rematch?.[other];
+  const askers = others.filter((x) => !!s.rematch?.[x]);
+  const theyAsked = multi ? askers.length > 0 : other >= 0 && !!s.rematch?.[other];
+  const missing = others.filter((x) => !s.rematch?.[x]).length;
 
   return (
     <motion.section
@@ -318,9 +454,11 @@ function EndBanner({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
 
       {seat >= 0 && (
         <div className="relative mt-3.5 flex flex-wrap items-center justify-end gap-2">
-          {otherHere && iAsked && <span className="mr-auto text-xs text-offwhite/85">{S.rematchWaiting(otherName)}</span>}
-          {otherHere && theyAsked && !iAsked && <span className="mr-auto text-xs font-medium text-offwhite">{S.rematchOffer(otherName)}</span>}
-          {!otherHere && <span className="mr-auto text-xs text-offwhite/80">{S.waitingOpponent}</span>}
+          {otherHere && iAsked && <span className="mr-auto text-xs text-offwhite/85">{multi ? S.rematchWaitingMany(missing) : S.rematchWaiting(otherName)}</span>}
+          {otherHere && theyAsked && !iAsked && (
+            <span className="mr-auto text-xs font-medium text-offwhite">{multi ? S.rematchOfferMany(S.and(askers.map((x) => seatPlayerName(t, x) ?? ""))) : S.rematchOffer(otherName)}</span>
+          )}
+          {!otherHere && <span className="mr-auto text-xs text-offwhite/80">{multi ? (PLAYERS_HINT[kind] ?? S.waitingOpponent) : S.waitingOpponent}</span>}
           <button
             type="button"
             onClick={() => leaveSeat(t.table)}

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { canAct, type BaseState } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { closeGame, openGame } from "./api.ts";
 import { GamePanel } from "./GamePanel.tsx";
@@ -41,7 +42,8 @@ function TurnChip() {
     if (!s.selfId) return null;
     for (const g of Object.values(s.games)) {
       const seat = g.seats.indexOf(s.selfId);
-      if (seat >= 0 && g.phase === "playing" && (g.state as { turn?: number }).turn === seat) return g.table;
+      // Minha vez, ou minha dupla responde a um pedido (truco).
+      if (seat >= 0 && g.phase === "playing" && canAct(g.state as BaseState, seat)) return g.table;
     }
     return null;
   });

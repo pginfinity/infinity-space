@@ -29,6 +29,7 @@ const DEFS: GuideDef[] = [
   { key: "sinuca", label: "Sinuca", hint: "Bola 8, para dois", group: "Jogos", icon: Disc3, types: ["pool"] },
   { key: "fliper", label: "Fliperamas", hint: "Três jogos com ranking", group: "Jogos", icon: Trophy, types: ["arcade"] },
   { key: "tabuleiro", label: "Xadrez, Lig 4 e velha", hint: "Mesas de jogo do Arcade", group: "Jogos", icon: Crown, types: ["chess-table", "connect4-table", "tictactoe-table"] },
+  { key: "cafe-jogos", label: "Damas, dominó e truco", hint: "Mesas de jogo do café", group: "Jogos", icon: Crown, types: ["checkers-table", "domino-table", "cards-table"] },
   { key: "bolinha", label: "Bolinha de papel", hint: "Acerte a lixeira de longe", group: "Jogos", icon: Trash2, types: ["trash-bin"] },
   { key: "gongo", label: "Gongo", hint: "Comemore uma venda", group: "Escritório", icon: Bell, types: ["gong"] },
   { key: "deploy", label: "Botão de deploy", hint: "Lança um foguete", group: "Escritório", icon: Rocket, types: ["big-button"] },
