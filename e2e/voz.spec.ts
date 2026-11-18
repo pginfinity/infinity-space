@@ -18,7 +18,7 @@ async function enter(page: Page, name: string) {
   await page.context().grantPermissions(["microphone", "camera"]);
   await page.goto(`/?nome=${name}&lente=2d`);
   await page.waitForFunction(() => !!(window as unknown as { __infinity?: Hook }).__infinity?.store.getState().selfId, null, { timeout: 30_000 });
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.media.state.getState().status), { timeout: 20_000 }).toBe("on");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.media.state.getState().status), { timeout: 45_000 }).toBe("on"); // (LiveKit local de desenvolvimento pode demorar)
 }
 
 test("perto se ouve, na sala fechada não", async ({ browser }) => {
