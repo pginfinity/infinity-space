@@ -9,6 +9,15 @@ import { walkTo } from "../engine/movement.ts";
 import { guideItems, nearestSpot, type GuideGroup, type GuideItem } from "./guide.ts";
 // pacote mesas: mesas livres/ocupadas no mapa ampliado
 import { DesksGuide, DesksMapLayer } from "../activities/mesas/minimap.tsx";
+// pacote easter: o mapa com cara de pergaminho (só visual, só para quem disse a frase)
+import { useParchment } from "../activities/easter/state.ts";
+import { T as EASTER } from "../activities/easter/strings.ts";
+
+/** Cores do minimapa: as normais e as de pergaminho (tons sépia, tinta marrom). */
+const INK = {
+  normal: { floor: "#11284A", room: null, wall: "#E9E5DF", glass: "#5FD0FF", label: "#F2F0EF", other: "#F2F0EF", me: "#00B7FF", rim: "#00112A", poi: "#F2F0EF" },
+  parchment: { floor: "#D8C397", room: "#6B4423", wall: "#4A2E16", glass: "#7A5530", label: "#3E2612", other: "#4A2E16", me: "#8E2B1E", rim: "#EADBB8", poi: "#5B3A1E" },
+} as const;
 
 /**
  * Minimapa da estação: salas coloridas pela cor de cada área, você e as outras pessoas.
@@ -29,6 +38,8 @@ export function Minimap() {
   const dotsRef = useRef<SVGGElement>(null);
   const players = useApp((s) => s.players);
   const selfId = useApp((s) => s.selfId);
+  const parchment = useParchment((s) => s.until !== null);
+  const ink = parchment ? INK.parchment : INK.normal;
 
   const b = useMemo(() => boundsOf(map.floors.flatMap((f) => f.polygon)), [map]);
   const pad = 1;
@@ -80,10 +91,18 @@ export function Minimap() {
   };
 
   return (
-    <div className={clsx("glass pointer-events-auto absolute right-3 flex flex-col overflow-hidden rounded-2xl transition-all duration-300", big ? "bottom-24 top-16 z-30 w-[min(1000px,calc(100vw-24px))]" : "bottom-[max(12px,env(safe-area-inset-bottom))] hidden w-[230px] sm:flex")}>
+    <div
+      className={clsx("pointer-events-auto absolute right-3 flex flex-col overflow-hidden rounded-2xl transition-all duration-300", parchment ? "border border-[#8A6A3E]" : "glass", big ? "bottom-24 top-16 z-30 w-[min(1000px,calc(100vw-24px))]" : "bottom-[max(12px,env(safe-area-inset-bottom))] hidden w-[230px] sm:flex")}
+      style={parchment ? { background: "linear-gradient(165deg, #EEE0BF 0%, #E4D1A6 55%, #D6BE8C 100%)", boxShadow: "inset 0 0 26px rgba(110,72,30,0.38), 0 10px 30px rgba(0,0,0,0.35)" } : undefined}
+      data-parchment={parchment ? "true" : undefined}
+    >
       <div className="flex items-center justify-between px-3 pt-2">
-        <span className="label-caps">{hover ?? "Mapa da estação"}</span>
-        <button type="button" onClick={() => setBig((v) => !v)} className="rounded-md p-1 text-slate hover:text-offwhite" aria-label={big ? "Diminuir mapa" : "Ampliar mapa"} data-tour-target="mapa">
+        {parchment ? (
+          <span className="text-[12px] font-semibold italic tracking-wide text-[#4A2E16]">{hover ?? EASTER.marauder.title}</span>
+        ) : (
+          <span className="label-caps">{hover ?? "Mapa da estação"}</span>
+        )}
+        <button type="button" onClick={() => setBig((v) => !v)} className={clsx("rounded-md p-1", parchment ? "text-[#6B4423] hover:text-[#3E2612]" : "text-slate hover:text-offwhite")} aria-label={big ? "Diminuir mapa" : "Ampliar mapa"} data-tour-target="mapa">
           {big ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
         </button>
       </div>
@@ -92,24 +111,47 @@ export function Minimap() {
         {map.floors
           .filter((f) => f.style !== "line")
           .map((f) => (
-            <polygon key={f.id} points={f.polygon.map((p) => `${p.x},${p.z}`).join(" ")} fill="#11284A" />
+            <polygon key={f.id} points={f.polygon.map((p) => `${p.x},${p.z}`).join(" ")} fill={ink.floor} />
           ))}
         {rooms.map((z) => (
           <polygon
             key={z.id}
             points={z.polygon.map((p) => `${p.x},${p.z}`).join(" ")}
-            fill={z.theme?.accent ?? "#00B7FF"}
-            fillOpacity={hover === z.name ? 0.42 : z.listed ? 0.2 : 0.06}
+            fill={ink.room ?? z.theme?.accent ?? "#00B7FF"}
+            fillOpacity={parchment ? (hover === z.name ? 0.24 : z.listed ? 0.08 : 0.03) : hover === z.name ? 0.42 : z.listed ? 0.2 : 0.06}
             onMouseEnter={() => setHover(z.listed ? z.name : null)}
           />
         ))}
         {map.walls.map((w, i) => (
-          <line key={i} x1={w.a.x} y1={w.a.z} x2={w.b.x} y2={w.b.z} stroke={w.kind === "solid" ? "#E9E5DF" : "#5FD0FF"} strokeWidth={w.kind === "solid" ? 0.22 : 0.14} strokeOpacity={0.85} />
+          <line
+            key={i}
+            x1={w.a.x}
+            y1={w.a.z}
+            x2={w.b.x}
+            y2={w.b.z}
+            stroke={w.kind === "solid" ? ink.wall : ink.glass}
+            strokeWidth={w.kind === "solid" ? 0.22 : 0.14}
+            strokeOpacity={0.85}
+            strokeLinecap={parchment ? "round" : undefined}
+            strokeDasharray={parchment && w.kind !== "solid" ? "0.35 0.25" : undefined}
+          />
         ))}
+        {parchment && (
+          // bordas gastas do pergaminho (só enfeite, por cima do chão)
+          <>
+            <defs>
+              <radialGradient id="easter-pergaminho" cx="50%" cy="50%" r="70%">
+                <stop offset="55%" stopColor="#6B4423" stopOpacity={0} />
+                <stop offset="100%" stopColor="#6B4423" stopOpacity={0.32} />
+              </radialGradient>
+            </defs>
+            <rect x={b.minX - pad} y={b.minZ - pad} width={b.maxX - b.minX + pad * 2} height={b.maxZ - b.minZ + pad * 2} fill="url(#easter-pergaminho)" pointerEvents="none" />
+          </>
+        )}
         {big && <DesksMapLayer />}
         {big &&
           map.labels.map((l) => (
-            <text key={l.text + l.pos.x} x={l.pos.x} y={l.pos.z} textAnchor="middle" fontSize={0.95} fill="#F2F0EF" fontFamily="Geist, sans-serif" fontWeight={600} pointerEvents="none">
+            <text key={l.text + l.pos.x} x={l.pos.x} y={l.pos.z} textAnchor="middle" fontSize={0.95} fill={ink.label} fontFamily="Geist, sans-serif" fontWeight={600} fontStyle={parchment ? "italic" : undefined} pointerEvents="none">
               {l.text}
             </text>
           ))}
@@ -121,9 +163,9 @@ export function Minimap() {
                 cx={p.x}
                 cy={p.z}
                 r={poi === item.key ? 0.85 : 0.45}
-                fill={poi === item.key ? "#EE5C29" : "#F2F0EF"}
+                fill={poi === item.key ? "#EE5C29" : ink.poi}
                 fillOpacity={poi && poi !== item.key ? 0.35 : 0.9}
-                stroke="#00112A"
+                stroke={ink.rim}
                 strokeWidth={0.18}
                 pointerEvents="none"
               />
@@ -131,11 +173,11 @@ export function Minimap() {
           )}
         <g ref={dotsRef}>
           {Object.values(players).map((p) => (
-            <circle key={p.id} data-id={p.id} r={p.id === selfId ? 0.85 : 0.6} fill={p.id === selfId ? "#00B7FF" : "#F2F0EF"} stroke="#00112A" strokeWidth={0.25} pointerEvents="none" />
+            <circle key={p.id} data-id={p.id} r={p.id === selfId ? 0.85 : 0.6} fill={p.id === selfId ? ink.me : ink.other} stroke={ink.rim} strokeWidth={0.25} pointerEvents="none" />
           ))}
         </g>
       </svg>
-      {big && <GuideList items={guide} active={poi} onHover={setPoi} onGo={goTo} />}
+      {big && <GuideList items={guide} active={poi} onHover={setPoi} onGo={goTo} solid={parchment} />}
       </div>
     </div>
   );
@@ -144,9 +186,10 @@ export function Minimap() {
 const GROUPS: GuideGroup[] = ["Jogos", "Escritório", "Estação"];
 
 /** "O que fazer aqui": tudo que é interativo na estação, com ir até lá. */
-function GuideList({ items, active, onHover, onGo }: { items: GuideItem[]; active: string | null; onHover: (k: string | null) => void; onGo: (i: GuideItem) => void }) {
+function GuideList({ items, active, onHover, onGo, solid }: { items: GuideItem[]; active: string | null; onHover: (k: string | null) => void; onGo: (i: GuideItem) => void; solid?: boolean }) {
   return (
-    <aside className="max-h-[45%] shrink-0 overflow-y-auto border-t border-offwhite/8 px-2 pb-2 pt-1 sm:max-h-none sm:w-64 sm:border-l sm:border-t-0" aria-label="O que fazer aqui" onMouseLeave={() => onHover(null)}>
+    // `solid`: com o mapa de pergaminho (pacote easter), a lista ganha fundo próprio para continuar legível
+    <aside className={clsx("max-h-[45%] shrink-0 overflow-y-auto border-t border-offwhite/8 px-2 pb-2 pt-1 sm:max-h-none sm:w-64 sm:border-l sm:border-t-0", solid && "bg-space/92 text-offwhite")} aria-label="O que fazer aqui" onMouseLeave={() => onHover(null)}>
       <p className="px-2 pb-1 pt-2 text-sm font-medium">O que fazer aqui</p>
       <DesksGuide />
       {GROUPS.map((g) => (

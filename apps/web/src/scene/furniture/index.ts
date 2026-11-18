@@ -15,6 +15,7 @@ import * as grupo from "./grupo.ts";
 import * as escritorio from "./escritorio.ts";
 import * as vivo from "./vivo.ts";
 import * as arcade from "./arcade.ts";
+import * as easter from "./easter.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -128,6 +129,15 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   "tictactoe-table": arcade.tictactoeTable,
   "arcade-board": arcade.arcadeBoard,
   "trash-bin": arcade.trashBin,
+  // pacote easter (homenagens discretas)
+  "lens-rack": easter.lensRack,
+  "crooked-book": easter.crookedBook,
+  "pill-dish": easter.pillDish,
+  "brick-pillar": easter.brickPillar,
+  "fancy-pen": easter.fancyPen,
+  barrel: easter.barrel,
+  "ramen-bowl": easter.ramenBowl,
+  "duck-family": easter.duckFamily,
 };
 
 // ---- mobília montada na cena (para as atividades mudarem o visual de uma cópia) ----------------
@@ -165,6 +175,7 @@ export const VARIANTS: Partial<Record<ObjectType, number>> = {
   moodboard: 2,
   arcade: 3,
   "coffee-table": 2,
+  "pill-dish": 2,
 };
 
 /** Tipos com modelo neste catálogo, na ordem do catálogo. */

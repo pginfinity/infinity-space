@@ -5,6 +5,7 @@ import { CHAT_TEXT_MAX, chatKey, chatMentionQuery } from "@infinity/world";
 import { useApp } from "../../state/store.ts";
 import { AvatarFace } from "../../ui/AvatarFace.tsx";
 import { myKey, setDraft, useChat } from "./store.ts";
+import { interceptChat } from "./intercept.ts";
 import { T } from "./strings.ts";
 
 /**
@@ -86,7 +87,8 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ sl
   const submit = () => {
     const text = value.trim();
     if (!text) return;
-    onSend(value);
+    // Frases que ficam só aqui (pacote easter): limpa o campo e não envia nada.
+    if (!interceptChat(text)) onSend(value);
     set("");
     setDismissed(null);
     setCaret(0);

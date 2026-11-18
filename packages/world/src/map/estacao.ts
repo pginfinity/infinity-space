@@ -602,6 +602,30 @@ export function buildStationMap(): MapDef {
   b.put("plant-tall", 9.6, 21.4, N, { zoneId: aud.id });
   b.put("plant-tall", 22.4, 21.4, N, { zoneId: aud.id });
 
+  // ── Homenagens discretas a filmes e séries (pacote easter) ──────────────────────────
+  // Arte original, sem personagens nem logos. Nenhuma tem ponto de interação no mapa (não entram no
+  // guia): quem chega perto ganha o alvo do pacote no cliente. Nada na Sala Eclipse, nada no caminho.
+  // 2001: um quarto rack no Dev Lab, com a lente vermelha.
+  b.put("lens-rack", -25.45, -15.25, E, { zoneId: dev.id });
+  // Interestelar: livro torto na 4ª prateleira da estante do Design (lado direito, visto de frente).
+  // Estante em (-11.75, -12.6) virada para o leste: o lugar dele na fileira, local (0.5, 0.03), é o
+  // mundo (-11.72, -13.1); o modelo já sai puxado para a frente.
+  b.put("crooked-book", -11.72, -13.1, E, { zoneId: design.id, elevation: 1.224 });
+  // Matrix: as duas pílulas nas pontas da mesa de centro do lounge da Diretoria (vermelha a leste).
+  b.put("pill-dish", 16.7, -9.58, N, { zoneId: dirL.id, elevation: 0.42 });
+  b.put("pill-dish", 15.69, -9.58, N, { zoneId: dirL.id, elevation: 0.42, variant: 1 });
+  // Harry Potter: pilastra de tijolos com a placa da plataforma, no corredor sul (face sul da parede do Átrio).
+  b.onWall("brick-pillar", 9, -3.1, S, { zoneId: "corredor-sul" });
+  // O Lobo de Wall Street: a caneta na mesa alta do Comercial, perto da ponta leste (virada para ela:
+  // o alvo fica na ponta, onde não disputa com as banquetas).
+  b.put("fancy-pen", 15.92, 6.24, E, { zoneId: com.id, elevation: 1.05 });
+  // Chaves: o barril no canto sudeste do Arcade.
+  b.put("barrel", -12.55, 21.45, W, { zoneId: arc.id });
+  // Naruto: a tigela de lámen na ponta da bancada da copa, depois da pia (longe da pipoqueira).
+  b.put("ramen-bowl", -11.56, 15.42, E, { zoneId: cafe.id, elevation: 0.92 });
+  // Família Soprano: patinhos de borracha na mesa de centro do lounge do Átrio.
+  b.put("duck-family", 4.94, -1.69, N, { zoneId: "atrio", elevation: 0.42 });
+
   // pacote portas: uma porta no vão de cada sala fechada (reunião, suítes e cabines de foco).
   // `rot` aponta de dentro para fora; `size.w` é a largura do vão; variante 1 = folha de vidro.
   const door = (zoneId: string, x: number, z: number, out: number, w: number, glass: boolean) =>

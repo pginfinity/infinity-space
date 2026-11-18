@@ -6,6 +6,12 @@ import { useMedia } from "../media/rtc.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { screenMesh, tvFor } from "./tvs.ts";
 import { world } from "../world/world.ts";
+// pacote easter: às 22:04 a TV do Átrio mostra o relâmpago e "1,21 gigawatts!" no lugar da data
+import { clockParts, isGigawattMinute, lightningFlash } from "../activities/easter/rules.ts";
+import { tvNow } from "../activities/easter/state.ts";
+import { T as EASTER } from "../activities/easter/strings.ts";
+
+const TZ = "America/Sao_Paulo";
 
 /** Projeta cada tela compartilhada na TV da sala de quem compartilha (com aviso se a janela foi minimizada). */
 export function ScreenTVs() {
@@ -14,7 +20,8 @@ export function ScreenTVs() {
   const paused = useRef(new Map<string, THREE.MeshBasicMaterial>());
   // TV parada: nome da sala e hora (Brasília), no lugar da tela genérica.
   const idle = useRef(new Map<string, IdleScreen>());
-  const lastClock = useRef(-Infinity);
+  const lastSecond = useRef(-1);
+  const lastMinute = useRef(-1);
 
   useEffect(
     () => () => {
@@ -36,8 +43,8 @@ export function ScreenTVs() {
     [],
   );
 
-  useFrame((state) => {
-    // Telas de espera: criadas quando as TVs já existem; hora redesenhada a cada 30 s.
+  useFrame(() => {
+    // Telas de espera: criadas quando as TVs já existem; hora redesenhada na virada de cada minuto.
     if (!idle.current.size) {
       const { map, zones } = world();
       for (const o of map.objects) {
@@ -45,15 +52,31 @@ export function ScreenTVs() {
         const mesh = screenMesh(o.screenId);
         if (!mesh) continue;
         const room = (o.zoneId ? map.zones.find((z) => z.id === o.zoneId) : zones.zoneAt(o.pos))?.name ?? "Infinity Space";
-        const scr = new IdleScreen(room);
+        const scr = new IdleScreen(room, o.screenId);
         idle.current.set(o.screenId, scr);
         mesh.material = scr.material;
       }
+      // telas novas (troca de lente): confere o minuto já, sem esperar a próxima virada
+      if (idle.current.size) lastMinute.current = -1;
     }
-    if (state.clock.elapsedTime - lastClock.current > 30) {
-      lastClock.current = state.clock.elapsedTime;
-      for (const i of idle.current.values()) i.draw();
+    // Conferido uma vez por segundo (e logo depois de criar as telas, que zera o minuto).
+    const now = tvNow();
+    const second = Math.floor(now / 1000);
+    if (second !== lastSecond.current || lastMinute.current < 0) {
+      lastSecond.current = second;
+      const minute = Math.floor(now / 60000);
+      if (minute !== lastMinute.current) {
+        lastMinute.current = minute;
+        const { hour, minute: mm } = clockParts(now, TZ);
+        const giga = isGigawattMinute(hour, mm);
+        for (const i of idle.current.values()) {
+          i.giga = giga && i.screenId === "atrio";
+          i.draw(now);
+        }
+      }
     }
+    // Relâmpago (só durante o minuto dos gigawatts, na TV do Átrio).
+    for (const i of idle.current.values()) if (i.giga) i.flash(now);
     const selfId = useApp.getState().selfId;
     const players = useApp.getState().players;
     const want = new Map<string, string>(); // screenId -> dono
@@ -125,18 +148,31 @@ class IdleScreen {
   readonly material: THREE.MeshBasicMaterial;
   private readonly canvas = document.createElement("canvas");
   private readonly tex: THREE.CanvasTexture;
+  /** Minuto dos 1,21 gigawatts (pacote easter): a data vira o aviso e o relâmpago pisca. */
+  giga = false;
+  private lastFlash = 0;
 
-  constructor(private readonly room: string) {
+  constructor(
+    private readonly room: string,
+    readonly screenId: string,
+  ) {
     this.canvas.width = 640;
     this.canvas.height = 360;
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.colorSpace = THREE.SRGBColorSpace;
     this.tex.anisotropy = 4;
     this.material = new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false });
-    this.draw();
+    this.draw(tvNow());
   }
 
-  draw(): void {
+  /** Redesenha só enquanto o relâmpago está aceso (e uma vez quando apaga). */
+  flash(now: number): void {
+    const f = lightningFlash((now % 60000) / 1000);
+    if (f > 0 || this.lastFlash > 0) this.draw(now, f);
+    this.lastFlash = f;
+  }
+
+  draw(at: number, flash = 0): void {
     const g = this.canvas.getContext("2d")!;
     const { width: w, height: h } = this.canvas;
     const bg = g.createLinearGradient(0, 0, 0, h);
@@ -149,7 +185,8 @@ class IdleScreen {
     glow.addColorStop(1, "rgba(0,183,255,0)");
     g.fillStyle = glow;
     g.fillRect(0, 0, w, h);
-    const now = new Date();
+    const now = new Date(at);
+    if (flash > 0) drawLightning(g, w, h, flash);
     g.textAlign = "center";
     g.fillStyle = "#8A93A3";
     g.font = '500 26px NORD, "Arial Black", sans-serif';
@@ -159,9 +196,15 @@ class IdleScreen {
     g.fillStyle = "#F2F0EF";
     g.font = '600 132px Geist, system-ui, sans-serif';
     g.fillText(CLOCK.format(now), w / 2, 222);
-    g.fillStyle = "#8A93A3";
-    g.font = '400 26px Geist, system-ui, sans-serif';
-    g.fillText(DAY.format(now), w / 2, 280);
+    if (this.giga) {
+      g.fillStyle = "#E8B44A";
+      g.font = '600 30px Geist, system-ui, sans-serif';
+      g.fillText(EASTER.tv.gigawatts, w / 2, 282);
+    } else {
+      g.fillStyle = "#8A93A3";
+      g.font = '400 26px Geist, system-ui, sans-serif';
+      g.fillText(DAY.format(now), w / 2, 280);
+    }
     this.tex.needsUpdate = true;
   }
 
@@ -169,4 +212,29 @@ class IdleScreen {
     this.tex.dispose();
     this.material.dispose();
   }
+}
+
+/** Relâmpago rápido (pacote easter): clarão na tela e um raio em zigue-zague. Arte própria. */
+function drawLightning(g: CanvasRenderingContext2D, w: number, h: number, f: number): void {
+  g.save();
+  g.fillStyle = `rgba(214,236,255,${0.38 * f})`;
+  g.fillRect(0, 0, w, h);
+  const bolt = (pts: Array<[number, number]>) => {
+    g.beginPath();
+    g.moveTo(pts[0]![0] * w, pts[0]![1] * h);
+    for (const [x, y] of pts.slice(1)) g.lineTo(x * w, y * h);
+    g.stroke();
+  };
+  g.globalAlpha = Math.min(1, f * 1.2);
+  g.strokeStyle = "#FFF6DC";
+  g.lineJoin = "miter";
+  g.lineCap = "round";
+  g.shadowColor = "#FFD27A";
+  g.shadowBlur = 22;
+  g.lineWidth = 7;
+  bolt([[0.83, -0.02], [0.76, 0.2], [0.81, 0.24], [0.71, 0.45], [0.76, 0.48], [0.64, 0.72]]);
+  g.lineWidth = 3.5;
+  bolt([[0.76, 0.2], [0.68, 0.3], [0.7, 0.34], [0.62, 0.42]]);
+  bolt([[0.71, 0.45], [0.82, 0.58], [0.8, 0.62], [0.87, 0.7]]);
+  g.restore();
 }

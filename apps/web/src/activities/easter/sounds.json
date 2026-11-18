@@ -1,0 +1,6 @@
+{
+  "easter-book": { "prompt": "A hardcover book sliding off a wooden shelf and landing flat on a carpeted floor with a soft dull thud, a little dust puff, short and close, no music", "seconds": 0.9 },
+  "easter-bonk": { "prompt": "Cartoon head bonk against a brick wall: a soft hollow thump followed by a tiny comic spring wobble, playful and light, no voice, no music", "seconds": 0.8 },
+  "easter-slurp": { "prompt": "Someone happily slurping hot ramen noodles from a bowl, one quick slurp and a soft satisfied chopstick tap on ceramic, close and clean, no voice words, no music", "seconds": 1.1 },
+  "easter-pergaminho": { "prompt": "Old parchment map being unfolded with a crisp paper rustle and a faint magical ink shimmer, short and quiet, no music", "seconds": 1.2 }
+}

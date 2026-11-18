@@ -108,4 +108,14 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   pod: { w: 2.2, d: 2.2, h: 2.4, blocks: false, look: "(Estrutura: cabine de foco, montada com paredes no mapa.)" },
   // pacote portas
   door: { w: 1.6, d: 0.08, h: 2.2, blocks: false, look: "(Porta de sala no vão da parede: folha e luz de estado desenhadas pela atividade \"portas\", nas duas lentes.)" },
+  // pacote easter: homenagens discretas (arte original; sem personagens, logos, símbolos nem fontes das obras).
+  // Os pequenos vão em cima de móveis: a altura vem de `elevation`.
+  "lens-rack": { w: 0.7, d: 0.9, h: 2.0, blocks: true, look: "Rack de servidores igual aos outros, com um painel de alumínio escovado no alto e uma lente vermelha redonda acesa, respirando devagar (2001)." },
+  "crooked-book": { w: 0.05, d: 0.2, h: 0.28, blocks: false, look: "Livro de capa dura cor de vinho, lombada com filetes dourados, puxado para fora da prateleira e torto (Interestelar). Vai na estante (elevation = altura da prateleira)." },
+  "pill-dish": { w: 0.12, d: 0.12, h: 0.04, blocks: false, look: "Pirezinho de vidro com uma pílula brilhante: vermelha (variante 0) ou azul (variante 1) (Matrix). Vai em cima de uma mesa." },
+  "brick-pillar": { w: 0.9, d: 0.14, h: 2.7, blocks: false, wallMounted: 1.35, look: "Pilastra de tijolos aparentes encostada na parede do corredor, com uma plaquinha esmaltada de plataforma; o “9¾” é desenhado à parte pelo pacote easter (Harry Potter)." },
+  "fancy-pen": { w: 0.16, d: 0.09, h: 0.1, blocks: false, look: "Caneta-tinteiro preta com detalhes dourados num suporte de mármore escuro (O Lobo de Wall Street). Vai em cima de uma mesa." },
+  barrel: { w: 0.62, d: 0.62, h: 0.86, blocks: true, look: "Barril de madeira com aros de metal e tampa solta, esquecido num canto (Chaves)." },
+  "ramen-bowl": { w: 0.22, d: 0.22, h: 0.14, blocks: false, look: "Tigela funda de lámen: caldo, macarrão, ovo, cebolinha, alga e a fatia de narutomaki (branca com espiral rosa), hashis por cima (Naruto). Vai na bancada." },
+  "duck-family": { w: 0.3, d: 0.2, h: 0.12, blocks: false, look: "Bandeja rasa com água e uma família de patinhos de borracha amarelos em fila: a mãe e três filhotes (Família Soprano). Vai em cima de uma mesa." },
 };
