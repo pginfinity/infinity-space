@@ -109,5 +109,6 @@ export const T = {
     title: "Telescópio",
     hint: "Esc para voltar ao escritório",
     caption: "A Terra, daqui da estação",
+    captionMoon: "A Lua, daqui da estação",
   },
 };

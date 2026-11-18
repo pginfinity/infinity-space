@@ -81,6 +81,15 @@ export function CameraRig() {
     const blur = () => s.keys.clear();
     const context = (e: Event) => e.preventDefault();
 
+    // Só em desenvolvimento: aponta a câmera (rumo em graus, inclinação em radianos) para conferir o céu.
+    if (import.meta.env.DEV) {
+      (window as unknown as { __infinityCam?: unknown }).__infinityCam = (yawDeg: number, pitch = s.pitch, dist = s.dist) => {
+        s.yaw = THREE.MathUtils.degToRad(yawDeg);
+        s.pitch = THREE.MathUtils.clamp(pitch, MIN_PITCH, MAX_PITCH);
+        s.dist = THREE.MathUtils.clamp(dist, MIN_DIST, MAX_DIST);
+      };
+    }
+
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);

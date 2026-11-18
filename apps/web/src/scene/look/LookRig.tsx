@@ -1,16 +1,9 @@
-import { useEffect, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useEffect } from "react";
+import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Lens } from "@infinity/world";
-import { self } from "../../world/registry.ts";
 import { LOOK } from "./looks.ts";
 import { useQuality } from "../quality.ts";
 
-/**
- * Luz e ambiente da prévia de visual (ver looks.ts): reflexos de ambiente, luz de recorte, exposição
- * e sombras projetadas pela luz principal (seguindo você, para cobrir o que está na tela).
- * No visual atual não faz nada.
- */
 /**
  * Ambiente para os reflexos: uma sala escura (o casco da estação) com faixas de luz no teto e uma
  * janela quente de um lado. No mármore e no vidro, o reflexo lê como luminária e janela, não como
@@ -39,10 +32,14 @@ function stationEnvironment(): THREE.Scene {
   return scene;
 }
 
-export function LookRig({ lens }: { lens: Lens }) {
+/**
+ * Ambiente do visual (ver looks.ts): reflexos, exposição, luz de recorte e quais malhas projetam
+ * sombra (paredes e avatares também, além dos móveis). Ligar as sombras e mover a luz do Sol é da
+ * lente (Canvas `shadows`) e do SunLights (WorldScene.tsx). No modo "leve" não há sombras.
+ */
+export function LookRig() {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
-  const rim = useRef<THREE.DirectionalLight>(null);
   const quality = useQuality((s) => s.mode);
 
   // Reflexos: o "interior" da estação gerado na hora (sem baixar nada), ver stationEnvironment().
@@ -71,12 +68,9 @@ export function LookRig({ lens }: { lens: Lens }) {
     gl.toneMappingExposure = LOOK.exposure;
   }, [gl]);
 
-  // Sombras: liga no renderizador e marca as malhas (de tempos em tempos, para as que chegam depois).
-  const shadows = LOOK.shadows && quality !== "leve";
+  // Paredes, avatares e o resto também projetam sombra (de tempos em tempos, para o que chega depois).
   useEffect(() => {
-    if (!shadows) return;
-    gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (!LOOK.shadows || quality === "leve") return;
     const mark = () => {
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
@@ -84,55 +78,15 @@ export function LookRig({ lens }: { lens: Lens }) {
         m.userData.lookShadow = true;
         const mats = Array.isArray(m.material) ? m.material : [m.material];
         const solid = mats.every((x) => !x.transparent && !(x as THREE.MeshBasicMaterial).isMeshBasicMaterial);
-        m.castShadow = solid && !m.name.startsWith("floor");
+        if (solid && !m.name.startsWith("floor")) m.castShadow = true;
         m.receiveShadow = true;
-        mats.forEach((x) => (x.needsUpdate = true));
       });
     };
     mark();
     const id = window.setInterval(mark, 2000);
     return () => window.clearInterval(id);
-  }, [gl, scene, shadows]);
-
-  const key = useRef<THREE.DirectionalLight | null>(null);
-  const offset = useRef(new THREE.Vector3());
-  useFrame(() => {
-    if (!shadows) return;
-    // A luz principal é a direcional mais forte da cena (ver SunLights em WorldScene.tsx).
-    if (!key.current) {
-      let best: THREE.DirectionalLight | null = null;
-      scene.traverse((o) => {
-        const l = o as THREE.DirectionalLight;
-        if (l.isDirectionalLight && l !== rim.current && (!best || l.intensity > best.intensity)) best = l;
-      });
-      if (!best) return;
-      const l = best as THREE.DirectionalLight;
-      key.current = l;
-      offset.current.copy(l.position).sub(l.target.position).normalize().multiplyScalar(40);
-      l.castShadow = true;
-      // Resolução da sombra pelo modo de qualidade (borda mais limpa no "alta").
-      const size = quality === "alta" ? 4096 : 2048;
-      l.shadow.mapSize.set(size, size);
-      const cam = l.shadow.camera;
-      // Área coberta pela sombra em volta de você (o 3D enxerga mais longe que o 2D).
-      const half = lens === "3d" ? 28 : 22;
-      cam.left = -half;
-      cam.right = half;
-      cam.top = half;
-      cam.bottom = -half;
-      cam.near = 1;
-      cam.far = 120;
-      cam.updateProjectionMatrix();
-      l.shadow.bias = -0.0004;
-      l.shadow.normalBias = 0.03;
-      l.shadow.radius = lens === "2d" ? 2 : 3;
-      scene.add(l.target);
-    }
-    const l = key.current;
-    l.target.position.set(self.x, 0, self.z);
-    l.position.copy(l.target.position).add(offset.current);
-  });
+  }, [scene, quality]);
 
   if (!LOOK.lights.rim) return null;
-  return <directionalLight ref={rim} position={[-30, 22, -26]} intensity={LOOK.lights.rim.intensity} color={LOOK.lights.rim.color} />;
+  return <directionalLight position={[-30, 22, -26]} intensity={LOOK.lights.rim.intensity} color={LOOK.lights.rim.color} />;
 }

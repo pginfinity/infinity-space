@@ -34,6 +34,8 @@ export default function Lens3D() {
         key={quality}
         dpr={dpr}
         gl={{ antialias: quality !== "leve", powerPreference: "high-performance" }}
+        // Sombras do Sol (refeitas só quando ele anda; ver SunLights). No modo leve, sem sombras.
+        shadows={quality === "leve" ? false : "percentage"}
         camera={{ fov: 50, near: 0.1, far: 3000, position: [0, 8, 14] }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;

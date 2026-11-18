@@ -154,5 +154,105 @@
       "drag": "Arraste",
       "hold": "segure"
     }
+  },
+  "espaco": {
+    "command": "Agora no espaço",
+    "commandHint": "Lua, Sol, meteoros, eclipses e planetas",
+    "title": "Agora no espaço",
+    "sub": "Estação a 400 km, sobre São Paulo",
+    "close": "Fechar",
+    "loading": "Calculando o céu…",
+    "footer": "Céu real de São Paulo, no relógio do servidor.",
+    "moon": {
+      "label": "Lua",
+      "lit": "{{pct}}% iluminada",
+      "nextFull": "Cheia em {{date}}",
+      "nextNew": "Nova em {{date}}",
+      "phases": {
+        "nova": "Lua nova",
+        "crescente": "Lua crescente",
+        "quartoCrescente": "Quarto crescente",
+        "gibosaCrescente": "Crescente gibosa",
+        "cheia": "Lua cheia",
+        "gibosaMinguante": "Minguante gibosa",
+        "quartoMinguante": "Quarto minguante",
+        "minguante": "Lua minguante"
+      }
+    },
+    "station": {
+      "label": "Estação",
+      "sun": "No Sol",
+      "shadow": "Na sombra da Terra",
+      "toShadow": "Entra na sombra às {{time}}",
+      "toLight": "Volta ao Sol às {{time}}"
+    },
+    "meteors": {
+      "label": "Meteoros",
+      "none": "Nenhuma chuva agora",
+      "next": "Próxima: {{name}}, pico em {{date}}",
+      "peakToday": "pico hoje",
+      "peakTomorrow": "pico amanhã",
+      "peakOn": "pico em {{date}}",
+      "peakWas": "pico foi em {{date}}",
+      "radiantUp": "Radiante em {{where}}, acima do horizonte",
+      "radiantDown": "Radiante em {{where}}, abaixo do horizonte: poucos agora",
+      "showers": {
+        "quadrantidas": "Quadrântidas",
+        "liridas": "Líridas",
+        "etaAquaridas": "Eta Aquáridas",
+        "perseidas": "Perseidas",
+        "orionidas": "Oriônidas",
+        "leonidas": "Leônidas",
+        "geminideas": "Geminídeas",
+        "ursideas": "Ursídeas"
+      },
+      "radiants": {
+        "quadrantidas": "Boieiro",
+        "liridas": "Lira",
+        "etaAquaridas": "Aquário",
+        "perseidas": "Perseu",
+        "orionidas": "Órion",
+        "leonidas": "Leão",
+        "geminideas": "Gêmeos",
+        "ursideas": "Ursa Menor"
+      }
+    },
+    "eclipse": {
+      "label": "Eclipses",
+      "solar": "Solar {{kind}}",
+      "lunar": "Lunar {{kind}}",
+      "now": "acontecendo agora",
+      "here": "visível daqui",
+      "notHere": "não visível daqui",
+      "kinds": {
+        "penumbral": "penumbral",
+        "partial": "parcial",
+        "annular": "anular",
+        "total": "total"
+      }
+    },
+    "planets": {
+      "label": "Planetas",
+      "names": {
+        "venus": "Vênus",
+        "marte": "Marte",
+        "jupiter": "Júpiter",
+        "saturno": "Saturno"
+      },
+      "up": "{{dir}}, {{alt}}°",
+      "low": "{{dir}}, rente à Terra",
+      "hidden": "atrás da Terra",
+      "glare": "perto do Sol"
+    },
+    "compass": [
+      "N",
+      "NE",
+      "L",
+      "SE",
+      "S",
+      "SO",
+      "O",
+      "NO"
+    ]
   }
 }

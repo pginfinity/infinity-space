@@ -19,6 +19,7 @@
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "3.2.2",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
+    "astronomy-engine": "2.1.19",
     "clsx": "^2.1.1",
     "i18next": "^27.1.2",
     "livekit-client": "^2.24.1",
