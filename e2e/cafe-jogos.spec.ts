@@ -27,7 +27,16 @@ interface Snap {
     stake?: number;
     lastHand?: { team: number; points: number; how: string } | null;
     lost?: [number, number];
+    table?: Play[];
+    prevTrick?: { cards: Play[] } | null;
   };
+}
+
+/** Carta na mesa do truco (`card` null = coberta, e quem olha não pode ver). */
+interface Play {
+  seat: number;
+  card: number | null;
+  covered?: boolean;
 }
 
 const snap = (page: Page, table: string) => page.evaluate((t) => (window as any).__infinity.store.getState().games[t] as Snap, table);
@@ -89,6 +98,10 @@ async function expectNoLeak(page: Page, table: string) {
   (g.state.hands ?? []).forEach((h, i) => {
     if (i !== seat) expect(h, `mão do lugar ${i} escondida de ${me}`).toBeNull();
   });
+  // Carta coberta: só quem jogou recebe a carta (sem mão de onze nestes testes).
+  for (const p of [...(g.state.table ?? []), ...(g.state.prevTrick?.cards ?? [])]) {
+    if (p.covered && p.seat !== seat) expect(p.card, `carta coberta do lugar ${p.seat} escondida de ${me}`).toBeNull();
+  }
 }
 
 test("Damas: captura obrigatória pelo painel, 2D e 3D", async ({ browser }) => {
@@ -278,6 +291,51 @@ test("Truco: mano a mano pelo painel (2D e 3D), com truco aceito e seis corrido"
   await settle(ana, 600);
   await panel(ana).screenshot({ path: `${SHOTS}/cafe-truco-painel.png` });
   await panel(carla).screenshot({ path: `${SHOTS}/cafe-truco-assistindo.png` });
+
+  // Carta coberta (segunda vaza): quem está na vez liga "Jogar coberta" e escolhe a carta.
+  // Quem cobriu vê qual foi; o outro e quem assiste recebem só as costas.
+  const coverer = await actor([ana, bruno], id);
+  const watcher = coverer === ana ? bruno : ana;
+  await waitAct(coverer, id);
+  const coverSeat = (await snap(coverer, id)).seats.indexOf(await selfId(coverer));
+  const hidden = (await snap(coverer, id)).state.hands![coverSeat]![0]!;
+  const beforeCover = (await snap(coverer, id)).state.moves;
+  await expect(panel(watcher).getByRole("button", { name: "Jogar coberta" })).toHaveCount(0);
+  await panel(coverer).getByRole("button", { name: "Jogar coberta" }).click();
+  await expect(panel(coverer).getByRole("button", { name: "Jogar coberta" })).toHaveAttribute("aria-pressed", "true");
+  await expect(panel(coverer).getByText("Escolha a carta que vai coberta.")).toBeVisible();
+  await settle(coverer, 400);
+  await panel(coverer).screenshot({ path: `${SHOTS}/cafe-truco-coberta-escolha.png` });
+  await panel(coverer).getByRole("region", { name: "Suas cartas" }).getByRole("button", { name: /^Cobrir / }).first().click();
+  await expect.poll(async () => (await snap(coverer, id)).state.moves, { timeout: 10_000 }).toBeGreaterThan(beforeCover);
+  expect((await snap(coverer, id)).state.table).toEqual([{ seat: coverSeat, card: hidden, covered: true }]);
+  await expect.poll(async () => (await snap(watcher, id)).state.table, { timeout: 10_000 }).toEqual([{ seat: coverSeat, card: null, covered: true }]);
+  await expect.poll(async () => (await snap(carla, id)).state.table, { timeout: 10_000 }).toEqual([{ seat: coverSeat, card: null, covered: true }]);
+  // No painel: quem cobriu vê as costas e a carta no cantinho; o outro, só as costas.
+  const coveredOn = (p: Page) => panel(p).locator("[data-truco-play][data-covered] canvas");
+  await expect(coveredOn(coverer)).toHaveCount(2);
+  await expect(coveredOn(watcher)).toHaveCount(1);
+  await expect(coveredOn(carla)).toHaveCount(1);
+  await expect(panel(coverer).getByRole("img", { name: /, coberta/ })).toBeVisible();
+  await expect(panel(watcher).getByRole("img", { name: /carta coberta/ })).toBeVisible();
+  for (const p of [ana, bruno, carla]) await expectNoLeak(p, id);
+  await settle(ana, 600);
+  await panel(coverer).screenshot({ path: `${SHOTS}/cafe-truco-coberta-painel.png` });
+  await panel(watcher).screenshot({ path: `${SHOTS}/cafe-truco-coberta-painel-outro.png` });
+  await panel(carla).screenshot({ path: `${SHOTS}/cafe-truco-coberta-assistindo.png` });
+  // No tampo, nas duas lentes, a coberta está de costas.
+  for (const p of [ana, bruno]) await p.keyboard.press("Escape");
+  await cam(bruno, 200, 1.25, 3);
+  // 2D com zoom máximo (e de volta depois, para as fotos seguintes).
+  await ana.mouse.move(720, 450);
+  for (let i = 0; i < 6; i++) await ana.mouse.wheel(0, -300);
+  await settle(bruno, 1500);
+  await ana.screenshot({ path: `${SHOTS}/cafe-truco-coberta-2d.png` });
+  // Recorte da mesa (a câmera do 2D segue a Ana, sentada nela).
+  await ana.screenshot({ path: `${SHOTS}/cafe-truco-coberta-2d-mesa.png`, clip: { x: 600, y: 260, width: 340, height: 220 } });
+  await bruno.screenshot({ path: `${SHOTS}/cafe-truco-coberta-3d.png` });
+  for (let i = 0; i < 6; i++) await ana.mouse.wheel(0, 300);
+  for (const p of [ana, bruno]) await openGame(p, id);
 
   // Joga a mão até o fim (cada um a primeira carta da mão): vale 3 para quem levar.
   for (let i = 0; i < 6 && (await snap(ana, id)).state.lastHand == null; i++) await playCard(await actor([ana, bruno], id));

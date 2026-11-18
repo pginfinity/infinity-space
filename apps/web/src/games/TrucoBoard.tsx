@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { TRUCO_RANKS, TRUCO_SUITS, TRUCO_TARGET, trucoRank, trucoSuit, trucoTeam, type TrucoPlay, type TrucoState } from "@infinity/world";
+import { EyeOff } from "lucide-react";
+import { TRUCO_RANKS, TRUCO_SUITS, TRUCO_TARGET, trucoCanCover, trucoRank, trucoSuit, trucoTeam, type TrucoPlay, type TrucoState } from "@infinity/world";
 import { seatPlayerName, sendGame, type Table } from "./api.ts";
 import { CardArt } from "./Art.tsx";
 import { FELT } from "./palette.ts";
@@ -49,9 +50,21 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
   const partner = me >= 0 && s.active.length === 4 ? s.active.find((x) => x !== me && s.teamOf[x] === myTeam) : undefined;
   const partnerHand = partner !== undefined ? s.hands[partner] : null;
 
+  // Carta coberta: da segunda vaza em diante, pelo botão "Jogar coberta" ou com Shift + clique na carta.
+  const canCover = myTurn && trucoCanCover(s);
+  const [covering, setCovering] = useState(false);
+  useEffect(() => setCovering(false), [s.moves, s.hand, canCover]);
+  const playCard = (i: number, e: MouseEvent) => {
+    const cover = canCover && (covering || e.shiftKey);
+    sendGame(t.table, "move", cover ? { play: i, cover: true } : { play: i });
+  };
+
   // Cartas na mesa: a vaza em andamento; com a mesa vazia, a última vaza (apagadinha), para dar tempo de ver.
   const showing: TrucoPlay[] = s.table.length ? s.table : (s.prevTrick?.cards ?? []);
   const fading = s.table.length === 0 && !!s.prevTrick;
+  // Para leitores de tela: o que está na mesa (a coberta aparece como "carta coberta" para quem não a jogou).
+  const who = (x: number) => (x === me ? S.you : nameOf(t, x));
+  const onTable = showing.map((p) => `${who(p.seat)}, ${p.card === null ? S.coveredCard : p.covered ? S.coveredOwn(cardName(p.card)) : cardName(p.card)}`);
 
   return (
     <div className="flex flex-col gap-2.5" data-truco>
@@ -61,7 +74,7 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
         className="relative aspect-[16/11] w-full overflow-hidden rounded-xl shadow-[inset_0_2px_14px_rgb(0_0_0/0.5)] ring-1 ring-offwhite/10"
         style={{ background: `radial-gradient(110% 90% at 50% 45%, ${FELT.center} 0%, ${FELT.edge} 100%)` }}
         role="img"
-        aria-label={`${S.trucoTable}${playing ? `: ${S.vira} ${cardName(s.vira)}, ${S.manilha(TRUCO_RANKS[s.manilha]!)}` : ""}`}
+        aria-label={`${S.trucoTable}${playing ? `: ${S.vira} ${cardName(s.vira)}, ${S.manilha(TRUCO_RANKS[s.manilha]!)}${onTable.length ? `. ${S.onTable}: ${onTable.join("; ")}` : ""}` : ""}`}
       >
         {playing && (
           <>
@@ -83,8 +96,15 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
                     animate={{ opacity: fading && !won ? 0.45 : 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3, ease: EASE }}
+                    data-truco-play={p.seat}
+                    data-covered={p.covered ? "" : undefined}
+                    data-face={p.covered ? "down" : "up"}
                   >
-                    <CardArt card={p.card} w={50} h={74} className={clsx("drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]", won && "rounded-[5px] shadow-[0_0_0_3px_rgb(0_183_255)]")} />
+                    {p.covered ? (
+                      <CoveredCard card={p.card} won={won} />
+                    ) : (
+                      <CardArt card={p.card} w={50} h={74} className={clsx("drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]", won && "rounded-[5px] shadow-[0_0_0_3px_rgb(0_183_255)]")} />
+                    )}
                   </motion.div>
                 );
               })}
@@ -94,7 +114,7 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
         {!playing && <p className="absolute inset-0 grid place-items-center text-xs text-offwhite/70">{S.trucoTable}</p>}
       </div>
 
-      {playing && <Actions t={t} me={me} myTeam={myTeam} canMove={canMove} myTurn={myTurn} teamName={teamName} />}
+      {playing && <Actions t={t} me={me} myTeam={myTeam} canMove={canMove} myTurn={myTurn} teamName={teamName} canCover={canCover} covering={covering} setCovering={setCovering} />}
 
       {playing && me >= 0 && (
         <section aria-label={S.trucoHand} className="flex flex-col gap-1.5">
@@ -102,22 +122,31 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
           <div className="flex items-end justify-center gap-2.5">
             {Array.from({ length: handCount }, (_, i) => {
               const card = hand?.[i] ?? null;
+              const name = card === null ? `${S.hiddenCard} ${i + 1}` : cardName(card);
+              const cover = canCover && covering;
               return (
                 <motion.button
                   key={`${s.hand}-${card ?? `x${i}`}`}
                   type="button"
                   disabled={!myTurn}
-                  onClick={() => sendGame(t.table, "move", { play: i })}
-                  aria-label={card === null ? `${S.hiddenCard} ${i + 1}` : cardName(card)}
+                  onClick={(e) => playCard(i, e)}
+                  aria-label={cover ? S.coverThis(name) : name}
+                  title={canCover && !covering ? S.coverShortcut : undefined}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, ease: EASE, delay: i * 0.05 }}
                   className={clsx(
-                    "rounded-[7px] outline-none transition-transform focus-visible:ring-2 focus-visible:ring-signal",
+                    "relative rounded-[7px] transition-transform focus-visible:ring-2 focus-visible:ring-signal",
                     myTurn ? "cursor-pointer hover:-translate-y-2" : "cursor-default",
+                    cover ? "outline-2 outline-offset-2 outline-dashed outline-signal/70" : "outline-none",
                   )}
                 >
-                  <CardArt card={card} w={66} h={98} className="drop-shadow-[0_6px_10px_rgb(0_0_0/0.4)]" />
+                  <CardArt card={card} w={66} h={98} className={clsx("drop-shadow-[0_6px_10px_rgb(0_0_0/0.4)] transition-opacity", cover && "opacity-80")} />
+                  {cover && (
+                    <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-space text-signal ring-1 ring-signal/60" aria-hidden>
+                      <EyeOff className="size-3" />
+                    </span>
+                  )}
                 </motion.button>
               );
             })}
@@ -137,6 +166,22 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
       )}
 
       {s.lastHand && <HandResult s={s} myTeam={myTeam} teamName={teamName} />}
+    </div>
+  );
+}
+
+/**
+ * Carta coberta na mesa: de costas para todo mundo. Quem pode vê-la (quem jogou; na mão de onze, também o
+ * parceiro) recebe a carta do servidor e a vê pequenininha encostada no canto, para lembrar qual foi.
+ */
+function CoveredCard({ card, won }: { card: number | null; won: boolean }) {
+  return (
+    <div className="relative">
+      <CardArt card={null} w={50} h={74} className={clsx("drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]", won && "rounded-[5px] shadow-[0_0_0_3px_rgb(0_183_255)]")} />
+      <span className="absolute inset-x-0 bottom-1.5 flex justify-center">
+        <span className="rounded-full bg-space/85 px-1.5 py-px text-[8.5px] font-semibold uppercase tracking-[0.1em] text-offwhite/90">{S.coveredTag}</span>
+      </span>
+      {card !== null && <CardArt card={card} w={30} h={44} className="absolute -right-4 -top-3 rotate-[10deg] drop-shadow-[0_2px_4px_rgb(0_0_0/0.45)]" />}
     </div>
   );
 }
@@ -203,8 +248,28 @@ function ScoreBar({ s, teamName, myTeam }: { s: TrucoState; teamName: (team: num
   );
 }
 
-/** O que dá para fazer agora: pedir truco, responder a um pedido, decidir a mão de onze. */
-function Actions({ t, me, myTeam, canMove, myTurn, teamName }: { t: Table<TrucoState>; me: number; myTeam: number; canMove: boolean; myTurn: boolean; teamName: (team: number) => string }) {
+/** O que dá para fazer agora: pedir truco, jogar coberta, responder a um pedido, decidir a mão de onze. */
+function Actions({
+  t,
+  me,
+  myTeam,
+  canMove,
+  myTurn,
+  teamName,
+  canCover,
+  covering,
+  setCovering,
+}: {
+  t: Table<TrucoState>;
+  me: number;
+  myTeam: number;
+  canMove: boolean;
+  myTurn: boolean;
+  teamName: (team: number) => string;
+  canCover: boolean;
+  covering: boolean;
+  setCovering: (on: boolean) => void;
+}) {
   const s = t.state;
   const send = (data: unknown) => sendGame(t.table, "move", data);
   let msg: ReactNode = null;
@@ -235,8 +300,29 @@ function Actions({ t, me, myTeam, canMove, myTurn, teamName }: { t: Table<TrucoS
   } else if (s.iron) {
     msg = S.iron;
   } else if (myTurn) {
-    msg = S.playCard;
-    if (s.eleven === null && s.stake < TRUCO_TARGET && s.raisedBy !== myTeam) buttons = <Primary onClick={() => send({ truco: true })}>{S.raiseName(s.stake < 3 ? 3 : s.stake + 3)}</Primary>;
+    msg = canCover && covering ? S.coverPick : S.playCard;
+    const raise = s.eleven === null && s.stake < TRUCO_TARGET && s.raisedBy !== myTeam;
+    if (canCover || raise)
+      buttons = (
+        <>
+          {canCover && (
+            <button
+              type="button"
+              aria-pressed={covering}
+              onClick={() => setCovering(!covering)}
+              title={S.coverHint}
+              className={clsx(
+                "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold ring-1 transition-colors",
+                covering ? "bg-signal/15 text-signal ring-signal/60" : "text-offwhite/90 ring-offwhite/20 hover:bg-offwhite/8",
+              )}
+            >
+              <EyeOff className="size-3.5" aria-hidden />
+              {S.cover}
+            </button>
+          )}
+          {raise && <Primary onClick={() => send({ truco: true })}>{S.raiseName(s.stake < 3 ? 3 : s.stake + 3)}</Primary>}
+        </>
+      );
   } else if (s.eleven !== null) {
     msg = `${S.eleven}: ${teamName(s.eleven)}`;
   }

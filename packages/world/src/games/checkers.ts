@@ -13,6 +13,12 @@ import { forfeitTwoSeats, type BaseState, type GameRules } from "./types.ts";
  * - Promove ao terminar o lance na última linha. Se passa pela última linha no meio de uma captura e a
  *   sequência continua, segue como pedra.
  * - Empate: 20 lances seguidos só de damas sem captura, ou a mesma posição pela terceira vez.
+ * - Finais especiais (regras oficiais, as mesmas da regra internacional), contra uma dama sozinha:
+ *   - 3 damas, 2 damas + 1 pedra ou 1 dama + 2 pedras: empate depois de 16 lances de cada lado;
+ *   - 2 damas, 1 dama + 1 pedra ou 1 dama: empate depois de 5 lances de cada lado.
+ *   A contagem começa quando a posição aparece e recomeça se a composição muda (captura ou promoção).
+ *   Enquanto ela vale, é ela que decide o empate por lances: a regra dos 20 lances fica de fora (senão os
+ *   20 lances só de damas acabariam antes com o final de 3 damas contra 1). A repetição continua valendo.
  * - Quem não tem lance (sem peças ou bloqueado) perde.
  */
 
@@ -21,6 +27,36 @@ export const CHECKERS_EMPTY = 0;
 export const CHECKERS_PIECE = { man0: 1, king0: 2, man1: 3, king1: 4 } as const;
 /** Lances seguidos só de damas, sem captura, que empatam a partida. */
 export const CHECKERS_KING_DRAW = 20;
+
+/** Finais especiais contra uma dama sozinha: [damas, pedras] do outro lado → lances de cada lado até o empate. */
+export const CHECKERS_ENDINGS: ReadonlyArray<{ kings: number; men: number; each: number }> = [
+  { kings: 3, men: 0, each: 16 },
+  { kings: 2, men: 1, each: 16 },
+  { kings: 1, men: 2, each: 16 },
+  { kings: 2, men: 0, each: 5 },
+  { kings: 1, men: 1, each: 5 },
+  { kings: 1, men: 0, each: 5 },
+];
+
+/** Final especial no tabuleiro: o lado mais forte (`strong`), o que ele tem e quantos lances de cada lado valem. */
+export interface CheckersEnding {
+  /** Lugar do lado com mais peças (no 1 dama contra 1 dama, o lugar 0). */
+  strong: number;
+  kings: number;
+  men: number;
+  /** Lances de cada lado até o empate (16 ou 5). */
+  each: number;
+  /** Composição das peças (muda com captura ou promoção, e a contagem recomeça). */
+  key: string;
+}
+
+/** Contagem de um final especial em andamento. */
+export interface CheckersEndgame {
+  /** Lances de cada lado até o empate (16 ou 5). */
+  each: number;
+  /** Lances já feitos (dos dois lados somados) desde que a posição apareceu. */
+  plies: number;
+}
 
 export interface CheckersMove {
   /** Casa de saída e cada casa onde a peça para (0 a 63, em ordem de leitura vista pelas Claras). */
@@ -39,6 +75,8 @@ export interface CheckersState extends BaseState {
   seen: Record<string, number>;
   /** Peças perdidas por cada lugar. */
   lost: [number, number];
+  /** Contagem do final especial (3 damas contra 1 e parecidos). null = não vale agora. */
+  endgame: CheckersEndgame | null;
 }
 
 /** Lance enviado pelo cliente: o caminho completo, da casa de saída à última parada. */
@@ -160,13 +198,41 @@ export function checkersStart(): number[] {
 
 const key = (board: readonly number[], turn: number) => `${board.join("")}${turn}`;
 
+/**
+ * Final especial no tabuleiro, ou null: um lado com uma dama sozinha e o outro com uma das composições
+ * de `CHECKERS_ENDINGS` (2 damas contra 2 damas, por exemplo, não entra: fica com a regra dos 20 lances).
+ */
+export function checkersEnding(board: readonly number[]): CheckersEnding | null {
+  const kings = [0, 0];
+  const men = [0, 0];
+  for (const p of board) {
+    const owner = checkersOwner(p);
+    if (owner < 0) continue;
+    if (checkersIsKing(p)) kings[owner]!++;
+    else men[owner]!++;
+  }
+  for (const strong of [0, 1]) {
+    const weak = strong === 0 ? 1 : 0;
+    if (kings[weak] !== 1 || men[weak] !== 0) continue;
+    const found = CHECKERS_ENDINGS.find((e) => e.kings === kings[strong] && e.men === men[strong]);
+    if (found) return { strong, kings: found.kings, men: found.men, each: found.each, key: `${kings[0]}.${men[0]}x${kings[1]}.${men[1]}` };
+  }
+  return null;
+}
+
+/** Lances que faltam para o empate do final especial, contados para quem está na vez (null = não vale). */
+export function checkersEndgameLeft(s: Pick<CheckersState, "endgame">): number | null {
+  if (!s.endgame) return null;
+  return Math.max(0, Math.ceil((s.endgame.each * 2 - s.endgame.plies) / 2));
+}
+
 export const checkers: GameRules<CheckersState> = {
   kind: "checkers",
   seats: 2,
 
   create() {
     const board = checkersStart();
-    return { turn: 0, winner: null, draw: false, over: false, reason: null, moves: 0, board, last: null, kingMoves: 0, seen: { [key(board, 0)]: 1 }, lost: [0, 0] };
+    return { turn: 0, winner: null, draw: false, over: false, reason: null, moves: 0, board, last: null, kingMoves: 0, seen: { [key(board, 0)]: 1 }, lost: [0, 0], endgame: null };
   },
 
   move(state, seat, data) {
@@ -196,10 +262,17 @@ export const checkers: GameRules<CheckersState> = {
     const seen = irreversible ? {} : { ...state.seen };
     seen[k] = (seen[k] ?? 0) + 1;
 
-    const next: CheckersState = { ...state, board, last: { path: legal.path, captured: legal.captured }, moves: state.moves + 1, turn: foe, kingMoves, seen, lost };
+    // Final especial: conta os lances desde que a composição apareceu; se mudou (captura, promoção), recomeça do zero.
+    const ending = checkersEnding(board);
+    const sameEnding = ending !== null && checkersEnding(state.board)?.key === ending.key;
+    const endgame: CheckersEndgame | null = ending ? { each: ending.each, plies: sameEnding ? (state.endgame?.plies ?? 0) + 1 : 0 } : null;
+
+    const next: CheckersState = { ...state, board, last: { path: legal.path, captured: legal.captured }, moves: state.moves + 1, turn: foe, kingMoves, seen, lost, endgame };
     if (checkersMoves(next).length === 0) return { ...next, over: true, winner: seat, reason: "nomoves" };
     if ((seen[k] ?? 0) >= 3) return { ...next, over: true, draw: true, reason: "repetition" };
-    if (kingMoves >= CHECKERS_KING_DRAW) return { ...next, over: true, draw: true, reason: "kings" };
+    if (endgame && endgame.plies >= endgame.each * 2) return { ...next, over: true, draw: true, reason: "endgame" };
+    // Com a contagem do final valendo, ela é quem decide (a regra dos 20 lances fica de fora).
+    if (!endgame && kingMoves >= CHECKERS_KING_DRAW) return { ...next, over: true, draw: true, reason: "kings" };
     return next;
   },
 

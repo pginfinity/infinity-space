@@ -4,6 +4,7 @@ import {
   TRUCO_RANKS,
   TRUCO_SUITS,
   truco,
+  trucoCanCover,
   trucoCard,
   trucoHandWinner,
   trucoManilha,
@@ -28,6 +29,20 @@ function play(s: TrucoState, seat: number, card: number): TrucoState {
   const next = truco.move(s, seat, { play: index }, 1234);
   if (!next) throw new Error(`carta recusada: lugar ${seat}, carta ${card}`);
   return next;
+}
+
+/** Joga a carta (pelo valor) virada para baixo. */
+function cover(s: TrucoState, seat: number, card: number): TrucoState {
+  const index = s.hands[seat]!.indexOf(card);
+  const next = truco.move(s, seat, { play: index, cover: true }, 1234);
+  if (!next) throw new Error(`coberta recusada: lugar ${seat}, carta ${card}`);
+  return next;
+}
+
+/** Mão de quatro montada à mão (duplas 0+2 contra 1+3). Vira 4 de ouros: manilha é o 5. Lugar 0 começa. */
+function deal4(h: [number[], number[], number[], number[]], vira = C("4", "ouros")): TrucoState {
+  const s = truco.create({ seated: [0, 1, 2, 3], seed: 1 });
+  return { ...s, hands: h, counts: h.map((x) => x.length), vira, manilha: trucoManilha(vira), turn: 0, lead: 0, dealer: 3, table: [], tricks: [], eleven: null, deciding: false, iron: false, acting: undefined, stake: 1 };
 }
 
 describe("Truco: começo", () => {
@@ -277,6 +292,196 @@ describe("Truco: mão de onze, mão de ferro e fim da partida", () => {
   it("abandono: a outra dupla vence", () => {
     const s = truco.create({ seated: [0, 1, 2, 3], seed: 3 });
     expect(truco.forfeit(s, 2, "left")).toMatchObject({ over: true, winners: [1, 3], quit: 2, reason: "left" });
+  });
+});
+
+describe("Truco: carta coberta", () => {
+  it("proibida na primeira vaza (nem quem abre nem quem responde); dados ruins são recusados", () => {
+    let s = deal2([C("3", "ouros"), C("7", "copas"), C("K", "espadas")], [C("2", "paus"), C("A", "copas"), C("4", "espadas")]);
+    expect(trucoCanCover(s)).toBe(false);
+    expect(truco.move(s, 0, { play: 0, cover: true })).toBeNull();
+    expect(truco.move(s, 0, { play: 0, cover: "sim" })).toBeNull();
+    s = play(s, 0, C("3", "ouros"));
+    expect(truco.move(s, 1, { play: 0, cover: true })).toBeNull();
+    // `cover: false` é carta aberta.
+    s = truco.move(s, 1, { play: 0, cover: false })!;
+    expect(s.tricks).toEqual([0]);
+    expect(s.prevTrick?.cards.every((p) => !p.covered)).toBe(true);
+    expect(trucoCanCover(s)).toBe(true);
+  });
+
+  it("sempre perde, até a manilha mais forte (zap) coberta contra um 4 aberto", () => {
+    const zap = C("5", "paus");
+    let s = deal2([C("3", "ouros"), zap, C("K", "espadas")], [C("2", "paus"), C("4", "copas"), C("4", "espadas")]);
+    s = play(s, 0, C("3", "ouros"));
+    s = play(s, 1, C("2", "paus"));
+    expect(s.tricks).toEqual([0]);
+    // Quem abre a vaza cobre o zap; o 4 aberto leva.
+    s = cover(s, 0, zap);
+    expect(s.table).toEqual([{ seat: 0, card: zap, covered: true }]);
+    expect(s.hands[0]).not.toContain(zap);
+    expect(s.counts[0]).toBe(1);
+    s = play(s, 1, C("4", "copas"));
+    expect(s.tricks).toEqual([0, 1]);
+    expect(s.prevTrick).toEqual({ cards: [{ seat: 0, card: zap, covered: true }, { seat: 1, card: C("4", "copas") }], team: 1, seat: 1 });
+    expect(s.turn).toBe(1);
+    // Terceira vaza normal decide.
+    s = play(s, 1, C("4", "espadas"));
+    s = play(s, 0, C("K", "espadas"));
+    expect(s.score).toEqual([1, 0]);
+  });
+
+  it("não empata com ninguém: 4 aberto contra 4 coberto, ganha o aberto (e cobrir respondendo também perde)", () => {
+    let s = deal2([C("3", "ouros"), C("4", "copas"), C("K", "espadas")], [C("2", "paus"), C("4", "espadas"), C("A", "copas")]);
+    s = play(s, 0, C("3", "ouros"));
+    s = play(s, 1, C("2", "paus"));
+    s = play(s, 0, C("4", "copas"));
+    s = cover(s, 1, C("4", "espadas"));
+    // Aberto, seria empate (4 contra 4); coberto, a vaza e a mão são da dupla 0.
+    expect(s.score).toEqual([1, 0]);
+    expect(s.lastHand).toMatchObject({ team: 0, how: "tricks" });
+  });
+
+  it("em quatro: um aberto e todos os outros cobertos, o aberto leva (mesmo sendo um 4)", () => {
+    const h: [number[], number[], number[], number[]] = [
+      [C("K", "ouros"), C("4", "copas"), C("4", "paus")],
+      [C("Q", "copas"), C("3", "copas"), C("6", "paus")],
+      [C("J", "espadas"), C("7", "ouros"), C("6", "espadas")],
+      [C("7", "espadas"), C("2", "copas"), C("7", "paus")],
+    ];
+    let s = deal4(h);
+    s = play(s, 0, C("K", "ouros"));
+    s = play(s, 1, C("Q", "copas"));
+    s = play(s, 2, C("J", "espadas"));
+    s = play(s, 3, C("7", "espadas"));
+    expect(s.tricks).toEqual([0]);
+    expect(s.turn).toBe(0);
+    s = play(s, 0, C("4", "copas"));
+    s = cover(s, 1, C("3", "copas"));
+    s = cover(s, 2, C("7", "ouros"));
+    s = cover(s, 3, C("2", "copas"));
+    // Duas vazas da dupla 0: a mão acaba.
+    expect(s.score).toEqual([1, 0]);
+    expect(s.lastHand).toMatchObject({ team: 0, points: 1, how: "tricks" });
+  });
+
+  it("empate de cartas abertas continua empate com as outras cobertas; a primeira vaza ganha decide a mão", () => {
+    const h: [number[], number[], number[], number[]] = [
+      [C("K", "ouros"), C("3", "ouros"), C("4", "paus")],
+      [C("Q", "copas"), C("3", "copas"), C("6", "paus")],
+      [C("J", "espadas"), C("7", "ouros"), C("6", "espadas")],
+      [C("7", "espadas"), C("2", "copas"), C("7", "paus")],
+    ];
+    let s = deal4(h);
+    s = play(s, 0, C("K", "ouros"));
+    s = play(s, 1, C("Q", "copas"));
+    s = play(s, 2, C("J", "espadas"));
+    s = play(s, 3, C("7", "espadas"));
+    s = play(s, 0, C("3", "ouros"));
+    s = play(s, 1, C("3", "copas"));
+    s = cover(s, 2, C("7", "ouros"));
+    s = cover(s, 3, C("2", "copas"));
+    // 3 contra 3 de duplas diferentes: a vaza empata (o 2 coberto não leva nada); a dupla 0 ganhou a primeira.
+    expect(s.lastHand).toMatchObject({ team: 0, points: 1, how: "tricks" });
+    expect(trucoTrick(
+      [
+        { seat: 0, card: C("3", "ouros") },
+        { seat: 1, card: C("3", "copas") },
+        { seat: 2, card: C("7", "ouros"), covered: true },
+        { seat: 3, card: C("2", "copas"), covered: true },
+      ],
+      trucoManilha(C("4", "ouros")),
+      [0, 1, 0, 1],
+    )).toEqual({ team: -1, seat: 0 });
+  });
+
+  it("todas cobertas: a vaza empata e quem a começou começa a próxima", () => {
+    // Primeira vaza empatada (3 contra 3); na segunda os dois cobrem: segue empatado e a terceira decide.
+    let s = deal2([C("3", "ouros"), C("7", "copas"), C("K", "espadas")], [C("3", "copas"), C("A", "copas"), C("4", "espadas")]);
+    s = play(s, 0, C("3", "ouros"));
+    s = play(s, 1, C("3", "copas"));
+    expect(s.tricks).toEqual([-1]);
+    s = cover(s, 0, C("7", "copas"));
+    s = cover(s, 1, C("A", "copas"));
+    expect(s.tricks).toEqual([-1, -1]);
+    expect(s.prevTrick).toMatchObject({ team: -1, seat: null });
+    expect(s).toMatchObject({ lead: 0, turn: 0 });
+    s = play(s, 0, C("K", "espadas"));
+    s = play(s, 1, C("4", "espadas"));
+    expect(s.score).toEqual([1, 0]);
+    // Ganhou a primeira e cobriram tudo na segunda: a mão é de quem ganhou a primeira.
+    let t = deal2([C("3", "ouros"), C("7", "copas"), C("K", "espadas")], [C("2", "copas"), C("A", "copas"), C("4", "espadas")]);
+    t = play(t, 0, C("3", "ouros"));
+    t = play(t, 1, C("2", "copas"));
+    t = cover(t, 0, C("7", "copas"));
+    t = cover(t, 1, C("A", "copas"));
+    expect(t.score).toEqual([1, 0]);
+    expect(trucoTrick([{ seat: 3, card: 5, covered: true }, { seat: 0, card: 9, covered: true }], 1, [0, 1, 0, 1])).toEqual({ team: -1, seat: 3 });
+  });
+
+  it("mão de ferro: não se cobre (as cartas já vão às cegas)", () => {
+    let s = trucoWithScore(truco.create({ seated: [0, 1], seed: 2 }), [11, 11]);
+    expect(s.iron).toBe(true);
+    s = truco.move(s, s.turn, { play: 0 })!;
+    s = truco.move(s, s.turn, { play: 0 })!;
+    expect(s.tricks).toHaveLength(1);
+    expect(trucoCanCover(s)).toBe(false);
+    expect(truco.move(s, s.turn, { play: 0, cover: true })).toBeNull();
+    expect(truco.move(s, s.turn, { play: 0 })).not.toBeNull();
+  });
+
+  it("escondida: só quem cobriu vê a carta, na mesa, na vaza fechada e no fim da partida", () => {
+    // Placar 10 a 4 com truco aceito: a mão vale 3 e acaba a partida.
+    let s = { ...deal2([C("4", "paus"), C("2", "copas"), C("3", "ouros")], [C("A", "copas"), C("6", "copas"), C("K", "espadas")]), score: [10, 4] as [number, number] };
+    s = truco.move(s, 0, { truco: true })!;
+    s = truco.move(s, 1, { answer: "accept" })!;
+    s = play(s, 0, C("4", "paus"));
+    s = play(s, 1, C("A", "copas"));
+    s = play(s, 1, C("6", "copas"));
+    s = play(s, 0, C("2", "copas"));
+    expect(s.tricks).toEqual([1, 0]);
+    s = play(s, 0, C("3", "ouros"));
+    s = cover(s, 1, C("K", "espadas"));
+    expect(s).toMatchObject({ over: true, winners: [0], score: [12, 4] });
+    const hidden = { seat: 1, card: null, covered: true };
+    expect(truco.view!(s, 1).prevTrick?.cards[1]).toEqual({ seat: 1, card: C("K", "espadas"), covered: true });
+    expect(truco.view!(s, 0).prevTrick?.cards).toEqual([{ seat: 0, card: C("3", "ouros") }, hidden]);
+    expect(truco.view!(s, -1).prevTrick?.cards[1]).toEqual(hidden);
+    // A visão não mexe no estado do servidor.
+    expect(s.prevTrick?.cards[1]?.card).toBe(C("K", "espadas"));
+
+    // Na mesa, antes de fechar a vaza.
+    let t = deal2([C("3", "ouros"), C("7", "copas"), C("K", "espadas")], [C("2", "paus"), C("A", "copas"), C("4", "espadas")]);
+    t = play(t, 0, C("3", "ouros"));
+    t = play(t, 1, C("2", "paus"));
+    t = cover(t, 0, C("7", "copas"));
+    expect(truco.view!(t, 0).table).toEqual([{ seat: 0, card: C("7", "copas"), covered: true }]);
+    expect(truco.view!(t, 1).table).toEqual([{ seat: 0, card: null, covered: true }]);
+    expect(truco.view!(t, -1).table).toEqual([{ seat: 0, card: null, covered: true }]);
+    expect(JSON.stringify(truco.view!(t, 1))).not.toContain('"seed"');
+  });
+
+  it("mão de onze: pode cobrir; o parceiro da dupla com 11 (que já viu a mão) vê a carta, a outra dupla não", () => {
+    const h: [number[], number[], number[], number[]] = [
+      [C("K", "ouros"), C("3", "ouros"), C("4", "paus")],
+      [C("Q", "copas"), C("3", "copas"), C("6", "paus")],
+      [C("J", "espadas"), C("7", "ouros"), C("6", "espadas")],
+      [C("7", "espadas"), C("2", "copas"), C("7", "paus")],
+    ];
+    let s: TrucoState = { ...deal4(h), score: [11, 5], eleven: 0, stake: 3 };
+    s = play(s, 0, C("K", "ouros"));
+    s = play(s, 1, C("Q", "copas"));
+    s = play(s, 2, C("J", "espadas"));
+    s = play(s, 3, C("7", "espadas"));
+    s = cover(s, 0, C("4", "paus"));
+    const card = C("4", "paus");
+    expect(truco.view!(s, 0).table[0]?.card).toBe(card);
+    expect(truco.view!(s, 2).table[0]?.card).toBe(card);
+    expect(truco.view!(s, 1).table[0]?.card).toBeNull();
+    expect(truco.view!(s, 3).table[0]?.card).toBeNull();
+    expect(truco.view!(s, -1).table[0]?.card).toBeNull();
+    // Fora da mão de onze, nem o parceiro vê.
+    expect(truco.view!({ ...s, eleven: null }, 2).table[0]?.card).toBeNull();
   });
 });
 
