@@ -603,11 +603,19 @@ export function buildStationMap(): MapDef {
   b.put("sofa", -2.55, 16.2, W, { zoneId: cafe.id, color: "#6B4A32", interact: { point: { x: -2.55, z: 16.2 }, yaw: W, radius: 1.6, action: "sit", seatHeight: 0.42, label: "Sentar", more: [{ x: -2.55, z: 15.45 }, { x: -2.55, z: 16.95 }] } });
   b.put("coffee-table", -3.9, 16.2, E, { zoneId: cafe.id });
   b.onWall("neon-sign", 12, -9.6, S, { zoneId: cafe.id, text: "CAFÉ", accent: s.cafe.accent });
-  b.put("plant-tall", -2.5, 12.6, N, { zoneId: cafe.id, variant: 1 });
+  // (ao lado da porta: no canto nordeste ela tapava o mural de fotos no 2D e o "Regar" disputava o E dele)
+  b.put("plant-tall", -8.2, 12.55, N, { zoneId: cafe.id, variant: 1 });
   // pacote grupo: cavalete do Stop (Adedonha), ponto de entrada do jogo no Café
   b.put("stop-board", -4.4, 13.25, S, { zoneId: cafe.id, label: "Stop", interact: { point: { x: -4.4, z: 14.1 }, yaw: N, radius: 1.7, action: "use", label: "Jogar Stop" } });
   // pacote vivo: quadro de giz com o contador do dia, embaixo do neon
   b.put("chalkboard", -9.6, 12.6, S, { zoneId: cafe.id, label: "Quadro da copa" });
+  // pacote escritorio: mural de fotos da cabine, na parede norte, à direita do Stop (virado para o sul,
+  // aparece no 2D). O ponto do E fica a mais de 1,7 m do ponto do Stop: cada um ganha na sua frente.
+  b.onWall("photo-wall", 12, -3.05, S, {
+    zoneId: cafe.id,
+    label: "Mural de fotos",
+    interact: { point: { x: -3.05, z: 13.0 }, yaw: N, radius: 1.7, action: "use", label: "Ver fotos" },
+  });
 
   // ── Gestão & Projetos (Ordenar) ─────────────────────────────────────────────────────
   const ges = b.room("gestao", "Gestão & Projetos", "open", rect(-2, 9, 12, 22), s.gestao, { team: "Gestão & Projetos" });

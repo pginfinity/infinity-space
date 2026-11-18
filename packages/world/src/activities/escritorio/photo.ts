@@ -5,7 +5,8 @@ import type { EscVec3 } from "./common.ts";
 /**
  * Cabine de fotos do Marketing Studio (fundo infinito + ring light + câmera no tripé).
  * Alguém dispara o timer; no fim, cada participante gera a foto no próprio navegador, do ponto
- * de vista da câmera, com a moldura da marca. Nada de imagem guardada no servidor.
+ * de vista da câmera, com a moldura da marca. A imagem só vai para o servidor se alguém do grupo
+ * puser a foto no mural da copa (ver photowall.ts).
  */
 
 export const PHOTO_ID = "cabine";
@@ -30,9 +31,11 @@ export interface PhotoCountdown {
   ms: number;
 }
 
-/** Evento "shot" (para todos): quem sai na foto (e recebe a imagem). */
+/** Evento "shot" (para todos): quem sai na foto (e recebe a imagem) e o id do disparo. */
 export interface PhotoShot {
   ids: string[];
+  /** Id do disparo: o bilhete do mural (evento "ticket") vale para esta foto. */
+  shot: string;
 }
 
 export interface PhotoRig {

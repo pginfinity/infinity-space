@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, MessageCircleMore, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Timer, Trash2, Trophy, Tv } from "lucide-react";
+import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Images, MessageCircleMore, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Timer, Trash2, Trophy, Tv } from "lucide-react";
 import { TV_SCREEN, type MapObject, type ObjectType, type Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 
@@ -38,6 +38,7 @@ const DEFS: GuideDef[] = [
   { key: "deploy", label: "Botão de deploy", hint: "Lança um foguete", group: "Escritório", icon: Rocket, types: ["big-button"] },
   { key: "mural", label: "Mural de recados", hint: "Post-its para o time", group: "Escritório", icon: StickyNote, types: ["notice-board"] },
   { key: "cabine", label: "Cabine de fotos", hint: "Foto da turma", group: "Escritório", icon: Camera, types: ["camera-tripod"] },
+  { key: "mural-fotos", label: "Mural de fotos", hint: "As fotos da cabine, na copa", group: "Escritório", icon: Images, types: ["photo-wall"] },
   { key: "foco", label: "Mesa de foco", hint: "Pomodoro em grupo, em silêncio", group: "Escritório", icon: Timer, types: ["focus-table"] },
   { key: "copa", label: "Copa", hint: "Café, chá, suco e pipoca", group: "Estação", icon: Coffee, types: ["coffee-machine"] },
   { key: "plantas", label: "Estação de rega", hint: "As plantas precisam de você", group: "Estação", icon: Droplets, types: ["watering-station"] },

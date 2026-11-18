@@ -64,10 +64,11 @@ Depois disso, cada push na `main` que passar na verificação (typecheck, testes
 
 ## 6. Backups e manutenção
 
-- Backup diário do volume `dados` (contas, mural, plantas, rankings, gravações pendentes), guardado por 14 dias, com cópia fora da VPS. Ex.: `docker run --rm -v infinity-space_dados:/d -v /backup:/b alpine tar czf /b/dados-$(date +%F).tgz -C /d .`
+- Backup diário do volume `dados` (contas, mural, plantas, rankings, gravações pendentes e as fotos do mural da copa em `fotos-copa/`, no máximo 12 JPEG, poucos MB), guardado por 14 dias, com cópia fora da VPS. Ex.: `docker run --rm -v infinity-space_dados:/d -v /backup:/b alpine tar czf /b/dados-$(date +%F).tgz -C /d .`
 - O certificado do TURN (Let's Encrypt, emitido pelo Caddy) renova a cada ~60 dias e o LiveKit só lê na partida: reiniciar o LiveKit uma vez por semana (cron: `docker compose -f /opt/infinity-space/deploy/docker-compose.yml restart livekit`), de madrugada.
 - Atualizações de segurança automáticas do Ubuntu (`unattended-upgrades`).
 - Monitoramento simples de disponibilidade (ex.: UptimeRobot grátis) em `https://space.ai-infinity.io/health`.
+- Fotos do mural da copa (`/api/mural-fotos/<id>.jpg`): o servidor responde com `Cache-Control: private`, então a Cloudflare não guarda cópia (com o login ligado, só quem tem sessão vê). Não criar regra de cache para `/api/*` na Cloudflare. O envio aceita até 2 MB por foto (o Caddy não limita o corpo por padrão).
 
 ## 7. Gravação das reuniões no Google Drive
 

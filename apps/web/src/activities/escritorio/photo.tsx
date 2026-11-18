@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
 import { AnimatePresence, motion } from "motion/react";
-import { Camera, Download, X } from "lucide-react";
+import { Camera, Check, Download, ImageUp, LoaderCircle, X } from "lucide-react";
 import { useFrame, useThree, type RootState } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -16,6 +16,7 @@ import {
   type PhotoRig,
   type PhotoShot,
   type PhotoState,
+  type PhotoTicket,
   type Vec2,
 } from "@infinity/world";
 import { actState, sendAct, type ActivityClient, type DynamicTarget } from "../registry.ts";
@@ -29,18 +30,20 @@ import { objectMatrix } from "../../scene/furniture/index.ts";
 import { deferScene, focusSoon, nameOf, useEscape } from "./shared.tsx";
 import { noise, tone } from "./synth.ts";
 import { T } from "./strings.ts";
+import { postToWall, saveTicket, useWallPost } from "./photoUpload.ts";
 
 /**
  * Cabine de fotos do Marketing Studio. Perto do tripé (ou já na frente do fundo), E liga o timer
  * de 5 s para todo mundo na cabine. No fim, cada participante gera no próprio navegador a foto do
  * ponto de vista da câmera (render fora da tela, estilo 3D, 1600×1200) com a moldura da marca, e
- * pode baixar o PNG. Nenhuma imagem vai para o servidor.
+ * pode baixar o PNG ou pôr no mural da copa (photoUpload.ts). Só nesse caso a imagem vai para o
+ * servidor, e ela é só a cena: avatares e móveis, sem câmera nem tela de ninguém (ver renderView).
  */
 
 interface PhotoUi {
   countdown: { name: string; start: number; ms: number; key: number } | null;
   flash: number;
-  photo: { url: string; file: string; names: string } | null;
+  photo: { url: string; file: string; names: string; shot: string } | null;
   busy: boolean;
 }
 const usePhotoUi = create<PhotoUi>(() => ({ countdown: null, flash: 0, photo: null, busy: false }));
@@ -101,7 +104,10 @@ export const photoBooth: ActivityClient = {
         sfx("photo-shutter", { at: r.tripod, range: 12, volume: 0.8 });
       }
       const me = useApp.getState().selfId;
-      if (me && d.ids.includes(me)) void develop(r, d.ids);
+      if (me && d.ids.includes(me)) void develop(r, d.ids, d.shot);
+    } else if (e.ev === "ticket") {
+      const d = e.data as PhotoTicket;
+      if (typeof d?.shot === "string" && typeof d.ticket === "string") saveTicket(d.shot, d.ticket);
     }
   },
   Overlay: PhotoOverlay,
@@ -157,9 +163,11 @@ function renderView(r: PhotoRig): Uint8Array | null {
   cam.lookAt(r.camera.target.x, r.camera.target.y, r.camera.target.z);
   cam.updateMatrixWorld();
   // O tripé fica entre a câmera virtual e a turma: sai da foto (e o brilho do flash também).
+  // Privacidade: nada de vídeo de verdade na foto (uma TV com a tela de alguém, por exemplo), porque
+  // ela pode ir para o mural da copa. Hoje nenhuma tela aparece no quadro, mas a regra não depende disso.
   const hidden: THREE.Object3D[] = [];
   scene.traverse((o) => {
-    if (o.visible && (o.name.startsWith("mobilia:camera-tripod:") || o.name === "cabine:brilho")) hidden.push(o);
+    if (o.visible && (o.name.startsWith("mobilia:camera-tripod:") || o.name === "cabine:brilho" || hasVideo(o))) hidden.push(o);
   });
   for (const o of hidden) o.visible = false;
   // Paredes inteiras na foto (o 2D corta a altura; o 3D vaza em volta de você).
@@ -191,8 +199,16 @@ function renderView(r: PhotoRig): Uint8Array | null {
   }
 }
 
+/** A malha mostra vídeo (câmera ou tela compartilhada)? */
+function hasVideo(o: THREE.Object3D): boolean {
+  const mesh = o as THREE.Mesh;
+  if (!mesh.isMesh || !mesh.material) return false;
+  for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if ((m as THREE.MeshBasicMaterial).map instanceof THREE.VideoTexture) return true;
+  return false;
+}
+
 /** Revela a foto: render + moldura da marca (estrela oficial, "Infinity Space", lugar e data). */
-async function develop(r: PhotoRig, ids: string[]): Promise<void> {
+async function develop(r: PhotoRig, ids: string[], shot: string): Promise<void> {
   usePhotoUi.setState({ busy: true });
   try {
     // Espera o flash (e um quadro) para todo mundo estar parado na pose.
@@ -249,7 +265,7 @@ async function develop(r: PhotoRig, ids: string[]): Promise<void> {
     if (old) URL.revokeObjectURL(old.url);
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
-    usePhotoUi.setState({ photo: { url: URL.createObjectURL(blob), file: `infinity-space-${stamp}.png`, names } });
+    usePhotoUi.setState({ photo: { url: URL.createObjectURL(blob), file: `infinity-space-${stamp}.png`, names, shot } });
   } catch (err) {
     console.error("[cabine] não deu para gerar a foto:", err);
     toast(T.photo.failed);
@@ -359,18 +375,64 @@ function PhotoCard({ photo }: { photo: NonNullable<PhotoUi["photo"]> }) {
           <X className="size-4" />
         </button>
       </div>
-      <img src={photo.url} alt={T.photo.alt(photo.names)} className="max-h-[62vh] w-full rounded-lg object-contain shadow-2xl" />
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={close} className="rounded-xl px-3 py-2 text-sm text-slate hover:bg-offwhite/8 hover:text-offwhite">
+      <img src={photo.url} alt={T.photo.alt(photo.names)} className="max-h-[58vh] w-full rounded-lg object-contain shadow-2xl" />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" onClick={close} className="mr-auto rounded-xl px-3 py-2 text-sm text-slate hover:bg-offwhite/8 hover:text-offwhite">
           {T.close}
         </button>
+        <WallButton photo={photo} />
         <a ref={link} href={photo.url} download={photo.file} className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2 text-sm font-semibold text-offwhite hover:brightness-110">
           <Download className="size-4" aria-hidden />
           {T.photo.download}
         </a>
       </div>
+      <WallNote shot={photo.shot} />
     </motion.div>
   );
+}
+
+/** "Pôr no mural da copa": só aparece para quem tem o bilhete desta foto (quem saiu nela). */
+function WallButton({ photo }: { photo: NonNullable<PhotoUi["photo"]> }) {
+  const ticket = useWallPost((s) => s.tickets[photo.shot]);
+  const status = useWallPost((s) => s.posts[photo.shot]?.status);
+  if (!ticket) return null;
+  const base = "flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium";
+  if (status === "posted" || status === "group") {
+    return (
+      <span className={`${base} text-offwhite/85`} role="status">
+        <Check className="size-4 text-ok" aria-hidden />
+        {status === "posted" ? T.photo.onWall : T.photo.onWallGroup}
+      </span>
+    );
+  }
+  const sending = status === "sending";
+  return (
+    <button
+      type="button"
+      onClick={() => void postToWall(photo.shot, photo.url)}
+      disabled={sending}
+      aria-busy={sending}
+      className={`${base} border border-offwhite/15 text-offwhite hover:bg-offwhite/8 disabled:opacity-70`}
+    >
+      {sending ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <ImageUp className="size-4" aria-hidden />}
+      {sending ? T.photo.sending : T.photo.toWall}
+    </button>
+  );
+}
+
+/** Embaixo dos botões: o que acontece no mural (antes de enviar) ou o erro do envio. */
+function WallNote({ shot }: { shot: string }) {
+  const ticket = useWallPost((s) => s.tickets[shot]);
+  const post = useWallPost((s) => s.posts[shot]);
+  if (!ticket || post?.status === "posted" || post?.status === "group") return null;
+  if (post?.status === "error") {
+    return (
+      <p className="text-right text-xs text-danger" role="alert">
+        {T.photo.wallErrors[post.error ?? "mural"] ?? T.photo.wallErrors.mural}
+      </p>
+    );
+  }
+  return <p className="text-right text-[11px] text-slate">{T.photo.toWallHint}</p>;
 }
 
 // ---- no mundo: brilho do ring light -------------------------------------------------------

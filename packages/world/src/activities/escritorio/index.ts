@@ -10,3 +10,4 @@ export * from "./board.ts";
 export * from "./plane.ts";
 export * from "./greet.ts";
 export * from "./photo.ts";
+export * from "./photowall.ts";
