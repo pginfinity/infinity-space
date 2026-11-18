@@ -52,6 +52,29 @@ if (uSee > 0.5) {
   material.customProgramCacheKey = () => `wall:${key}`;
 }
 
+/**
+ * Sombra das paredes: cortada na mesma altura da parede desenhada. No 2D (paredes baixinhas), uma
+ * parede de 1 m não projeta a sombra de uma de 2,8 m, que aparecia no chão sem nada que a explicasse.
+ * A parte vazada do 3D (em volta da linha câmera → avatar) continua fazendo sombra: a parede está lá.
+ */
+let wallDepth: THREE.MeshDepthMaterial | null = null;
+function wallShadow(): THREE.MeshDepthMaterial {
+  if (wallDepth) return wallDepth;
+  const m = new THREE.MeshDepthMaterial();
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uCut = wallUniforms.uCut;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying float vWallY;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWallY = (modelMatrix * vec4(transformed, 1.0)).y;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nvarying float vWallY;\nuniform float uCut;")
+      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vWallY > uCut) discard;");
+  };
+  m.customProgramCacheKey = () => "wall-shadow";
+  wallDepth = m;
+  return m;
+}
+
 /** Caixa alinhada ao segmento da parede, deslocada `offset` metros para a esquerda (normal (d.z, -d.x)). */
 function box(w: Wall, height: number, thickness: number, baseY: number, offset: number, from = 0, to = 1): THREE.BufferGeometry {
   const dx = w.b.x - w.a.x;
@@ -123,6 +146,7 @@ export function buildWalls(map: MapDef): THREE.Group {
     const m = lit({ color }, false, { rough: 0.88 });
     patch(m, `solid:${color}`, true);
     const mesh = new THREE.Mesh(merged, m);
+    mesh.customDepthMaterial = wallShadow();
     mesh.name = `wall:${color}`;
     group.add(mesh);
   }
@@ -140,6 +164,7 @@ export function buildWalls(map: MapDef): THREE.Group {
     const m = lit({ color: "#C9D2DE" }, false, { rough: 0.35, metal: 0.6 });
     patch(m, "frame", false);
     const mesh = new THREE.Mesh(frameMerged, m);
+    mesh.customDepthMaterial = wallShadow();
     mesh.name = "frames";
     group.add(mesh);
   }

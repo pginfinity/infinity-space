@@ -78,12 +78,14 @@ export function LookRig() {
         m.userData.lookShadow = true;
         const mats = Array.isArray(m.material) ? m.material : [m.material];
         const solid = mats.every((x) => !x.transparent && !(x as THREE.MeshBasicMaterial).isMeshBasicMaterial);
-        if (solid && !m.name.startsWith("floor")) m.castShadow = true;
+        // (pisos e tapetes só recebem: rente ao chão, só fariam "acne" na sombra)
+        if (solid && !m.name.startsWith("floor") && !m.name.startsWith("mobilia:rug")) m.castShadow = true;
         m.receiveShadow = true;
       });
     };
     mark();
-    const id = window.setInterval(mark, 2000);
+    // A cada segundo: quem acabou de entrar já chega com sombra.
+    const id = window.setInterval(mark, 1000);
     return () => window.clearInterval(id);
   }, [scene, quality]);
 

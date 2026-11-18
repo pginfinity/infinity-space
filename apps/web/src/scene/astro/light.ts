@@ -3,14 +3,16 @@ import type { Sky, Vec3 } from "./astro.ts";
 /**
  * Luz principal do escritório a partir do céu real (módulo puro).
  *
- * - A direção vem do Sol de verdade, visto da estação. Quando o Sol está abaixo do plano do piso
- *   (mas ainda acima da borda da Terra), a luz entra rasante pelas bordas: a altura é limitada a
- *   MIN_ELEVATION para o piso continuar iluminado, com sombras compridas; o rumo continua o real.
+ * - A direção vem do Sol de verdade, visto da estação: o rumo é sempre o real. A altura tem um mínimo
+ *   (MIN_ELEVATION): com o Sol baixo (ou abaixo do plano do piso, ainda acima da borda da Terra), a
+ *   luz entra pelas janelas do alto. Assim o piso continua iluminado e a sombra de uma pessoa fica
+ *   presa aos pés, com no máximo ~1,4 vez a altura dela (com o Sol rasante real, passava de 4 vezes e
+ *   a sombra parecia solta, longe de quem a projeta).
  * - Perto da borda da Terra a luz atravessa a atmosfera: fica dourada, depois laranja, e mais fraca.
  * - Na sombra da Terra a luz do Sol some e o escritório fica só com as luzes internas, mais quentes.
  */
 
-export const MIN_ELEVATION = 14;
+export const MIN_ELEVATION = 35;
 
 export interface OfficeLight {
   /** Direção de onde vem a luz principal (unitário, cena). */

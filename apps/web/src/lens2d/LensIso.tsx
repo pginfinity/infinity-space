@@ -24,7 +24,7 @@ const MAX_ZOOM = 96;
 const WALL_CUT = 1.0;
 
 export default function LensIso() {
-  // Sombras do Sol também no 2D (baratas: o mapa só é refeito quando o Sol anda); no modo leve, sem.
+  // Sombras do Sol também no 2D (quadro só em volta do que se vê, refeito a cada quadro; ver SunLights); no modo leve, sem.
   const shadows = useQuality((s) => s.mode) !== "leve";
   useEffect(() => {
     wallUniforms.uCut.value = WALL_CUT;
