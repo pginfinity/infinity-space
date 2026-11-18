@@ -2,7 +2,7 @@
 
 O escritório precisa ter coisa para fazer em todo canto, sem parecer genérico. Tudo aqui funciona igual no 2D e no 3D, com estado no servidor (todo mundo vê a mesma coisa) e, quando faz sentido, salvo de um dia para o outro.
 
-## Situação (16/11/2026)
+## Situação (18/11/2026)
 
 Pronto e integrado (base em `docs/atividades.md`):
 
@@ -18,6 +18,10 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Reuniões:** gravação da sala com envio ao Google Drive.
 - **Primeiros passos:** na primeira entrada o Orbi se apresenta, vai até a pessoa e acompanha uma lista que se marca sozinha (andar, usar com E, microfone, chat, achar alguém, mapa, 2D/3D). Tecla ? abre todos os atalhos; dá para rever pela busca, pelos ajustes ou pelo menu Mais.
 - **Jukebox:** 10 faixas originais geradas com a ElevenLabs (`scripts/music.mjs`, duas versões de cada; a escolhida fica em `apps/web/public/music`). A versão generativa continua de reserva se um arquivo faltar.
+
+- **Espaço vivo em tempo real:** estação a 400 km sobre São Paulo; Sol, Lua com a fase real, planetas, estrelas reais e Via Láctea; Terra da NASA com dia, noite e luzes das cidades; meteoros nas datas reais (iguais para todos) e eclipses; a luz do escritório vem do Sol de verdade e some na sombra da Terra. Painel "Agora no espaço" no Ctrl+K.
+- **Homenagens (easter eggs):** 12 referências discretas a filmes e séries, com arte original (2001, Interestelar, Matrix, Plataforma 9¾, "me venda esta caneta", Chaves, lámen, Soprano, De Volta para o Futuro às 22:04, Konami, Mapa do Maroto, frases do Orbi). Onde fica cada uma: bloco "Homenagens" em `packages/world/src/map/estacao.ts`.
+- **Visual Cinema** (oficial): luz física, sombras do Sol, reflexos e gradação de cor; modo "leve" nos ajustes.
 
 Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no mural da copa.
 
