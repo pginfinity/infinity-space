@@ -467,7 +467,8 @@ export function buildStationMap(): MapDef {
   b.put("plant", -16.6, -3.4, N, { zoneId: ecl.id, variant: 1 });
   b.put("plant", -16.6, 8.4, N, { zoneId: ecl.id, variant: 2 });
   b.put("plant-tall", -25.4, 8.4, N, { zoneId: ecl.id });
-  b.put("plant-tall", -25.4, -3.4, N, { zoneId: ecl.id });
+  // (longe do quadro branco: colada nele, quem ia regar recebia "Desenhe e adivinhe")
+  b.put("plant-tall", -25.4, 0.6, N, { zoneId: ecl.id });
 
   // ── Marketing Studio (Visualizar) ───────────────────────────────────────────────────
   const mkt = b.room("marketing", "Marketing Studio", "open", rect(-16, -5, -4, 9), s.marketing, { team: "Marketing & Criação" });
@@ -660,9 +661,10 @@ export function buildStationMap(): MapDef {
   // ── Jogos de mesa do café: damas, dominó e truco ────────────────────────────────────
   // No vão livre entre a mesa alta e as mesinhas bistrô, com passagem dos dois lados de cada mesa.
   // Dominó e truco são para quatro (parceiros frente a frente); damas, para dois.
-  b.gameTable4("domino-table", -9.3, 18.1, "cafe-domino-1", cafe.id, "#C68A4A");
-  b.gameTable("checkers-table", -7.05, 18.1, "z", "cafe-damas-1", cafe.id);
-  b.gameTable4("cards-table", -4.8, 18.1, "cafe-truco-1", cafe.id, "#C68A4A");
+  // (afastadas da geladeira: com a cadeira oeste do dominó a 0,8 m, quem ia pegar suco recebia "Sentar e jogar")
+  b.gameTable4("domino-table", -8.7, 18.1, "cafe-domino-1", cafe.id, "#C68A4A");
+  b.gameTable("checkers-table", -6.45, 18.1, "z", "cafe-damas-1", cafe.id);
+  b.gameTable4("cards-table", -4.2, 18.1, "cafe-truco-1", cafe.id, "#C68A4A");
 
   // pacote portas: uma porta no vão de cada sala fechada (reunião, suítes e cabines de foco).
   // `rot` aponta de dentro para fora; `size.w` é a largura do vão; variante 1 = folha de vidro.
