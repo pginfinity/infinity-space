@@ -5,6 +5,7 @@ import { yawOf } from "@infinity/world";
 import { setWallView } from "../scene/wallFacing.ts";
 import { SPACE } from "../world/theme.ts";
 import { WorldScene } from "../scene/WorldScene.tsx";
+import { LookPost } from "../scene/look/LookPost.tsx";
 import { wallUniforms } from "../scene/walls.ts";
 import { self } from "../world/registry.ts";
 import { setHeading, walkTo } from "../engine/movement.ts";
@@ -45,6 +46,7 @@ export default function LensIso() {
       >
         <WorldScene lens="2d" />
         <IsoRig />
+        <LookPost lens="2d" />
       </Canvas>
     </div>
   );

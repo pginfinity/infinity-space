@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { WALL_THICKNESS, type MapDef, type Wall } from "@infinity/world";
+import { lit } from "./materials.ts";
 
 /**
  * Paredes com a cor de cada sala em cada face, vidro, e janelas para o espaço no casco.
@@ -119,7 +120,7 @@ export function buildWalls(map: MapDef): THREE.Group {
     const merged = mergeGeometries(list, false);
     list.forEach((g) => g.dispose());
     if (!merged) continue;
-    const m = new THREE.MeshToonMaterial({ color });
+    const m = lit({ color }, false);
     patch(m, `solid:${color}`, true);
     const mesh = new THREE.Mesh(merged, m);
     mesh.name = `wall:${color}`;
@@ -136,7 +137,7 @@ export function buildWalls(map: MapDef): THREE.Group {
   }
   const frameMerged = mergeGeometries(frames, false);
   if (frameMerged) {
-    const m = new THREE.MeshToonMaterial({ color: "#C9D2DE" });
+    const m = lit({ color: "#C9D2DE" }, false);
     patch(m, "frame", false);
     const mesh = new THREE.Mesh(frameMerged, m);
     mesh.name = "frames";

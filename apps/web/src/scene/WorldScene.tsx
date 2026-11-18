@@ -9,14 +9,17 @@ import { Space } from "./Space.tsx";
 import { ScreenTVs } from "./ScreenTVs.tsx";
 import { HearingRing } from "./HearingRing.tsx";
 import { ActivitiesScene } from "../activities/index.tsx";
+import { LookRig } from "./look/LookRig.tsx";
+import { LOOK } from "./look/looks.ts";
 
 /** O mundo: luzes, espaço, estação e pessoas. A lente só muda a câmera e o tratamento da imagem. */
 export function WorldScene({ lens }: { lens: Lens }) {
   return (
     <>
       <SunLights />
-      <directionalLight position={[-24, 18, -16]} intensity={0.35} color="#8FD0FF" />
-      <ambientLight intensity={0.18} />
+      <directionalLight position={[-24, 18, -16]} intensity={0.35 * LOOK.lights.sky} color="#8FD0FF" />
+      <ambientLight intensity={0.18 * LOOK.lights.ambient} />
+      <LookRig lens={lens} />
       <Space />
       <Station lens={lens} />
       <Avatars />
@@ -32,7 +35,9 @@ export function WorldScene({ lens }: { lens: Lens }) {
 /** Só em desenvolvimento: expõe o renderizador para medir desempenho (chamadas de desenho, triângulos). */
 function DevProbe() {
   const gl = useThree((s) => s.gl);
-  (window as unknown as { __infinityGl?: unknown }).__infinityGl = gl;
+  const scene = useThree((s) => s.scene);
+  (window as unknown as { __infinityGl?: unknown; __infinityScene?: unknown }).__infinityGl = gl;
+  (window as unknown as { __infinityScene?: unknown }).__infinityScene = scene;
   return null;
 }
 
@@ -75,9 +80,12 @@ function SunLights() {
     if (state.clock.elapsedTime - last.current < 60 || !key.current || !sky.current) return;
     last.current = state.clock.elapsedTime;
     const l = officeLight(sunAt().altitude);
-    key.current.color.copy(l.color);
-    key.current.intensity = l.intensity;
-    sky.current.intensity = l.sky;
+    // Prévias de visual (look/looks.ts) multiplicam ou trocam as cores; no visual atual, nada muda.
+    key.current.color.copy(LOOK.lights.keyColor ? new THREE.Color(LOOK.lights.keyColor) : l.color);
+    key.current.intensity = l.intensity * LOOK.lights.key;
+    sky.current.intensity = l.sky * LOOK.lights.sky;
+    if (LOOK.lights.skyColor) sky.current.color.set(LOOK.lights.skyColor);
+    if (LOOK.lights.groundColor) sky.current.groundColor.set(LOOK.lights.groundColor);
   });
   return (
     <>

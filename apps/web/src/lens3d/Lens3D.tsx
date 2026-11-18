@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
+import { LookPost } from "../scene/look/LookPost.tsx";
 import * as THREE from "three";
 import { SPACE } from "../world/theme.ts";
 import { WorldScene } from "../scene/WorldScene.tsx";
@@ -55,6 +56,7 @@ export default function Lens3D() {
         )}
         <WorldScene lens="3d" />
         <CameraRig />
+        <LookPost lens="3d" />
         <WarmUp onReady={() => setReadyFor(quality)} />
       </Canvas>
       {!ready && (

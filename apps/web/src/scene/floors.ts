@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { FloorStyle, MapDef } from "@infinity/world";
+import { lit } from "./materials.ts";
 
 /**
  * Pisos com textura desenhada em canvas (carpete, tábuas, ladrilho, mármore, neon).
@@ -149,7 +150,7 @@ export function buildFloors(map: MapDef): THREE.Group {
     const tex = floorTexture(style);
     const material = SPECS[style].emissive
       ? new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })
-      : new THREE.MeshToonMaterial({ map: tex, gradientMap: null });
+      : lit({ map: tex }, false);
     const mesh = new THREE.Mesh(merged, material);
     mesh.name = `floor:${style}`;
     mesh.receiveShadow = true;
