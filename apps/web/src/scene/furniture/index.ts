@@ -16,6 +16,7 @@ import * as escritorio from "./escritorio.ts";
 import * as vivo from "./vivo.ts";
 import * as arcade from "./arcade.ts";
 import * as easter from "./easter.ts";
+import * as foco from "./foco.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -138,6 +139,8 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   barrel: easter.barrel,
   "ramen-bowl": easter.ramenBowl,
   "duck-family": easter.duckFamily,
+  // pacote foco
+  "focus-table": foco.focusTable,
 };
 
 // ---- mobília montada na cena (para as atividades mudarem o visual de uma cópia) ----------------
