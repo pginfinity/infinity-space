@@ -10,5 +10,6 @@
   "greet-toast": { "prompt": "Two glass champagne flutes clinking in a toast, bright ringing tone, short", "seconds": 1 },
   "greet-hug": { "prompt": "Soft warm cozy whoosh with a gentle bell, like a cartoon hug, heartwarming, very short", "seconds": 0.9 },
   "photo-tick": { "prompt": "Camera self-timer tick, small electronic blip, dry", "seconds": 0.2 },
-  "photo-shutter": { "prompt": "Classic camera shutter click with a short flash charge whine, crisp and clean", "seconds": 0.5 }
+  "photo-shutter": { "prompt": "Classic camera shutter click with a short flash charge whine, crisp and clean", "seconds": 0.5 },
+  "photowall-pin": { "prompt": "Small wooden clothespin snapping onto a printed photo hanging on a twine line, short crisp click and soft paper flutter", "seconds": 0.5 }
 }

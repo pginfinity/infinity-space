@@ -29,6 +29,7 @@ O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(thi
 
 - **Um jogo por vez:** jogos com lugar implementam `seatLabel`, `inMatchFor` e `releaseSeat`, e chamam `host.claimSeat(id, this)` antes de sentar alguém: quem estava só esperando em outro jogo sai de lá; quem está no meio de uma partida recebe um aviso (`host.notify`). Jogo de grupo também pode entrar na regra: a Palavra secreta trata "estar na mesa" como lugar (no lobby, sai sozinha se a pessoa for jogar outra coisa; com a vez rolando, não larga).
 - **Persistência:** `host.store.get(chave, padrão)` e `host.store.set(chave, valor)`. A chave começa pelo pacote (`"escritorio/gongo"`). Os arquivos JSON vão para `DATA_DIR`, que fica fora do Git.
+- **Arquivos (imagens):** o WebSocket só leva estado pequeno. O mural de fotos da copa recebe a imagem por HTTP (`escritorio/photowall-http.ts`, montado no `index.ts` do servidor) com um bilhete que a própria atividade deu pelo WebSocket; guarda numa subpasta de `DATA_DIR` (`host.store.dir`) e serve com cache `private`. Use como modelo.
 - **Atalhos de teste:** operações `dev-*` (ex.: `dev-skip` da mesa de foco, que pula para o fim da fase) só valem fora de produção (`NODE_ENV !== "production"`, que o Dockerfile define). Use para não esperar 25 minutos num teste de ponta a ponta.
 - **Limite:** cada pessoa manda no máximo 90 pedidos por segundo para as atividades.
 - **Rótulos na cena:** use o `Html` de `apps/web/src/scene/Html.tsx`, não o do drei (o do drei quebrava a troca de lente com `removeChild`).

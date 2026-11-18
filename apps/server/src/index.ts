@@ -7,6 +7,9 @@ import { WebSocketServer } from "ws";
 import { OfficeRoom } from "./room.ts";
 import { Accounts } from "./auth/accounts.ts";
 import { AUTH_REQUIRED, PUBLIC_URL, authRoutes, sessionIdFromCookie } from "./auth/routes.ts";
+import { PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
+import { photoWallRoutes } from "./activities/escritorio/photowall-http.ts";
+import type { PhotoWallActivity } from "./activities/escritorio/photowall.ts";
 
 const PORT = Number(process.env.PORT ?? 2567);
 const HOST = process.env.HOST ?? "0.0.0.0";
@@ -19,6 +22,15 @@ room.start();
 const app = new Hono();
 const accounts = new Accounts(room.store);
 app.route("/api", authRoutes(accounts, { removed: (email) => room.disconnectEmail(email) }));
+// Mural de fotos da copa: envio da foto da cabine e as imagens (ver activities/escritorio/photowall-http.ts).
+app.route(
+  PHOTOWALL_API,
+  photoWallRoutes({
+    wall: () => room.acts.get(PHOTOWALL_ID) as PhotoWallActivity | undefined,
+    sessionEmail: (c) => accounts.sessionEmail(sessionIdFromCookie(c.req.header("cookie"))) ?? undefined,
+    authRequired: AUTH_REQUIRED,
+  }),
+);
 app.get("/health", (c) => c.json({ ok: true, online: room.size, uptime: Math.round((Date.now() - startedAt) / 1000) }));
 app.all("/api/*", (c) => c.json({ error: "não encontrado" }, 404));
 // Produção: o próprio servidor entrega o app compilado (apps/web/dist), com cache longo nos arquivos com hash.

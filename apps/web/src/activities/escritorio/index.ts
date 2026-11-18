@@ -6,6 +6,7 @@ import { deploy } from "./deploy.tsx";
 import { noticeBoard } from "./board.tsx";
 import { greet } from "./greet.tsx";
 import { photoBooth } from "./photo.tsx";
+import { photoWall } from "./photowall.tsx";
 
 /** Pacote "escritorio": interações sociais do escritório. */
 registerActivity(gong);
@@ -15,3 +16,4 @@ registerActivity(deploy);
 registerActivity(noticeBoard);
 registerActivity(greet);
 registerActivity(photoBooth);
+registerActivity(photoWall);

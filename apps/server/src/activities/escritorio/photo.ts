@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import {
   PHOTO_COOLDOWN_MS,
   PHOTO_COUNTDOWN_MS,
@@ -11,16 +12,24 @@ import {
   type PhotoRig,
   type PhotoShot,
   type PhotoState,
+  type PhotoTicket,
   type Vec2,
 } from "@infinity/world";
 import type { Activity, ActivityHost } from "../types.ts";
 
+/** Quem dá os bilhetes do mural da copa (ver photowall.ts). */
+export interface PhotoTickets {
+  issue(shot: string, ids: readonly string[]): Map<string, string>;
+}
+
 /**
  * Cabine de fotos: alguém perto do tripé (ou já no quadro) dispara o timer; no fim, o servidor
- * diz quem saiu na foto e cada um gera a imagem no próprio navegador. Nenhuma imagem passa por aqui.
+ * diz quem saiu na foto e cada um gera a imagem no próprio navegador. A imagem não passa por aqui:
+ * quem saiu na foto recebe um bilhete para, se quiser, pôr a foto no mural da copa (por HTTP).
  *
  * Operações: `start`.
- * Eventos: `countdown` PhotoCountdown (todos), `shot` PhotoShot (todos).
+ * Eventos: `countdown` PhotoCountdown (todos), `shot` PhotoShot (todos), `ticket` PhotoTicket
+ * (só para cada pessoa que saiu na foto).
  */
 export class PhotoActivity implements Activity {
   readonly id = PHOTO_ID;
@@ -33,6 +42,7 @@ export class PhotoActivity implements Activity {
   constructor(
     private readonly host: ActivityHost,
     private readonly now: () => number = Date.now,
+    private readonly tickets?: PhotoTickets,
   ) {
     const backdrop = host.objects("backdrop")[0];
     const tripod = host.objects("camera-tripod")[0];
@@ -69,6 +79,10 @@ export class PhotoActivity implements Activity {
     this.phase = "idle";
     this.readyAt = now + PHOTO_COOLDOWN_MS;
     this.host.changed(this);
-    this.host.event(this, "shot", { ids: photoParticipants(this.rig, people) } satisfies PhotoShot);
+    const ids = photoParticipants(this.rig, people);
+    const shot = randomBytes(6).toString("hex");
+    this.host.event(this, "shot", { ids, shot } satisfies PhotoShot);
+    if (!this.tickets) return;
+    for (const [id, ticket] of this.tickets.issue(shot, ids)) this.host.event(this, "ticket", { shot, ticket } satisfies PhotoTicket, { to: [id] });
   }
 }

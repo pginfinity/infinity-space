@@ -30,8 +30,16 @@ export function sessionIdFromCookie(header: string | undefined): string | undefi
   return undefined;
 }
 
+/** Pedido que muda algo vindo do próprio app? (proteção contra CSRF, além do SameSite) */
+export function sameAppOrigin(origin: string | undefined): boolean {
+  return !origin || origin === PUBLIC_URL || (!SECURE && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
+}
+
+/** IP de quem pediu (atrás do Caddy e da Cloudflare), para limites de frequência. */
+export const clientIp = (c: Context): string => c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") ?? "local";
+
 /** Limite simples por chave: N tentativas por janela. */
-class Limiter {
+export class Limiter {
   private readonly hits = new Map<string, number[]>();
   constructor(
     private readonly max: number,
@@ -61,15 +69,11 @@ export function authRoutes(accounts: Accounts, events: AuthEvents): Hono {
   const byIp = new Limiter(20, 15 * 60 * 1000);
 
   const sessionEmail = (c: Context) => accounts.sessionEmail(getCookie(c, COOKIE));
-  const ip = (c: Context) => c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") ?? "local";
+  const ip = clientIp;
 
   // Pedidos que mudam algo só valem vindos do próprio app (proteção contra CSRF, além do SameSite).
   app.use("*", async (c, next) => {
-    if (c.req.method !== "GET" && c.req.method !== "HEAD") {
-      const origin = c.req.header("origin");
-      const ok = !origin || origin === PUBLIC_URL || (!SECURE && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
-      if (!ok) return c.json({ error: "origem" }, 403);
-    }
+    if (c.req.method !== "GET" && c.req.method !== "HEAD" && !sameAppOrigin(c.req.header("origin"))) return c.json({ error: "origem" }, 403);
     await next();
   });
 

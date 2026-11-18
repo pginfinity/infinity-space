@@ -11,7 +11,8 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Mesas:** check-in até a meia-noite, mesas fixas (admin), até 3 objetos pessoais na mesa e recado deixado na mesa.
 - **Rituais:** daily na Sala Eclipse (antes Órbita e Lua, agora uma sala só, com duas entradas e mesa de conferência para 20): roda sorteada, cronômetro suave, passa-a-vez.
 
-- **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos.
+- **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos e mural de fotos da copa.
+- **Mural de fotos da copa:** depois da foto na cabine do Marketing, quem saiu nela pode pôr a foto no mural do Café & Copa (parede norte, à direita do Stop). As fotos ficam penduradas em varais, nas duas lentes; perto do mural, E abre a galeria (foto grande, data, baixar, tirar do mural). No máximo 12: as mais antigas saem. Qualquer pessoa perto do mural tira uma foto. Privacidade: a foto é só o render da cena (avatares e móveis); o render esconde qualquer malha com vídeo (câmera ou tela de alguém numa TV), então não leva imagem real de ninguém e não pede consentimento. Só quem saiu na foto recebe o bilhete para enviar (uma foto por disparo, vale 15 min); junto da imagem fica só a data e os nomes já impressos na moldura, nunca quem enviou.
 - **Estação viva:** itens na mão, copa (café, chá, água, suco, pipoca) com contador do dia, plantas que murcham e estação de rega, Orbi (robô mascote), jukebox com fila, telescópio, prancha flutuante.
 - **Jogos de mesa do café:** damas, dominó (2 a 4) e truco (2 ou 4), com a partida ao vivo no tampo. Cada pessoa recebe do servidor só a própria mão; quem assiste vê quantas pedras ou cartas cada um tem.
 - **Arcade:** tabuleiros ao vivo nas mesas, jogo da velha, hockey de mesa e pingue-pongue em tempo real, 3 fliperamas originais com ranking (Faxina Orbital, Cauda de Cometa, Estilhaço), bolinha de papel com recorde do dia, sinuca.
@@ -25,8 +26,6 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Visual Cinema** (oficial): luz física, sombras do Sol, reflexos e gradação de cor; modo "leve" nos ajustes.
 - **Mesa de foco (Pomodoro compartilhado):** mesa de quatro lugares no corredorzinho Foco. Quem senta entra no ciclo do grupo (25 min de foco, 5 de pausa, 15 a cada 4 focos), com um relógio só, no servidor; quem chega no meio entra no ciclo em andamento. Anel de progresso sobre a mesa nas duas lentes, chip no HUD para quem está sentado, som suave na troca de fase e status "Foco" automático durante o foco. Pausar, retomar e reiniciar só quando todos os sentados concordam; mesa vazia zera. Nada é contado nem guardado por pessoa.
 - **TV do lounge (assistir junto):** no lounge do Átrio, alguém cola um link do YouTube e todos que estão lá veem o mesmo vídeo no mesmo ponto (o player se ajusta quando fica mais de 1,5 s fora do tempo). Fila simples; play, pausa, ±10 s, próximo e trocar para quem está no lounge. O vídeo aparece num painel do HUD (youtube-nocookie); a TV do mundo mostra "Assistindo junto", o título e o progresso. Volume próprio (começa em 35%), abaixa sozinho quando alguém que você ouve fala e só toca no lounge. O servidor guarda só o id do vídeo e o título, em memória.
-
-Ainda não: foto do grupo no mural da copa.
 
 ## Jogos
 
@@ -60,6 +59,7 @@ Ainda não: foto do grupo no mural da copa.
 | **Aviãozinho de papel** | Escreva um recado e lance: o avião voa pelo escritório até a pessoa. |
 | **Mural de recados (Átrio)** | Post-its que ficam no mural para todos, com reações. |
 | **Cabine de fotos (Marketing)** | Foto do grupo posando, que vai para o mural de fotos da copa. |
+| **Mural de fotos (Café & Copa)** | As fotos da cabine penduradas em varais, com galeria para ver, baixar e tirar do mural. |
 | **Telescópio (janela)** | Câmera cinematográfica olhando a Terra. |
 | **Jukebox** | Fila de músicas compartilhada, ouvida por proximidade, com trilhas próprias geradas para a Infinity. |
 | **TV do lounge** | Assistir vídeo do YouTube junto, sincronizado, num happy hour: link colado no painel da TV, fila e controles para quem está no lounge. |

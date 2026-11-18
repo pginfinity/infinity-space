@@ -337,7 +337,7 @@ describe("cabine de fotos", () => {
     expect(host.last("shot")).toBeUndefined();
     now += 10;
     act.tick();
-    expect(host.last("shot")?.data).toEqual({ ids: ["a", "b"] });
+    expect(host.last("shot")?.data).toEqual({ ids: ["a", "b"], shot: expect.stringMatching(/^[0-9a-f]{12}$/) });
     expect(act.snapshot().phase).toBe("idle");
   });
 });
