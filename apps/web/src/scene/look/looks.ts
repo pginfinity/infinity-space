@@ -187,7 +187,7 @@ const CINEMA: Look = {
   id: "cinema",
   name: "Cinema realista",
   material: "standard",
-  roughness: 0.42,
+  roughness: 0.65,
   lights: { key: 1.5, sky: 0.22, ambient: 0.06, keyColor: "#FFE0BC", skyColor: "#C4D2EA", groundColor: "#1E2532", rim: { color: "#8EC5FF", intensity: 0.22 } },
   shadows: true,
   env: 0.16,
