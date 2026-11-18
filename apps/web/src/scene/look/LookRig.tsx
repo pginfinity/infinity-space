@@ -5,6 +5,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import type { Lens } from "@infinity/world";
 import { self } from "../../world/registry.ts";
 import { LOOK } from "./looks.ts";
+import { useQuality } from "../quality.ts";
 
 /**
  * Luz e ambiente da prévia de visual (ver looks.ts): reflexos de ambiente, luz de recorte, exposição
@@ -15,6 +16,7 @@ export function LookRig({ lens }: { lens: Lens }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const rim = useRef<THREE.DirectionalLight>(null);
+  const quality = useQuality((s) => s.mode);
 
   // Reflexos: um "estúdio" neutro gerado na hora (sem baixar nada).
   useEffect(() => {
@@ -74,7 +76,9 @@ export function LookRig({ lens }: { lens: Lens }) {
       key.current = l;
       offset.current.copy(l.position).sub(l.target.position).normalize().multiplyScalar(40);
       l.castShadow = true;
-      l.shadow.mapSize.set(2048, 2048);
+      // Resolução da sombra pelo modo de qualidade (borda mais limpa no "alta").
+      const size = quality === "leve" ? 1024 : quality === "alta" ? 4096 : 2048;
+      l.shadow.mapSize.set(size, size);
       const cam = l.shadow.camera;
       cam.left = -22;
       cam.right = 22;
@@ -85,7 +89,7 @@ export function LookRig({ lens }: { lens: Lens }) {
       cam.updateProjectionMatrix();
       l.shadow.bias = -0.0004;
       l.shadow.normalBias = 0.03;
-      l.shadow.radius = lens === "2d" ? 2 : 4;
+      l.shadow.radius = lens === "2d" ? 2 : 3;
       scene.add(l.target);
     }
     const l = key.current;

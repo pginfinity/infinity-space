@@ -71,6 +71,55 @@ export const ovalTable: ModelFn = ({ b, color }) => {
   notepad(b, -0.5, H, -0.6, 0.3, C.gold);
 };
 
+/**
+ * Mesa de conferência para 20 pessoas (Sala Eclipse), desenhada no tamanho real (1,8 × 7,6 m) para
+ * os detalhes não esticarem: 9 lugares de cada lado e um em cada ponta. No centro do tampo, o eclipse
+ * marchetado (disco escuro com a coroa na cor da sala); por baixo da borda, um filete de luz.
+ */
+export const conferenceTable: ModelFn = ({ b, color, accent }) => {
+  const W = 1.8;
+  const D = 7.6;
+  const H = 0.76;
+  const acc = accent ?? C.signal;
+  const top = color ?? C.cream;
+  // tampo e o "sanduíche" de madeira por baixo
+  b.plate(top, W, D, 0.055, 0, H - 0.055, 0, { r: 0.78 });
+  b.plate(C.woodLight, W - 0.07, D - 0.07, 0.04, 0, H - 0.09, 0, { r: 0.74 });
+  // faixa central escura (vidro) com o eclipse no meio
+  b.plate(C.navy, 0.42, D - 1.9, 0.006, 0, H, 0, { r: 0.18 });
+  b.slab(mix(acc, C.offwhite, 0.35), ellipse(0.98, 0.98), 0.006, 0, H + 0.004, 0, { curve: 48 });
+  b.slab(acc, ellipse(0.9, 0.9), 0.006, 0, H + 0.008, 0, { curve: 48 });
+  b.slab(T.navySoft, ellipse(0.78, 0.78), 0.006, 0, H + 0.012, 0, { curve: 48 });
+  b.slab(C.ink, ellipse(0.7, 0.7), 0.006, 0, H + 0.016, 0, { curve: 40 });
+  // filete de luz sob as bordas longas
+  for (const s of [-1, 1]) b.box(lit(acc), 0.012, 0.012, D - 1.9, s * (W / 2 - 0.09), H - 0.115, 0, { r: 0 });
+  // três pés (pedestais) com sapata
+  for (const z of [-2.6, 0, 2.6]) {
+    b.box(C.navy, 0.86, H - 0.13, 0.11, 0, (H - 0.13) / 2 + 0.03, z, { r: 0.04 });
+    b.box(C.navy, 1.04, 0.05, 0.26, 0, 0.025, z, { r: 0.022 });
+  }
+  b.box(C.navy, 0.12, 0.08, D - 2.4, 0, H - 0.13, 0, { r: 0.03 });
+  // caixas de tomada e viva-vozes ao longo da faixa
+  for (const z of [-2.2, 2.2]) {
+    b.box(C.graphite, 0.18, 0.03, 0.4, 0, H + 0.016, z, { r: 0.012 });
+    for (const dz of [-0.11, 0, 0.11]) b.box(lit(dz === 0 ? C.orange : C.signal), 0.06, 0.008, 0.05, 0, H + 0.033, z + dz, { r: 0 });
+  }
+  for (const z of [-3.1, -1.15, 1.15, 3.1]) speakerPuck(b, 0, H + 0.006, z);
+  // lugares: blocos, canecas e garrafinhas em alguns (não em todos, para parecer usado)
+  const seats = [-3.2, -2.4, -1.6, -0.8, 0, 0.8, 1.6, 2.4, 3.2];
+  seats.forEach((z, i) => {
+    for (const s of [-1, 1]) {
+      const k = (i * 7 + (s > 0 ? 3 : 0)) % 5;
+      const x = s * 0.56;
+      if (k === 0 || k === 3) notepad(b, x, H, z, s * 0.15 + (k === 3 ? 0.3 : -0.2), k === 3 ? C.orange : C.navy);
+      if (k === 1) mug(b, x + s * 0.1, H, z + 0.12, i % 2 ? C.offwhite : C.orange, s);
+      if (k === 2) bottle(b, x + s * 0.12, H, z - 0.1);
+    }
+  });
+  tinyPlant(b, 0, H + 0.006, -1.6, C.offwhite, 1.2);
+  tinyPlant(b, 0, H + 0.006, 1.6, C.offwhite, 1.2);
+};
+
 export const highTable: ModelFn = ({ b, color }) => {
   const W = 1.8;
   const D = 0.7;

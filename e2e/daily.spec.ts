@@ -19,9 +19,9 @@ async function enterEclipse(page: Page, name: string, at: { x: number; z: number
 test("daily do time: roda sorteada, passar a vez e concluir", async ({ browser }) => {
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
-  // Na roda do tapete, na metade sul da sala.
-  await enterEclipse(a, "Ana", { x: -21.9, z: 5.4 });
-  await enterEclipse(b, "Bruno", { x: -20.1, z: 5.4 });
+  // Em volta da mesa de 20 lugares (corredores dos dois lados).
+  await enterEclipse(a, "Ana", { x: -23.6, z: 2.5 });
+  await enterEclipse(b, "Bruno", { x: -18.4, z: 2.5 });
 
   await a.getByRole("button", { name: "Começar a daily" }).click();
   await a.getByRole("dialog", { name: "Começar a daily" }).getByRole("button", { name: "Começar" }).click();

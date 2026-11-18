@@ -432,23 +432,27 @@ export function buildStationMap(): MapDef {
   // pacote vivo: telescópio apontado para a janela leste
   b.put("telescope", 25.1, -11.7, E, { zoneId: dirL.id, label: "Telescópio" });
 
-  // ── Sala Eclipse: a sala da daily (antes Órbita e Lua) ──────────────────────────────
-  // Metade norte: mesa de reunião e TV. Metade sul: a roda da daily, em pé, no tapete do eclipse.
-  const ecl = b.room("eclipse", "Sala Eclipse", "meeting", rect(-26, -16, -4, 9), s.eclipse, { glass: true, capacity: 16 });
+  // ── Sala Eclipse: a sala da daily e das reuniões do time todo (antes Órbita e Lua) ─────
+  // Mesa de conferência para 20 no centro (9 lugares de cada lado e um em cada ponta), com uma TV
+  // em cada ponta da sala para quem apresenta. Corredores de 3 m dos dois lados.
+  const ecl = b.room("eclipse", "Sala Eclipse", "meeting", rect(-26, -16, -4, 9), s.eclipse, { glass: true, capacity: 22 });
   b.sign(ecl.id, "Sala Eclipse", -17.4, -4.15, N, s.eclipse.accent);
   b.sign(ecl.id, "Sala Eclipse", -17.4, 9.15, S, s.eclipse.accent);
-  b.put("meeting-table", -21, -0.2, N, { zoneId: ecl.id, size: { w: 1.3, d: 3.6, h: 0.75 } });
-  for (const z of [-1.3, -0.2, 0.9]) {
-    b.put("office-chair", -22.08, z, E, { zoneId: ecl.id, color: s.eclipse.accent });
-    b.put("office-chair", -19.92, z, W, { zoneId: ecl.id, color: s.eclipse.accent });
+  const TABLE = { x: -21, z: 2.5 };
+  b.put("conference-table", TABLE.x, TABLE.z, N, { zoneId: ecl.id, accent: s.eclipse.accent });
+  for (const dz of [-3.2, -2.4, -1.6, -0.8, 0, 0.8, 1.6, 2.4, 3.2]) {
+    b.put("office-chair", TABLE.x - 1.35, TABLE.z + dz, E, { zoneId: ecl.id, color: s.eclipse.accent });
+    b.put("office-chair", TABLE.x + 1.35, TABLE.z + dz, W, { zoneId: ecl.id, color: s.eclipse.accent });
   }
-  b.onWall("tv", -4, -21, S, { zoneId: ecl.id, screenId: ecl.id, size: { w: 2.2, d: 0.08, h: 1.24 } });
+  b.put("office-chair", TABLE.x, TABLE.z - 4.3, S, { zoneId: ecl.id, color: s.eclipse.accent });
+  b.put("office-chair", TABLE.x, TABLE.z + 4.3, N, { zoneId: ecl.id, color: s.eclipse.accent });
+  b.onWall("tv", -4, -21, S, { zoneId: ecl.id, screenId: ecl.id, size: { w: 2.6, d: 0.08, h: 1.46 } });
+  b.onWall("tv", 9, -21, N, { zoneId: ecl.id, screenId: "eclipse-sul", size: { w: 2.6, d: 0.08, h: 1.46 } });
   b.onWall("whiteboard", -4, -24.6, S, { zoneId: ecl.id });
-  b.put("rug", -21, 5.4, N, { zoneId: ecl.id, variant: 3, size: { w: 3.8, d: 3.8, h: 0.02 }, color: "#0A1630", accent: s.eclipse.accent });
-  b.onWall("tv", 9, -21, N, { zoneId: ecl.id, screenId: "eclipse-roda", size: { w: 2.2, d: 0.08, h: 1.24 } });
   b.put("plant", -16.6, -3.4, N, { zoneId: ecl.id, variant: 1 });
   b.put("plant", -16.6, 8.4, N, { zoneId: ecl.id, variant: 2 });
   b.put("plant-tall", -25.4, 8.4, N, { zoneId: ecl.id });
+  b.put("plant-tall", -25.4, -3.4, N, { zoneId: ecl.id });
 
   // ── Marketing Studio (Visualizar) ───────────────────────────────────────────────────
   const mkt = b.room("marketing", "Marketing Studio", "open", rect(-16, -5, -4, 9), s.marketing, { team: "Marketing & Criação" });

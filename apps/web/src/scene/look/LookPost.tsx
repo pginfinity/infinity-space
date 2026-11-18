@@ -5,6 +5,7 @@ import * as THREE from "three";
 import type { Lens } from "@infinity/world";
 import { GradeEffect, InkEffect } from "./effects.ts";
 import { hasPost, LOOK } from "./looks.ts";
+import { useQuality } from "../quality.ts";
 
 /**
  * Tratamento de imagem da prévia de visual (ver looks.ts). Sem visual escolhido, não existe:
@@ -12,15 +13,21 @@ import { hasPost, LOOK } from "./looks.ts";
  *
  * Ordem: oclusão de ambiente → brilho → tone mapping → paleta → contorno → foco → aberração →
  * vinheta → grão. (Com a etapa extra, o tone mapping sai do renderizador e vem para cá.)
+ *
+ * Nitidez: com a etapa extra, o antisserrilhado do navegador não vale mais; no 3D a suavização de
+ * bordas é feita aqui (MSAA 4x), menos no modo "leve". O 2D é pixel art: sem suavização, de propósito.
+ * No modo "leve" também sai a oclusão de ambiente (a mais cara).
  */
 export function LookPost({ lens }: { lens: Lens }) {
   const spec = lens === "2d" ? LOOK.post2d : LOOK.post3d;
   const grade = useMemo(() => (spec.grade ? new GradeEffect(spec.grade) : null), [spec]);
   const ink = useMemo(() => (spec.ink ? new InkEffect(spec.ink) : null), [spec]);
+  const quality = useQuality((s) => s.mode);
   if (!hasPost(spec)) return null;
+  const light = quality === "leve";
 
   const fx: ReactElement[] = [];
-  if (spec.ao && lens === "3d") fx.push(<N8AO key="ao" aoRadius={spec.ao.radius} intensity={spec.ao.intensity} distanceFalloff={1} quality="medium" halfRes />);
+  if (spec.ao && lens === "3d" && !light) fx.push(<N8AO key="ao" aoRadius={spec.ao.radius} intensity={spec.ao.intensity} distanceFalloff={1} quality="medium" halfRes={quality !== "alta"} />);
   if (spec.bloom) fx.push(<Bloom key="bloom" intensity={spec.bloom.intensity} luminanceThreshold={spec.bloom.threshold} luminanceSmoothing={0.2} radius={spec.bloom.radius ?? 0.6} mipmapBlur />);
   fx.push(<ToneMapping key="tm" mode={ToneMappingMode.ACES_FILMIC} />);
   if (grade) fx.push(<primitive key="grade" object={grade} />);
@@ -34,7 +41,7 @@ export function LookPost({ lens }: { lens: Lens }) {
   if (spec.grain) fx.push(<Noise key="grain" opacity={spec.grain} blendFunction={BlendFunction.OVERLAY} premultiply={false} />);
 
   return (
-    <EffectComposer multisampling={0} enableNormalPass={false}>
+    <EffectComposer multisampling={lens === "3d" && !light ? 4 : 0} enableNormalPass={false}>
       {fx}
     </EffectComposer>
   );

@@ -168,7 +168,7 @@ const MAQUETE: Look = {
   post3d: {
     grade: { saturation: 0.9, contrast: 1.12, highlights: ["#FFF3E2", 0.1], paper: ["#F1EEE8", 0.2] },
     ao: { radius: 2.0, intensity: 4 },
-    tiltShift: { focus: 0.5, blur: 0.28 },
+    tiltShift: { focus: 0.6, blur: 0.18 },
     vignette: 0.38,
   },
   post2d: {
@@ -195,9 +195,8 @@ const CINEMA: Look = {
     grade: { saturation: 1.1, contrast: 1.2, shadows: ["#0E3A4A", 0.28], highlights: ["#FFC48A", 0.16] },
     bloom: { intensity: 0.9, threshold: 1.15, radius: 0.7 },
     ao: { radius: 1.1, intensity: 2.2 },
-    vignette: 0.5,
-    chromatic: 0.0012,
-    grain: 0.035,
+    // Sem aberração cromática nem grão: duplicavam as bordas e tiravam a nitidez.
+    vignette: 0.45,
   },
   post2d: {
     grade: { saturation: 1.05, contrast: 1.1, shadows: ["#0E3A4A", 0.2], highlights: ["#FFC48A", 0.14] },

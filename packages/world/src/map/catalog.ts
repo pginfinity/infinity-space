@@ -45,6 +45,7 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   "meeting-table": { w: 1.3, d: 3.2, h: 0.75, blocks: true, look: "Mesa de reunião retangular, tampo claro, caixa de tomadas no centro." },
   "round-table": { w: 1.4, d: 1.4, h: 0.75, blocks: true, look: "Mesa redonda de reunião, pé central." },
   "oval-table": { w: 1.6, d: 3.6, h: 0.75, blocks: true, look: "Mesa oval grande de diretoria, madeira escura brilhante." },
+  "conference-table": { w: 1.8, d: 7.6, h: 0.76, blocks: true, look: "Mesa de conferência para 20 pessoas (Sala Eclipse): tampo claro de cantos arredondados, faixa escura no centro com o eclipse marchetado, filete de luz por baixo." },
   "high-table": { w: 1.8, d: 0.7, h: 1.05, blocks: true, look: "Mesa alta de bar/standing, tampo de madeira." },
   "coffee-table": { w: 1.2, d: 0.7, h: 0.42, blocks: true, look: "Mesa de centro baixa, revistas e caneca." },
   "bistro-table": { w: 0.75, d: 0.75, h: 0.75, blocks: true, look: "Mesinha redonda de café, pé central metálico." },

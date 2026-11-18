@@ -299,26 +299,9 @@ export const rug: ModelFn = ({ b, color, accent, variant }) => {
   const base = color ?? T.navySoft;
   const acc = accent ?? C.sky;
   const third = mix(base, C.offwhite, 0.55);
-  const th = 0.004;
-  if (variant === 3) {
-    // Eclipse (roda da daily): disco escuro com a coroa em volta. Desenhado em elipse 1,5 × 1,0
-    // porque o tapete escala por eixo (3 × 2 no catálogo): com size quadrado, vira círculo.
-    // (ellipse recebe largura e profundidade, não raio)
-    const ring = (rx: number, col: string, y: number, seg = 48) => b.slab(col, ellipse(rx * 2, rx * 2 * (D / W)), th, 0, y, 0, { curve: seg });
-    ring(1.5, mix(acc, C.offwhite, 0.35), 0);
-    ring(1.42, acc, th);
-    ring(1.3, base, th * 2);
-    ring(1.0, mix(base, acc, 0.18), th * 3);
-    ring(0.96, base, th * 4);
-    // marcas da roda: 10 lugares em volta, para a daily em pé
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      b.cyl(mix(acc, C.offwhite, 0.5), 0.05, th, Math.cos(a) * 1.15, th * 4.5, Math.sin(a) * 1.15 * (D / W), { seg: 12 });
-    }
-    return;
-  }
   b.plate(base, W, D, 0.012, 0, 0, 0, { r: 0.08, bevel: 0.004 });
   const y1 = 0.012;
+  const th = 0.004;
   if (variant === 1) {
     // listras + franjas
     [-0.6, -0.2, 0.2, 0.6].forEach((z, i) => b.box(i % 2 ? acc : third, W - 0.2, th, i % 2 ? 0.16 : 0.08, 0, y1 + th / 2, z, { r: 0 }));

@@ -43,7 +43,7 @@ test("perto se ouve, na sala fechada não", async ({ browser }) => {
   await a.screenshot({ path: "test-results/screens/v3-voz-perto.png" });
 
   // Bruno entra na Sala Eclipse (fechada): a Ana deixa de ouvi-lo e ele deixa de ouvir a Ana.
-  await b.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.walkTo({ x: -21, z: 1.6 }));
+  await b.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.walkTo({ x: -23.6, z: 1.6 }));
   await expect.poll(() => a.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.media.audio()), { timeout: 30_000 }).not.toContain(brunoId);
   await expect.poll(() => b.evaluate(() => (window as unknown as { __infinity: Hook }).__infinity.media.audio()), { timeout: 10_000 }).not.toContain(anaId);
   await expect(a.getByRole("button", { name: /Desligar microfone/ })).toContainText("ninguém ouve", { timeout: 10_000 });

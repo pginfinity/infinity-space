@@ -40,7 +40,7 @@ test("grava a reunião da sala e salva o áudio", async ({ browser }) => {
   const b = await (await browser.newContext()).newPage();
   await enter(a, "Ana");
   await enter(b, "Bruno");
-  await Promise.all([walk(a, -21, 1.6), walk(b, -23, 1.6)]);
+  await Promise.all([walk(a, -23.6, 1.2), walk(b, -23.6, 3.4)]);
   await a.keyboard.press("KeyM");
   await b.keyboard.press("KeyM");
 

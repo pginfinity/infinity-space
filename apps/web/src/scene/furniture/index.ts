@@ -78,6 +78,7 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   "meeting-table": tables.meetingTable,
   "round-table": tables.roundTable,
   "oval-table": tables.ovalTable,
+  "conference-table": tables.conferenceTable,
   "high-table": tables.highTable,
   "coffee-table": tables.coffeeTable,
   "bistro-table": tables.bistroTable,

@@ -101,6 +101,7 @@ export type ObjectType =
   | "meeting-table"
   | "round-table"
   | "oval-table"
+  | "conference-table"
   | "high-table"
   | "coffee-table"
   | "bistro-table"

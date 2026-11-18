@@ -34,7 +34,7 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
   await enter(b, "Bruno");
 
   // Os dois entram na Sala Eclipse.
-  await Promise.all([walk(a, -21, 1.6), walk(b, -23, 1.6)]);
+  await Promise.all([walk(a, -23.6, 1.2), walk(b, -23.6, 3.4)]);
 
   // Ana abre o menu, escolhe "Documento" e o navegador (falso) entrega a tela.
   await a.getByRole("button", { name: "Compartilhar a tela" }).click();
