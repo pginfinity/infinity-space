@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { C, T, lit, litClear, mix, poly, trs, type ModelFn } from "./core.ts";
+import { C, T, lit, litClear, mix, poly, roundRect, trs, type ModelFn } from "./core.ts";
 import { at } from "./kit.ts";
 
 /**
@@ -144,6 +144,82 @@ export const missionConsole: ModelFn = ({ b, accent }) => {
       pose: (t, seed, _k, out) => {
         out.makeRotationY(t * 0.5 + seed * 6);
         out.setPosition(0, Math.sin(t * 1.4 + seed * 3) * 0.025, 0);
+      },
+    },
+  );
+};
+
+/**
+ * Painel de letras da Palavra secreta (Marketing Studio): quadro de feltro escuro numa moldura de
+ * madeira clara, preso em dois montantes com patins, bandeja de letrinhas soltas e um balão de fala
+ * no topo com os três pontinhos de "digitando". A face do feltro fica lisa: o jogo desenha por cima o
+ * placar e o tempo (ver activities/grupo/palavraScene), nunca a palavra.
+ */
+export const WORD_BOARD = {
+  /** Altura do centro do feltro. */
+  cy: 1.28,
+  /** Largura e altura do feltro (sem a moldura). */
+  w: 0.94,
+  h: 0.72,
+  /** Frente do feltro (z local). */
+  face: 0.031,
+};
+
+/** Matriz local (espaço do modelo) do centro da face do feltro, olhando para a frente. */
+export function wordBoardFaceMatrix(out = new THREE.Matrix4()): THREE.Matrix4 {
+  return out.makeTranslation(0, WORD_BOARD.cy, WORD_BOARD.face + 0.003);
+}
+
+export const wordBoard: ModelFn = ({ b, accent }) => {
+  const W = WORD_BOARD;
+  const wood = C.woodLight;
+  const woodDk = mix(C.wood, C.woodDark, 0.3);
+  const felt = mix(C.ink, C.navy, 0.35);
+  const fw = W.w + 0.12;
+  const fh = W.h + 0.12;
+  const px = fw / 2 + 0.03;
+  const top = 1.86;
+
+  // Patins, montantes e mãos-francesas.
+  for (const sx of [-1, 1]) {
+    b.box(woodDk, 0.09, 0.07, 0.5, sx * px, 0.035, 0, { r: 0.02 });
+    for (const sz of [-1, 1]) b.box(C.ink, 0.092, 0.018, 0.06, sx * px, 0.009, sz * 0.22, { r: 0.006 });
+    b.box(wood, 0.065, top - 0.07, 0.065, sx * px, 0.07 + (top - 0.07) / 2, 0, { r: 0.016 });
+    for (const sz of [-1, 1]) b.rod(woodDk, 0.013, sx * px, 0.07, sz * 0.19, sx * px, 0.4, sz * 0.03, { seg: 6 });
+  }
+  // Travessa de cima, presa nos montantes.
+  b.box(woodDk, fw + 0.13, 0.05, 0.07, 0, top - 0.02, 0, { r: 0.014 });
+
+  // Moldura e feltro.
+  b.box(wood, fw, fh, 0.05, 0, W.cy, 0, { r: 0.018 });
+  b.box(felt, W.w, W.h, 0.012, 0, W.cy, W.face - 0.006, { r: 0.003 });
+  // Bandeja com letrinhas soltas encostadas.
+  const ty = W.cy - fh / 2 - 0.012;
+  b.box(wood, fw - 0.02, 0.024, 0.1, 0, ty, 0.05, { r: 0.008 });
+  b.box(woodDk, fw - 0.02, 0.03, 0.012, 0, ty + 0.02, 0.094, { r: 0.004 });
+  const tiles: [number, number][] = [
+    [-0.34, -0.15],
+    [-0.29, 0.1],
+    [-0.12, -0.05],
+    [0.18, 0.12],
+    [0.24, -0.08],
+    [0.36, 0.05],
+  ];
+  for (const [x, rz] of tiles) b.box(C.offwhite, 0.04, 0.05, 0.008, x, ty + 0.037, 0.072, { rx: -0.32, rz, r: 0.003 });
+
+  // Balão de fala com os três pontinhos animados ("digitando").
+  const by = top + 0.16;
+  b.front(C.offwhite, roundRect(0.48, 0.26, 0.1), 0.045, 0, by, 0, { bevel: 0.008 });
+  b.front(C.offwhite, poly([[-0.1, -0.1], [-0.01, -0.1], [-0.15, -0.21]]), 0.045, 0, by, 0);
+  b.anim(
+    (s) => {
+      s.cyl(lit(accent ?? C.orange), 0.032, 0.02, 0, 0, 0, { rx: Math.PI / 2, seg: 14 });
+    },
+    {
+      copies: [-0.12, 0, 0.12].map((x) => at(x, by, 0.03)),
+      pose: (t, _seed, k, out) => {
+        const ph = (t * 2.4 - k * 0.45) % 3;
+        out.makeTranslation(0, ph > 0 && ph < 1 ? Math.sin(ph * Math.PI) * 0.03 : 0, 0);
       },
     },
   );

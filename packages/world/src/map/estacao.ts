@@ -474,9 +474,12 @@ export function buildStationMap(): MapDef {
   }
   b.island("desk", -8.6, -1.6, "z", "office-chair", mkt.id, s.marketing.accent);
   b.put("rug", -7.3, 7.0, N, { zoneId: mkt.id, size: { w: 3.2, d: 2.2, h: 0.02 }, color: "#F6C9B5", accent: s.marketing.accent });
-  b.put("beanbag", -8.3, 7.1, E, { zoneId: mkt.id, color: s.marketing.accent });
-  b.put("beanbag", -7.2, 6.5, N, { zoneId: mkt.id, color: "#F2B134" });
-  b.put("beanbag", -6.2, 7.3, W, { zoneId: mkt.id, color: "#00B7FF" });
+  // pacote grupo: painel de letras da Palavra secreta, com os pufes em meia-lua virados para ele
+  const WORD_BOARD = { x: -7.3, z: 5.45 };
+  b.put("word-board", WORD_BOARD.x, WORD_BOARD.z, S, { zoneId: mkt.id, label: "Palavra secreta", interact: { point: { x: -7.3, z: 6.25 }, yaw: N, radius: 1.7, action: "use", label: "Jogar Palavra secreta" } });
+  b.seatToward("beanbag", -8.6, 6.95, WORD_BOARD.x, WORD_BOARD.z, { zoneId: mkt.id, color: s.marketing.accent });
+  b.seatToward("beanbag", -7.3, 7.75, WORD_BOARD.x, WORD_BOARD.z, { zoneId: mkt.id, color: "#F2B134" });
+  b.seatToward("beanbag", -6.0, 6.95, WORD_BOARD.x, WORD_BOARD.z, { zoneId: mkt.id, color: "#00B7FF" });
   b.onWall("neon-sign", -4, -7.2, S, { zoneId: mkt.id, text: "IDEIAS QUE VENDEM", accent: s.marketing.accent });
   b.onWall("art-frame", 9, -13.2, N, { zoneId: mkt.id, variant: 2 });
   b.put("plant-tall", -5.6, -3.4, N, { zoneId: mkt.id });

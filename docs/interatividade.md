@@ -14,7 +14,7 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos.
 - **Estação viva:** itens na mão, copa (café, chá, água, suco, pipoca) com contador do dia, plantas que murcham e estação de rega, Orbi (robô mascote), jukebox com fila, telescópio, prancha flutuante.
 - **Arcade:** tabuleiros ao vivo nas mesas, jogo da velha, hockey de mesa e pingue-pongue em tempo real, 3 fliperamas originais com ranking (Faxina Orbital, Cauda de Cometa, Estilhaço), bolinha de papel com recorde do dia, sinuca.
-- **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação.
+- **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação, Palavra secreta.
 - **Reuniões:** gravação da sala com envio ao Google Drive.
 - **Primeiros passos:** na primeira entrada o Orbi se apresenta, vai até a pessoa e acompanha uma lista que se marca sozinha (andar, usar com E, microfone, chat, achar alguém, mapa, 2D/3D). Tecla ? abre todos os atalhos; dá para rever pela busca, pelos ajustes ou pelo menu Mais.
 - **Jukebox:** 10 faixas originais geradas com a ElevenLabs (`scripts/music.mjs`, duas versões de cada; a escolhida fica em `apps/web/public/music`). A versão generativa continua de reserva se um arquivo faltar.
@@ -40,6 +40,7 @@ Ainda não: foto do grupo no mural da copa.
 | Salas de reunião | **Desenhe e adivinhe** no quadro branco | Grupo |
 | Café | **Stop / Adedonha** | Grupo |
 | Lounge | **Impostor na Estação**: dedução social com missões espalhadas pela estação | Grupo |
+| Marketing Studio | **Palavra secreta**: no painel de letras, quem dá as dicas vê a palavra e as proibidas e fala por voz (ou escreve); o time chuta, o outro time fiscaliza com “Proibida!”. 3 pessoas jogam num time só; 4 ou mais, em dois times sorteados. 150 cartas originais em 5 temas | Grupo |
 | Qualquer lugar | Bolinha de papel na lixeira (mira e força) com recorde do dia | 1 pessoa |
 
 ## Interações do escritório
@@ -72,4 +73,4 @@ Ainda não: foto do grupo no mural da copa.
 
 1. Jogos de mesa (em andamento) e o pacote de interações do escritório.
 2. Jogos em tempo real e fliperamas com ranking.
-3. Jogos de grupo (Quiz Show, Desenhe e adivinhe, Stop, Impostor).
+3. Jogos de grupo (Quiz Show, Desenhe e adivinhe, Stop, Impostor, Palavra secreta).

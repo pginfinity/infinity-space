@@ -178,3 +178,18 @@ registerSynth("imp-reuniao", (c, out) => {
     note(c, out, 494, t + k * 0.8 + 0.38, 0.35, 0.18, "square", 480);
   }
 });
+
+registerSynth("palavra-proibida", (c, out) => {
+  const t = c.currentTime;
+  // apito de juiz curto e duas notas descendo: "epa!"
+  note(c, out, 1320, t, 0.12, 0.16, "square", 1240);
+  note(c, out, 392, t + 0.12, 0.22, 0.2, "triangle", 370);
+  note(c, out, 294, t + 0.3, 0.32, 0.2, "triangle", 277);
+});
+
+registerSynth("palavra-pular", (c, out) => {
+  const t = c.currentTime;
+  // virada de carta: sopro curto subindo e um toque leve
+  noise(c, out, t, 0.18, 0.18, 1400, 0.9, "bandpass");
+  note(c, out, 660, t + 0.08, 0.14, 0.1, "sine", 990);
+});

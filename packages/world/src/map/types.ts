@@ -156,6 +156,7 @@ export type ObjectType =
   // jogos de grupo (pacote grupo)
   | "stop-board"
   | "mission-console"
+  | "word-board"
   // pacote vivo (estação viva)
   | "telescope"
   | "chalkboard"
