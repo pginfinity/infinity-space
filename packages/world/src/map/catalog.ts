@@ -104,6 +104,8 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   telescope: { w: 0.8, d: 0.8, h: 1.6, blocks: true, action: "use", label: "Olhar pelo telescópio", look: "Telescópio de latão e azul-marinho num tripé de madeira, apontado para a janela." },
   chalkboard: { w: 0.7, d: 0.5, h: 1.25, blocks: true, look: "Cavalete de quadro de giz (A-frame) da copa, moldura de madeira. O texto do dia é desenhado à parte." },
   "watering-station": { w: 0.9, d: 0.45, h: 1.1, blocks: true, action: "use", label: "Pegar o regador", look: "Banquinho de jardinagem com regadores, vasinhos de muda e uma plaquinha das plantas felizes." },
+  // pacote foco
+  "focus-table": { w: 3.6, d: 0.7, h: 0.75, blocks: true, look: "Mesa comprida de foco encostada na parede: tampo de madeira clara, painel acústico de feltro azul-marinho atrás, luminárias baixas de luz quente e um suporte no centro para o relógio do Pomodoro (o anel é desenhado pela atividade \"foco\")." },
   // estruturas
   pod: { w: 2.2, d: 2.2, h: 2.4, blocks: false, look: "(Estrutura: cabine de foco, montada com paredes no mapa.)" },
   // pacote portas

@@ -160,6 +160,8 @@ export type ObjectType =
   | "telescope"
   | "chalkboard"
   | "watering-station"
+  // pacote foco: mesa de foco com Pomodoro compartilhado
+  | "focus-table"
   // estruturas
   | "pod"
   // pacote portas: porta de sala fechada (estado e visual vêm da atividade "portas")

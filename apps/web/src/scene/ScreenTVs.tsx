@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { useApp } from "../state/store.ts";
 import { useMedia } from "../media/rtc.ts";
 import { sampleRemote, self } from "../world/registry.ts";
-import { screenMesh, tvFor } from "./tvs.ts";
+import { screenClaim, screenMesh, tvFor } from "./tvs.ts";
 import { world } from "../world/world.ts";
 // pacote easter: às 22:04 a TV do Átrio mostra o relâmpago e "1,21 gigawatts!" no lugar da data
 import { clockParts, isGigawattMinute, lightningFlash } from "../activities/easter/rules.ts";
@@ -77,6 +77,13 @@ export function ScreenTVs() {
     }
     // Relâmpago (só durante o minuto dos gigawatts, na TV do Átrio).
     for (const i of idle.current.values()) if (i.giga) i.flash(now);
+    // TV ocupada por uma atividade (claimScreen) ou de volta à espera, quando ninguém compartilha tela nela.
+    for (const [screenId, i] of idle.current) {
+      if (active.current.has(screenId)) continue;
+      const mesh = screenMesh(screenId);
+      const want = screenClaim(screenId) ?? i.material;
+      if (mesh && mesh.material !== want) mesh.material = want;
+    }
     const selfId = useApp.getState().selfId;
     const players = useApp.getState().players;
     const want = new Map<string, string>(); // screenId -> dono

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Trash2, Trophy } from "lucide-react";
-import type { MapObject, ObjectType, Vec2 } from "@infinity/world";
+import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Timer, Trash2, Trophy, Tv } from "lucide-react";
+import { TV_SCREEN, type MapObject, type ObjectType, type Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 
 /**
@@ -17,6 +17,8 @@ interface GuideDef {
   group: GuideGroup;
   icon: LucideIcon;
   types: ObjectType[];
+  /** Entre os objetos desses tipos, só os que passam (ex.: só a TV do lounge). */
+  only?: (o: MapObject) => boolean;
 }
 
 const DEFS: GuideDef[] = [
@@ -34,9 +36,11 @@ const DEFS: GuideDef[] = [
   { key: "deploy", label: "Botão de deploy", hint: "Lança um foguete", group: "Escritório", icon: Rocket, types: ["big-button"] },
   { key: "mural", label: "Mural de recados", hint: "Post-its para o time", group: "Escritório", icon: StickyNote, types: ["notice-board"] },
   { key: "cabine", label: "Cabine de fotos", hint: "Foto da turma", group: "Escritório", icon: Camera, types: ["camera-tripod"] },
+  { key: "foco", label: "Mesa de foco", hint: "Pomodoro em grupo, em silêncio", group: "Escritório", icon: Timer, types: ["focus-table"] },
   { key: "copa", label: "Copa", hint: "Café, chá, suco e pipoca", group: "Estação", icon: Coffee, types: ["coffee-machine"] },
   { key: "plantas", label: "Estação de rega", hint: "As plantas precisam de você", group: "Estação", icon: Droplets, types: ["watering-station"] },
   { key: "jukebox", label: "Jukebox", hint: "Música para quem está perto", group: "Estação", icon: Music, types: ["jukebox"] },
+  { key: "tv", label: "TV do lounge", hint: "Assistir vídeo junto", group: "Estação", icon: Tv, types: ["tv"], only: (o) => o.screenId === TV_SCREEN },
   { key: "telescopio", label: "Telescópio", hint: "A Terra, daqui da estação", group: "Estação", icon: Telescope, types: ["telescope"] },
   { key: "recordes", label: "Recordes do Arcade", hint: "Quem manda nos fliperamas", group: "Estação", icon: Grid3x3, types: ["arcade-board"] },
   { key: "orbi", label: "Orbi", hint: "O robô passeia pelo Átrio, copa e Arcade", group: "Estação", icon: Bot, types: [] },
@@ -62,7 +66,7 @@ export function guideItems(): GuideItem[] {
   const { map, zones } = world();
   const out: GuideItem[] = [];
   for (const d of DEFS) {
-    const objs = map.objects.filter((o) => d.types.includes(o.type));
+    const objs = map.objects.filter((o) => d.types.includes(o.type) && (!d.only || d.only(o)));
     if (d.types.length && !objs.length) continue;
     const spots = objs.map(spotOf);
     const first = objs[0];

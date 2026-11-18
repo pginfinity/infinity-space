@@ -1,6 +1,7 @@
 import { dirOfYaw, type Vec2 } from "../geometry.ts";
 import { CATALOG } from "./catalog.ts";
 import type { Desk, FloorArea, FloorStyle, MapDef, MapLabel, MapObject, ObjectType, Sign, Wall, WallKind, Zone, ZoneKind } from "./types.ts";
+import { FOCO_SEAT_PREFIX, FOCO_TABLE_ID } from "../activities/foco/index.ts";
 
 /**
  * Planta "Estação Infinity": um deck retangular com dois corredores (norte e sul) e cada área
@@ -506,6 +507,19 @@ export function buildStationMap(): MapDef {
   b.room("foco-hall", "Foco", "open", rect(19, 22, -4, 9), s.foco, { listed: true });
   b.sign("foco-hall", "Foco", 20.5, -4.15, N, s.foco.accent);
   b.put("plant", 19.5, 8.4, N, { zoneId: "foco-hall", variant: 2 });
+  // pacote foco: mesa de foco com Pomodoro compartilhado, encostada na parede oeste, ao norte da porta
+  // do Comercial. Quatro lugares virados para a parede; a passagem para as cabines fica livre (leste).
+  const FOCO = { x: 19.46, z: -1.55 };
+  b.put("focus-table", FOCO.x, FOCO.z, E, { id: FOCO_TABLE_ID, zoneId: "foco-hall", label: "Mesa de foco" });
+  [-1.5, -0.5, 0.5, 1.5].forEach((k, i) => {
+    const seat = { x: FOCO.x + CATALOG["focus-table"].d / 2 + 0.42, z: FOCO.z + k * 0.85 };
+    b.put("office-chair", seat.x, seat.z, W, {
+      id: `${FOCO_SEAT_PREFIX}${i + 1}`,
+      zoneId: "foco-hall",
+      color: "#0A2547",
+      interact: { point: seat, yaw: W, radius: 1.3, action: "sit", seatHeight: CATALOG["office-chair"].seatHeight!, label: "Sentar e focar" },
+    });
+  });
   for (let i = 0; i < 4; i++) {
     const z0 = pods[i]!;
     const z1 = pods[i + 1]!;

@@ -29,6 +29,7 @@ O `host` oferece: `changed(this)` (manda o snapshot no fim do tique), `event(thi
 
 - **Um jogo por vez:** jogos com lugar implementam `seatLabel`, `inMatchFor` e `releaseSeat`, e chamam `host.claimSeat(id, this)` antes de sentar alguém: quem estava só esperando em outro jogo sai de lá; quem está no meio de uma partida recebe um aviso (`host.notify`).
 - **Persistência:** `host.store.get(chave, padrão)` e `host.store.set(chave, valor)`. A chave começa pelo pacote (`"escritorio/gongo"`). Os arquivos JSON vão para `DATA_DIR`, que fica fora do Git.
+- **Atalhos de teste:** operações `dev-*` (ex.: `dev-skip` da mesa de foco, que pula para o fim da fase) só valem fora de produção (`NODE_ENV !== "production"`, que o Dockerfile define). Use para não esperar 25 minutos num teste de ponta a ponta.
 - **Limite:** cada pessoa manda no máximo 90 pedidos por segundo para as atividades.
 - **Rótulos na cena:** use o `Html` de `apps/web/src/scene/Html.tsx`, não o do drei (o do drei quebrava a troca de lente com `removeChild`).
 - **Privacidade:** o que é "perto" segue `host.hearers`. O indicador de quem fala, no cliente, só acende para quem a pessoa ouve.
@@ -57,7 +58,9 @@ registerActivity({
 - **Relógio:** `serverNow()` (de `net/session.ts`) dá a hora do servidor, para contagens iguais para todos.
 - **Objetos de parede no 2D:** quem desenha sobre um objeto de parede usa `useWallVisible(id)` (de `scene/wallFacing.ts`), porque no 2D o objeto de costas para a câmera some.
 - **Pessoas:** `self`, `sampleRemote(id)` e `remoteIds()` vêm de `world/registry.ts`. Nomes e status ficam em `useApp` (`state/store.ts`). O campo `held` da pessoa é o item na mão; `note` é o status curto.
-- **Avisos e cartões do lado esquerdo:** nada de posição fixa (`absolute left-3 top-[...]`), que um cobre o outro. Use `<InStack side="top-left" | "bottom-left" order={n}>` de `ui/HudStack.tsx`: a pilha de cima desce a partir do status; a de baixo sobe a partir das dicas de controle. Ordem atual em cima: presença (0), gravação (1), daily (2), primeiros passos (3), aviõezinhos (4); embaixo: item na mão (0), Orbi (1), última mesa (2).
+- **Avisos e cartões do lado esquerdo:** nada de posição fixa (`absolute left-3 top-[...]`), que um cobre o outro. Use `<InStack side="top-left" | "bottom-left" order={n}>` de `ui/HudStack.tsx`: a pilha de cima desce a partir do status; a de baixo sobe a partir das dicas de controle. Ordem atual em cima: presença (0), gravação (1), daily e mesa de foco (2; nunca aparecem juntas, ficam em salas diferentes), primeiros passos (3), aviõezinhos (4); embaixo: item na mão (0), Orbi (1), última mesa (2).
+- **Telas das TVs:** `claimScreen(screenId, material)` (de `scene/tvs.ts`) põe o material da atividade na tela de uma TV (ex.: "Assistindo junto" na TV do lounge); `null` devolve. O compartilhamento de tela de alguém na sala tem prioridade; sem nenhum dos dois, a TV mostra a tela de espera. Reivindique a cada quadro enquanto valer (troca de lente remonta a cena) e só solte se o material ainda for o seu (`screenClaim`).
+- **Vídeo de fora (iframe):** iframe não vira textura do WebGL. Mostre num painel do HUD e mantenha o contêiner do player no mesmo lugar da árvore React (mudar de modo não recarrega o vídeo). Nos testes, um player falso (`navigator.webdriver` em desenvolvimento) substitui o de verdade: ver `activities/vivo/tvPlayer.ts`.
 - **Toast com complemento:** `toast(texto, ms, { sub })` (de `ui/toasts.ts`) mostra um complemento pequeno e apagado depois do texto.
 - **Mensagens que não saem do cliente:** `registerChatInterceptor(fn)` (de `activities/chat/intercept.ts`); se `fn(texto)` devolver true, o campo limpa e nada vai para a rede.
 - **Busca (Ctrl+K):** `registerPersonCommand` (ação por pessoa, ex.: "Mensagem para Ana") e `registerCommand` (ação geral, ex.: "Minha mesa", "Primeiros passos"), ambos de `presence/store.ts`.
@@ -83,6 +86,5 @@ Pedidas pelos pacotes, ao construir os jogos e interações:
 - **Interação:** prioridade entre alvos, mais de uma ação por alvo, "segurar E", raio por tipo no catálogo e objetos sem `action` assumíveis por atividade.
 - **Avatar:** `faceTowards(yaw)` no movimento e um ponto de ancoragem para balões acima da etiqueta de nome.
 - **Áudio:** um contexto de áudio compartilhado entre `sfx`, jukebox e vozes.
-- **TVs:** API para uma atividade ocupar a tela de uma TV (hoje cada pacote desenha um plano na frente).
 - **Host:** `playerHeld(id)` e `flush()` imediato para timers próprios. (Chamar e teleportar já existem pelo pacote presença e por `host.teleport`.)
 - **Portas:** readmitir pelo e-mail depois de uma reconexão (com o login ligado, o id muda mas a conta é a mesma).
