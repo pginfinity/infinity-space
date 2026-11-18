@@ -2,6 +2,7 @@ import {
   PAL_COOP_NAME,
   PAL_DEFAULT_ROUNDS,
   PAL_DEFAULT_SECONDS,
+  PAL_EDIT_RANGE,
   PAL_FEED_MAX,
   PAL_FLAG_GAP_MS,
   PAL_FLAG_MS,
@@ -11,55 +12,80 @@ import {
   PAL_HINT_MAX,
   PAL_ID,
   PAL_KIND,
+  PAL_MAX_CARDS,
   PAL_MAX_PLAYERS,
+  PAL_MAX_THEMES,
   PAL_MIN_PLAYERS,
+  PAL_MODES,
   PAL_READY_MS,
   PAL_ROUNDS,
   PAL_SECONDS,
   PAL_SKIPS,
   PAL_TEAM_NAMES,
-  PAL_TEAMS_FROM,
-  PAL_THEMES,
   PAL_TURN_END_MS,
   PAL_ZONE,
   grupoClean,
   palCardAudience,
+  palCardTaken,
   palCheckGuess,
+  palCleanCard,
+  palCleanLabel,
   palCleanThemes,
   palDeck,
   palHintHit,
+  palLabelTaken,
+  palNewId,
   palRole,
+  palSanitizeBank,
+  palSeedBank,
   palSplitTeams,
+  palSummaries,
   palTotalTurns,
+  palUsesTeams,
   palWinner,
+  type PalBank,
+  type PalBankError,
   type PalCard,
   type PalCardEvent,
   type PalFeedItem,
+  type PalMode,
   type PalPlayer,
   type PalState,
   type PalTeam,
+  type Vec2,
 } from "@infinity/world";
 import type { Activity, ActivityHost } from "../types.ts";
 
 /** Sala parada (lobby ou placar final) fecha sozinha depois disso. */
 const IDLE_MS = 10 * 60_000;
 const LABEL = "Palavra secreta";
+/** Chave do banco de cartas no store (null ou ausente: as 150 cartas originais). */
+const BANK_KEY = "grupo/palavra-banco";
+const BANK_OPS = ["bank", "themeAdd", "themeRename", "themeDelete", "cardSave", "cardDelete", "bankReset"];
 
 const twoTeams = (): PalTeam[] => PAL_TEAM_NAMES.map((name) => ({ name, score: 0 }));
 
 /**
  * Palavra secreta, no painel de letras do Marketing Studio.
  *
- * Operações: `join`, `leave`, `config {seconds?, rounds?, themes?}`, `shuffle` (sorteia os times de novo),
+ * Operações: `join`, `leave`, `config {seconds?, rounds?, themes?, mode?}`, `shuffle` (sorteia os times de novo),
  * `start`, `go` (o dicador começa a vez), `guess {text}`, `hint {text}`, `skip`, `flag` (Proibida!),
  * `judge {ok}` (o dicador decide), `sync` (pede a carta de novo), `again`, `end`.
+ * Editor de cartas (perto do painel e sem partida em andamento): `bank`, `themeAdd {label}`,
+ * `themeRename {id, label}`, `themeDelete {id}`, `cardSave {theme, id?, word, forbidden}`, `cardDelete {id}`
+ * e `bankReset` (volta às cartas originais).
  * Eventos: `card` (só para o dicador e o time adversário), `close` e `blocked` (só para quem mandou),
- * `turn`, `go`, `hit`, `skip`, `flag`, `forbidden`, `turnEnd` e `final` (para todos: sons e efeitos).
+ * `bank` e `bankError` (só para quem edita), `turn`, `go`, `hit`, `skip`, `flag`, `forbidden`,
+ * `turnEnd` e `final` (para todos: sons e efeitos).
  */
 export class PalavraActivity implements Activity {
   readonly id = PAL_ID;
   readonly kind = PAL_KIND;
   private st: PalState;
+  /** Banco de cartas (temas com cartas). Vai inteiro só para quem abre o editor. */
+  private bank: PalBank;
+  /** Onde fica o painel de letras (o editor abre perto dele). */
+  private readonly board: Vec2 | null;
   /** Carta da vez: fica só aqui (vai por evento para quem pode ver). */
   private card: PalCard | null = null;
   private deck: PalCard[] = [];
@@ -75,6 +101,8 @@ export class PalavraActivity implements Activity {
   private touched = Date.now();
 
   constructor(private readonly host: ActivityHost) {
+    this.bank = palSanitizeBank(host.store.get<unknown>(BANK_KEY, null)) ?? palSeedBank();
+    this.board = host.objects("word-board")[0]?.pos ?? null;
     this.st = this.empty(0);
   }
 
@@ -84,11 +112,13 @@ export class PalavraActivity implements Activity {
       game,
       owner: null,
       coop: false,
+      mode: "teams",
       players: [],
       teams: twoTeams(),
       seconds: PAL_DEFAULT_SECONDS,
       rounds: PAL_DEFAULT_ROUNDS,
-      themes: PAL_THEMES.map((t) => t.id),
+      themes: this.bank.themes.map((t) => t.id),
+      catalog: palSummaries(this.bank),
       turn: 0,
       turns: 0,
       team: 0,
@@ -169,7 +199,14 @@ export class PalavraActivity implements Activity {
         return this.again(from);
       case "end":
         return this.end(from);
+      default:
+        return this.bankOp(from, op, d);
     }
+  }
+
+  /** Opções que passam de uma partida para a outra. */
+  private kept(): Pick<PalState, "seconds" | "rounds" | "themes" | "mode"> {
+    return { seconds: this.st.seconds, rounds: this.st.rounds, themes: this.st.themes, mode: this.st.mode };
   }
 
   // ---- sala ----------------------------------------------------------------------------------
@@ -184,7 +221,7 @@ export class PalavraActivity implements Activity {
     }
     const name = this.host.playerName(from) ?? "Alguém";
     if (this.st.phase === "idle") {
-      this.st = { ...this.empty(this.st.game + 1), phase: "lobby", owner: from, seconds: this.st.seconds, rounds: this.st.rounds, themes: this.st.themes };
+      this.st = { ...this.empty(this.st.game + 1), ...this.kept(), phase: "lobby", owner: from };
       this.resetTurnMemory();
     }
     const back = this.st.players.find((p) => p.away && p.name === name);
@@ -249,8 +286,13 @@ export class PalavraActivity implements Activity {
     if (typeof d.seconds === "number" && PAL_SECONDS.includes(d.seconds)) this.st.seconds = d.seconds;
     if (typeof d.rounds === "number" && PAL_ROUNDS.includes(d.rounds)) this.st.rounds = d.rounds;
     if (d.themes !== undefined) {
-      const themes = palCleanThemes(d.themes);
+      const themes = palCleanThemes(d.themes, this.bank.themes.map((t) => t.id));
       if (themes) this.st.themes = themes;
+    }
+    if (typeof d.mode === "string" && PAL_MODES.includes(d.mode as PalMode) && d.mode !== this.st.mode) {
+      this.st.mode = d.mode as PalMode;
+      // Voltou para dois times: os times da mesa ficam equilibrados de novo.
+      if (this.st.mode === "teams") this.balance();
     }
     this.touched = Date.now();
     this.host.changed(this);
@@ -268,8 +310,10 @@ export class PalavraActivity implements Activity {
     if (this.st.phase !== "lobby" || from !== this.st.owner) return;
     const act = this.active();
     if (act.length < PAL_MIN_PLAYERS) return;
+    const deck = palDeck(this.bank, this.st.themes, Math.random);
+    if (deck.length === 0) return;
     this.st.players = act;
-    const coop = act.length < PAL_TEAMS_FROM;
+    const coop = !palUsesTeams(act.length, this.st.mode);
     if (coop) for (const p of act) p.team = 0;
     else this.balance();
     const sizes = coop ? [act.length] : [0, 1].map((t) => act.filter((p) => p.team === t).length);
@@ -278,7 +322,7 @@ export class PalavraActivity implements Activity {
     this.st.turns = palTotalTurns(sizes, this.st.rounds, coop);
     this.st.turn = 0;
     this.st.winner = null;
-    this.deck = palDeck(this.st.themes, Math.random);
+    this.deck = deck;
     this.used.clear();
     this.nextGiver = [0, 0];
     this.firstTeam = coop ? 0 : Math.random() < 0.5 ? 0 : 1;
@@ -300,7 +344,9 @@ export class PalavraActivity implements Activity {
     if (this.st.phase !== "final" || !this.player(from)) return;
     const players = this.active().map((p) => ({ id: p.id, name: p.name, team: p.team }));
     const owner = players.some((p) => p.id === this.st.owner) ? this.st.owner : from;
-    this.st = { ...this.empty(this.st.game + 1), phase: "lobby", owner, players, seconds: this.st.seconds, rounds: this.st.rounds, themes: this.st.themes };
+    this.st = { ...this.empty(this.st.game + 1), ...this.kept(), phase: "lobby", owner, players };
+    // Depois de uma partida cooperativa, todos estavam no mesmo time.
+    this.balance();
     this.resetTurnMemory();
     this.touched = Date.now();
     this.host.changed(this);
@@ -315,7 +361,7 @@ export class PalavraActivity implements Activity {
   }
 
   private reset(): void {
-    this.st = { ...this.empty(this.st.game), seconds: this.st.seconds, rounds: this.st.rounds, themes: this.st.themes };
+    this.st = { ...this.empty(this.st.game), ...this.kept() };
     this.resetTurnMemory();
     this.host.changed(this);
   }
@@ -362,7 +408,7 @@ export class PalavraActivity implements Activity {
     let card = this.deck.shift();
     while (card && this.used.has(card.word)) card = this.deck.shift();
     if (!card) {
-      const fresh = palDeck(this.st.themes, Math.random);
+      const fresh = palDeck(this.bank, this.st.themes, Math.random);
       this.deck = fresh.filter((c) => !this.used.has(c.word));
       if (this.deck.length === 0) {
         this.used.clear();
@@ -383,7 +429,9 @@ export class PalavraActivity implements Activity {
     const audience = palCardAudience(this.st);
     const list = to ? to.filter((id) => audience.includes(id)) : audience;
     if (list.length === 0) return;
-    const ev: PalCardEvent = { game: this.st.game, turn: this.st.turn, n: this.st.cardNo, word: this.card.word, forbidden: [...this.card.forbidden], theme: this.card.theme };
+    const theme = this.card.theme;
+    const themeLabel = this.st.catalog.find((t) => t.id === theme)?.label ?? "";
+    const ev: PalCardEvent = { game: this.st.game, turn: this.st.turn, n: this.st.cardNo, word: this.card.word, forbidden: [...this.card.forbidden], theme, themeLabel };
     this.host.event(this, "card", ev, { to: list });
   }
 
@@ -530,5 +578,104 @@ export class PalavraActivity implements Activity {
 
   leave(id: string): void {
     this.drop(id, true);
+  }
+
+  // ---- editor de cartas ----------------------------------------------------------------------
+
+  /**
+   * Pedidos do editor: só perto do painel de letras e sem partida em andamento. No meio de uma
+   * partida ninguém recebe o banco, então quem chuta nunca vê as cartas por este caminho.
+   */
+  private bankOp(from: string, op: string, d: Record<string, unknown>): void {
+    if (!BANK_OPS.includes(op)) return;
+    if (this.inGame()) return this.bankError(from, "playing");
+    if (!this.board || !this.host.near(from, this.board, PAL_EDIT_RANGE)) return this.bankError(from, "near");
+    if (op === "bank") return this.sendBank(from);
+    const themes = this.bank.themes;
+    const pick = (v: unknown) => (typeof v === "string" ? themes.find((t) => t.id === v) : undefined);
+    let stored: PalBank | null = this.bank;
+    switch (op) {
+      case "themeAdd": {
+        const label = palCleanLabel(d.label);
+        if (!label) return this.bankError(from, "label");
+        if (palLabelTaken(this.bank, label)) return this.bankError(from, "themeDup");
+        if (themes.length >= PAL_MAX_THEMES) return this.bankError(from, "full");
+        const all = themes.every((t) => this.st.themes.includes(t.id));
+        const id = palNewId(this.bank, "tema");
+        themes.push({ id, label, cards: [] });
+        // Com todos os temas escolhidos na mesa, o novo entra na escolha também.
+        if (all) this.st.themes = [...this.st.themes, id];
+        break;
+      }
+      case "themeRename": {
+        const theme = pick(d.id);
+        if (!theme) return;
+        const label = palCleanLabel(d.label);
+        if (!label) return this.bankError(from, "label");
+        if (palLabelTaken(this.bank, label, theme.id)) return this.bankError(from, "themeDup");
+        theme.label = label;
+        break;
+      }
+      case "themeDelete": {
+        const theme = pick(d.id);
+        if (!theme) return;
+        if (themes.length <= 1) return this.bankError(from, "lastTheme");
+        this.bank.themes = themes.filter((t) => t !== theme);
+        break;
+      }
+      case "cardSave": {
+        const theme = pick(d.theme);
+        if (!theme) return;
+        const id = typeof d.id === "string" ? d.id : null;
+        const home = id ? themes.find((t) => t.cards.some((c) => c.id === id)) : undefined;
+        const existing = home?.cards.find((c) => c.id === id);
+        if (home !== theme && theme.cards.length >= PAL_MAX_CARDS) return this.bankError(from, "full");
+        const card = palCleanCard(d);
+        if (typeof card === "string") return this.bankError(from, card);
+        if (palCardTaken(theme, card.word, existing?.id)) return this.bankError(from, "duplicate");
+        if (existing && home) {
+          existing.word = card.word;
+          existing.forbidden = card.forbidden;
+          // Mudou de tema: sai de um e entra no outro.
+          if (home !== theme) {
+            home.cards = home.cards.filter((c) => c !== existing);
+            theme.cards.push(existing);
+          }
+        } else theme.cards.push({ id: palNewId(this.bank, "carta"), ...card });
+        break;
+      }
+      case "cardDelete": {
+        const home = themes.find((t) => t.cards.some((c) => c.id === d.id));
+        if (!home) return;
+        home.cards = home.cards.filter((c) => c.id !== d.id);
+        break;
+      }
+      case "bankReset":
+        this.bank = palSeedBank();
+        // Nada guardado: vale o banco original (com as correções que ele ganhar em versões novas).
+        stored = null;
+        break;
+    }
+    this.host.store.set(BANK_KEY, stored);
+    this.syncCatalog();
+    this.touched = Date.now();
+    this.host.changed(this);
+    this.sendBank(from);
+  }
+
+  /** Resumo público dos temas; a escolha da mesa fica só com temas que existem (todos, se sobrar nenhum). */
+  private syncCatalog(): void {
+    const ids = this.bank.themes.map((t) => t.id);
+    this.st.catalog = palSummaries(this.bank);
+    const kept = this.st.themes.filter((id) => ids.includes(id));
+    this.st.themes = kept.length > 0 ? kept : ids;
+  }
+
+  private sendBank(to: string): void {
+    this.host.event(this, "bank", this.bank, { to: [to] });
+  }
+
+  private bankError(to: string, reason: PalBankError): void {
+    this.host.event(this, "bankError", { reason }, { to: [to] });
   }
 }

@@ -1,8 +1,9 @@
 import { grupoEditDistance, grupoFold, grupoShuffle } from "./common.ts";
-import { PAL_CARDS, type PalCard, type PalTheme } from "./palavraBank.ts";
+import type { PalCard, PalTheme } from "./palavraBank.ts";
+import type { PalBank, PalThemeSummary } from "./palavraEdit.ts";
 
 export type { PalCard, PalTheme } from "./palavraBank.ts";
-export { PAL_CARDS } from "./palavraBank.ts";
+export { PAL_CARDS, PAL_THEMES } from "./palavraBank.ts";
 
 /**
  * Palavra secreta, no Marketing Studio: jogo de dicas em times. Na vez do time, um "dicador" vê a
@@ -10,7 +11,8 @@ export { PAL_CARDS } from "./palavraBank.ts";
  * proximidade) ou por escrito; o próprio time chuta pelo campo do jogo. Cada acerto vale 1 ponto e
  * puxa a próxima carta, até o tempo acabar. O time adversário vê a carta para fiscalizar: aperta
  * "Proibida!" quando ouve uma palavra proibida e o dicador decide se falou (perde 1 ponto e a carta).
- * Com 3 pessoas, um time só (cooperativo). O dicador roda a cada vez.
+ * Com 3 pessoas, um time só (cooperativo); com 4 ou mais, quem abriu a mesa escolhe entre dois times e
+ * todos juntos (cooperativo). O dicador roda a cada vez. As cartas vêm do banco editável (`palavraEdit.ts`).
  *
  * Informação escondida: a carta só vai para o dicador e para o time adversário (evento "card").
  * O estado público tem o placar, de quem é a vez e as cartas já resolvidas, nunca a carta da vez.
@@ -22,7 +24,7 @@ export const PAL_KIND = "palavra";
 export const PAL_ZONE = "marketing";
 export const PAL_MIN_PLAYERS = 3;
 export const PAL_MAX_PLAYERS = 12;
-/** A partir de quantas pessoas a partida tem dois times (abaixo disso, um time só, cooperativo). */
+/** A partir de quantas pessoas a partida pode ter dois times (abaixo disso, um time só, cooperativo). */
 export const PAL_TEAMS_FROM = 4;
 export const PAL_SECONDS: readonly number[] = [30, 60, 90];
 export const PAL_DEFAULT_SECONDS = 60;
@@ -50,13 +52,9 @@ export const PAL_TEAM_NAMES: readonly string[] = ["Pulsar", "Quasar"];
 /** Nome do time único da partida cooperativa. */
 export const PAL_COOP_NAME = "Nebulosa";
 
-export const PAL_THEMES: readonly { id: PalTheme; label: string }[] = [
-  { id: "cotidiano", label: "Cotidiano" },
-  { id: "escritorio", label: "Escritório" },
-  { id: "tecnologia", label: "Tecnologia" },
-  { id: "brasil", label: "Cultura brasileira" },
-  { id: "espaco", label: "Espaço" },
-];
+/** Modo escolhido no lobby (vale com 4 pessoas ou mais): dois times ou todos juntos (cooperativo). */
+export type PalMode = "teams" | "coop";
+export const PAL_MODES: readonly PalMode[] = ["teams", "coop"];
 
 export type PalPhase = "idle" | "lobby" | "ready" | "playing" | "turnEnd" | "final";
 /** Papel de alguém na vez: dá dicas, chuta, fiscaliza (time adversário). */
@@ -100,11 +98,16 @@ export interface PalState {
   owner: string | null;
   /** Partida de um time só (definido ao começar). */
   coop: boolean;
+  /** Modo escolhido no lobby (com menos de 4 pessoas, a partida é cooperativa de qualquer jeito). */
+  mode: PalMode;
   players: PalPlayer[];
   teams: PalTeam[];
   seconds: number;
   rounds: number;
+  /** Temas escolhidos para a partida (ids do banco). */
   themes: PalTheme[];
+  /** Temas do banco: nome e quantas cartas (nunca as cartas). */
+  catalog: PalThemeSummary[];
   /** Vez atual (1..turns) e total de vezes da partida. */
   turn: number;
   turns: number;
@@ -137,6 +140,8 @@ export interface PalCardEvent {
   word: string;
   forbidden: string[];
   theme: PalTheme;
+  /** Nome do tema, para mostrar na carta. */
+  themeLabel: string;
 }
 
 const ARTICLES = new Set(["o", "a", "os", "as", "um", "uma", "uns", "umas"]);
@@ -197,19 +202,28 @@ export function palHintHit(hint: string, card: { word: string; forbidden: readon
   return null;
 }
 
-/** Limpa a lista de temas vinda do cliente (conhecidos, sem repetir). Null se ficar vazia. */
-export function palCleanThemes(raw: unknown): PalTheme[] | null {
+/** Limpa a lista de temas vinda do cliente (só os do banco, na ordem do banco, sem repetir). Null se ficar vazia. */
+export function palCleanThemes(raw: unknown, known: readonly PalTheme[]): PalTheme[] | null {
   if (!Array.isArray(raw)) return null;
-  const known = new Set(PAL_THEMES.map((t) => t.id));
-  const out = PAL_THEMES.map((t) => t.id).filter((id) => raw.includes(id) && known.has(id));
+  const out = known.filter((id) => raw.includes(id));
   return out.length > 0 ? out : null;
 }
 
 /** Baralho embaralhado com as cartas dos temas escolhidos (todos, se nenhum). */
-export function palDeck(themes: readonly PalTheme[], rand: () => number = Math.random): PalCard[] {
+export function palDeck(bank: PalBank, themes: readonly PalTheme[], rand: () => number = Math.random): PalCard[] {
   const set = new Set(themes);
-  const cards = PAL_CARDS.filter((c) => set.size === 0 || set.has(c.theme));
-  return grupoShuffle(cards, rand).map((c) => ({ ...c, forbidden: [...c.forbidden] }));
+  const cards = bank.themes.filter((t) => set.size === 0 || set.has(t.id)).flatMap((t) => t.cards.map((c) => ({ word: c.word, forbidden: [...c.forbidden], theme: t.id })));
+  return grupoShuffle(cards, rand);
+}
+
+/** Quantas cartas os temas escolhidos somam (pelo resumo público do banco). */
+export function palDeckSize(catalog: readonly PalThemeSummary[], themes: readonly PalTheme[]): number {
+  return catalog.filter((t) => themes.includes(t.id)).reduce((n, t) => n + t.count, 0);
+}
+
+/** A partida terá dois times? Só com 4 pessoas ou mais e o modo "dois times". */
+export function palUsesTeams(players: number, mode: PalMode): boolean {
+  return players >= PAL_TEAMS_FROM && mode === "teams";
 }
 
 /** Sorteia os times: ordem aleatória, um para cada lado (diferença de no máximo 1). Devolve o time de cada id. */

@@ -1,10 +1,14 @@
 /**
- * Banco de cartas da Palavra secreta, em pt-BR: cada carta é a palavra secreta seguida das
+ * Banco de cartas original da Palavra secreta, em pt-BR: cada carta é a palavra secreta seguida das
  * palavras proibidas (as dicas mais óbvias, que o dicador não pode dizer). Conteúdo original,
  * em cinco temas. Formato compacto: "palavra|proibida|proibida|proibida|proibida".
+ * É o banco inicial do editor de cartas (ver `palavraEdit.ts`) e o que "restaurar" traz de volta.
  */
 
-export type PalTheme = "cotidiano" | "escritorio" | "tecnologia" | "brasil" | "espaco";
+/** Id de um tema: os originais (abaixo) ou os criados no editor ("tema-xxxxxx"). */
+export type PalTheme = string;
+
+type SeedTheme = "cotidiano" | "escritorio" | "tecnologia" | "brasil" | "espaco";
 
 export interface PalCard {
   word: string;
@@ -12,7 +16,16 @@ export interface PalCard {
   theme: PalTheme;
 }
 
-const RAW: Record<PalTheme, readonly string[]> = {
+/** Temas originais, na ordem do banco. */
+export const PAL_THEMES: readonly { id: SeedTheme; label: string }[] = [
+  { id: "cotidiano", label: "Cotidiano" },
+  { id: "escritorio", label: "Escritório" },
+  { id: "tecnologia", label: "Tecnologia" },
+  { id: "brasil", label: "Cultura brasileira" },
+  { id: "espaco", label: "Espaço" },
+];
+
+const RAW: Record<SeedTheme, readonly string[]> = {
   cotidiano: [
     "guarda-chuva|molhar|abrir|sombrinha|tempestade",
     "geladeira|frio|gelo|cozinha|comida",
@@ -175,8 +188,8 @@ const RAW: Record<PalTheme, readonly string[]> = {
   ],
 };
 
-/** Todas as cartas, na ordem do banco. */
-export const PAL_CARDS: readonly PalCard[] = (Object.keys(RAW) as PalTheme[]).flatMap((theme) =>
+/** Todas as cartas originais, na ordem do banco. */
+export const PAL_CARDS: readonly PalCard[] = (Object.keys(RAW) as SeedTheme[]).flatMap((theme) =>
   RAW[theme].map((line) => {
     const [word, ...forbidden] = line.split("|");
     return { word: word as string, forbidden, theme };
