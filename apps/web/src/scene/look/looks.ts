@@ -1,10 +1,9 @@
 /**
- * Direções de arte do mundo (prévias para escolher uma). Cada "visual" muda o modelo de material,
- * a luz e o tratamento da imagem (paleta, contornos, foco, grão), sem mexer na geometria: é o mesmo
- * escritório, só que fotografado de outro jeito. Vale para as duas lentes.
- *
- * Escolha em desenvolvimento com `?visual=retro70 | maquete | cinema | ilustracao` (sem nada, fica o
- * visual atual, sem nenhum custo extra). Quando o time escolher, o vencedor vira o padrão.
+ * Direção de arte do mundo. O visual oficial é o **Cinema** (escolhido pelo time em 18/11/2026):
+ * luz física, sombras do Sol, reflexos, brilho nas telas e gradação de cor de cinema. Os outros ficam
+ * para comparação em desenvolvimento com `?visual=atual | retro70 | maquete | ilustracao`.
+ * Cada visual muda o modelo de material, a luz e o tratamento da imagem, sem mexer na geometria.
+ * O modo de qualidade "leve" (ajustes) tira as partes caras: sombras, oclusão, brilho e suavização.
  */
 
 export type LookId = "atual" | "retro70" | "maquete" | "cinema" | "ilustracao";
@@ -45,6 +44,8 @@ export interface Grade {
   lift?: number;
   /** Cores parecidas com branco puxadas para esta cor (papel, creme), e força. */
   paper?: [string, number];
+  /** Quanto as cores muito saturadas (a estrela da marca, o laranja, neon) ficam fora da gradação (0..1). */
+  protect?: number;
 }
 
 export interface PostSpec {
@@ -187,19 +188,19 @@ const CINEMA: Look = {
   name: "Cinema realista",
   material: "standard",
   roughness: 0.42,
-  lights: { key: 1.5, sky: 0.14, ambient: 0.05, keyColor: "#FFE0BC", skyColor: "#9FC4FF", groundColor: "#141B27", rim: { color: "#6FB8FF", intensity: 0.4 } },
+  lights: { key: 1.5, sky: 0.22, ambient: 0.06, keyColor: "#FFE0BC", skyColor: "#C4D2EA", groundColor: "#1E2532", rim: { color: "#8EC5FF", intensity: 0.22 } },
   shadows: true,
   env: 0.16,
   exposure: 0.92,
   post3d: {
-    grade: { saturation: 1.1, contrast: 1.2, shadows: ["#0E3A4A", 0.28], highlights: ["#FFC48A", 0.16] },
+    grade: { saturation: 1.08, contrast: 1.18, shadows: ["#0E3A4A", 0.22], highlights: ["#FFC48A", 0.16], protect: 0.85 },
     bloom: { intensity: 0.9, threshold: 1.15, radius: 0.7 },
     ao: { radius: 1.1, intensity: 2.2 },
     // Sem aberração cromática nem grão: duplicavam as bordas e tiravam a nitidez.
     vignette: 0.45,
   },
   post2d: {
-    grade: { saturation: 1.05, contrast: 1.1, shadows: ["#0E3A4A", 0.2], highlights: ["#FFC48A", 0.14] },
+    grade: { saturation: 1.05, contrast: 1.1, shadows: ["#0E3A4A", 0.2], highlights: ["#FFC48A", 0.14], protect: 0.85 },
     bloom: { intensity: 0.8, threshold: 1.1 },
     vignette: 0.4,
   },
@@ -231,9 +232,9 @@ const ILUSTRACAO: Look = {
 export const LOOKS: Record<LookId, Look> = { atual: ATUAL, retro70: RETRO70, maquete: MAQUETE, cinema: CINEMA, ilustracao: ILUSTRACAO };
 
 function resolve(): Look {
-  if (!import.meta.env.DEV || typeof location === "undefined") return ATUAL;
+  if (!import.meta.env.DEV || typeof location === "undefined") return CINEMA;
   const id = new URLSearchParams(location.search).get("visual");
-  return id && id in LOOKS ? LOOKS[id as LookId] : ATUAL;
+  return id && id in LOOKS ? LOOKS[id as LookId] : CINEMA;
 }
 
 /** O visual desta página (fixo durante a visita: trocar exige recarregar). */

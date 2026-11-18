@@ -2,9 +2,12 @@ import * as THREE from "three";
 import { LOOK } from "./look/looks.ts";
 
 /**
- * Direção de arte: "estação espacial aconchegante" em cel shading.
- * Todo objeto usa toonMaterial(): sombreamento em faixas (4 tons), cores chapadas, poucos brilhos.
- * Combina com o 2D isométrico em pixel art (o mesmo mundo renderizado em baixa resolução).
+ * Materiais de tudo no mundo. A direção de arte oficial é o visual **Cinema** (look/looks.ts): luz
+ * física fosca (MeshStandardMaterial) com sombras do Sol, reflexos e gradação de cor. As funções
+ * toon()/glow()/lit() escolhem o material pelo visual: no Cinema, toon() devolve um material físico;
+ * nos visuais de comparação (`?visual=atual` em desenvolvimento), cel shading em faixas.
+ * Aspereza e metal dos móveis saem da cor da paleta (furniture/core.ts, matOf); pisos e paredes passam
+ * a aspereza em lit(…, surface).
  */
 
 let gradient: THREE.DataTexture | null = null;
@@ -60,7 +63,13 @@ export function toon(color: string, opts: ToonOpts = {}): THREE.MeshToonMaterial
 }
 
 /** Parâmetros comuns aos materiais iluminados (cor, textura, emissivo, transparência, lado). */
-export type LitParams = Pick<THREE.MeshStandardMaterialParameters, "color" | "map" | "emissive" | "emissiveIntensity" | "transparent" | "opacity" | "depthWrite" | "side">;
+export type LitParams = Pick<THREE.MeshStandardMaterialParameters, "color" | "map" | "emissive" | "emissiveIntensity" | "transparent" | "opacity" | "depthWrite" | "side" | "alphaTest">;
+
+/** Aspereza e metal na luz física (pisos, paredes); no cel shading não fazem nada. */
+export interface Surface {
+  rough?: number;
+  metal?: number;
+}
 
 /**
  * Material iluminado no modelo do visual atual (cel shading ou luz física). Use no lugar de
@@ -68,9 +77,9 @@ export type LitParams = Pick<THREE.MeshStandardMaterialParameters, "color" | "ma
  * `toonRamp = false` mantém o sombreamento de 2 tons padrão do three no visual atual (pisos e paredes
  * sempre foram assim); nas prévias, todos usam a rampa do visual.
  */
-export function lit(params: LitParams, toonRamp = true): THREE.MeshToonMaterial {
+export function lit(params: LitParams, toonRamp = true, surface: Surface = {}): THREE.MeshToonMaterial {
   if (LOOK.material === "standard") {
-    return new THREE.MeshStandardMaterial({ ...params, roughness: LOOK.roughness ?? 0.8, metalness: 0, envMapIntensity: LOOK.env }) as unknown as THREE.MeshToonMaterial;
+    return new THREE.MeshStandardMaterial({ ...params, roughness: surface.rough ?? LOOK.roughness ?? 0.8, metalness: surface.metal ?? 0 }) as unknown as THREE.MeshToonMaterial;
   }
   return new THREE.MeshToonMaterial({ ...params, gradientMap: toonRamp || LOOK.material !== "toon" ? gradientMap() : null });
 }

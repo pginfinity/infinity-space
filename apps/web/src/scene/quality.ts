@@ -1,7 +1,8 @@
 import { create } from "zustand";
 
 /**
- * Qualidade gráfica do 3D, escolhida por cada pessoa (fica no navegador).
+ * Qualidade gráfica, escolhida por cada pessoa (fica no navegador). Vale para o 3D e, nas sombras e
+ * efeitos de imagem, também para o 2D.
  * - auto: começa no máximo e baixa a resolução sozinha se o computador não acompanhar;
  * - leve: resolução reduzida e sem suavização de bordas (computador mais fraco);
  * - alta: resolução cheia até 2x (telas de alta densidade, placa de vídeo boa).
@@ -18,6 +19,8 @@ function load(): Quality {
   } catch {
     // sem armazenamento: padrão
   }
+  // Navegador automatizado (testes, sem placa de vídeo): começa no leve, sem sombras nem efeitos.
+  if (typeof navigator !== "undefined" && navigator.webdriver) return "leve";
   return "auto";
 }
 

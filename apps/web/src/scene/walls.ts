@@ -120,7 +120,7 @@ export function buildWalls(map: MapDef): THREE.Group {
     const merged = mergeGeometries(list, false);
     list.forEach((g) => g.dispose());
     if (!merged) continue;
-    const m = lit({ color }, false);
+    const m = lit({ color }, false, { rough: 0.88 });
     patch(m, `solid:${color}`, true);
     const mesh = new THREE.Mesh(merged, m);
     mesh.name = `wall:${color}`;
@@ -137,7 +137,7 @@ export function buildWalls(map: MapDef): THREE.Group {
   }
   const frameMerged = mergeGeometries(frames, false);
   if (frameMerged) {
-    const m = lit({ color: "#C9D2DE" }, false);
+    const m = lit({ color: "#C9D2DE" }, false, { rough: 0.35, metal: 0.6 });
     patch(m, "frame", false);
     const mesh = new THREE.Mesh(frameMerged, m);
     mesh.name = "frames";

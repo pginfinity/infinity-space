@@ -3,6 +3,19 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { FloorStyle, MapDef } from "@infinity/world";
 import { lit } from "./materials.ts";
 
+/** Aspereza de cada piso na luz física (mármore e porcelanato refletem; carpete é fosco). */
+const FLOOR_ROUGH: Partial<Record<FloorStyle, number>> = {
+  marble: 0.22,
+  "tile-white": 0.3,
+  "tile-dark": 0.34,
+  concrete: 0.78,
+  "wood-light": 0.5,
+  "wood-warm": 0.46,
+  "carpet-navy": 0.96,
+  "carpet-graphite": 0.96,
+  "carpet-warm": 0.96,
+};
+
 /**
  * Pisos com textura desenhada em canvas (carpete, tábuas, ladrilho, mármore, neon).
  * As UVs vêm das coordenadas do mundo, então o padrão é contínuo entre salas vizinhas do mesmo piso.
@@ -150,7 +163,7 @@ export function buildFloors(map: MapDef): THREE.Group {
     const tex = floorTexture(style);
     const material = SPECS[style].emissive
       ? new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })
-      : lit({ map: tex }, false);
+      : lit({ map: tex }, false, { rough: FLOOR_ROUGH[style] ?? 0.7 });
     const mesh = new THREE.Mesh(merged, material);
     mesh.name = `floor:${style}`;
     mesh.receiveShadow = true;

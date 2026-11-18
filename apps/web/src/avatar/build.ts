@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { AvatarLook } from "@infinity/world";
-import { toon } from "../scene/materials.ts";
+import { lit, toon } from "../scene/materials.ts";
 import { faceTexture, shade, type Expression } from "./face.ts";
 
 /**
@@ -147,7 +147,8 @@ const faceMats = new Map<THREE.Texture, THREE.MeshToonMaterial>();
 function faceMaterial(tex: THREE.Texture): THREE.MeshToonMaterial {
   let m = faceMats.get(tex);
   if (!m) {
-    m = new THREE.MeshToonMaterial({ map: tex, transparent: true, alphaTest: 0.35, depthWrite: true });
+    // Mesmo modelo de luz do corpo (toon no visual antigo, físico no Cinema).
+    m = lit({ map: tex, transparent: true, alphaTest: 0.35, depthWrite: true });
     faceMats.set(tex, m);
   }
   return m;

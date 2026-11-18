@@ -16,7 +16,7 @@ import { useQuality } from "../quality.ts";
  *
  * Nitidez: com a etapa extra, o antisserrilhado do navegador não vale mais; no 3D a suavização de
  * bordas é feita aqui (MSAA 4x), menos no modo "leve". O 2D é pixel art: sem suavização, de propósito.
- * No modo "leve" também sai a oclusão de ambiente (a mais cara).
+ * No modo "leve" ficam só o tone mapping, a paleta e a vinheta (sem oclusão, brilho, foco nem grão).
  */
 export function LookPost({ lens }: { lens: Lens }) {
   const spec = lens === "2d" ? LOOK.post2d : LOOK.post3d;
@@ -28,17 +28,17 @@ export function LookPost({ lens }: { lens: Lens }) {
 
   const fx: ReactElement[] = [];
   if (spec.ao && lens === "3d" && !light) fx.push(<N8AO key="ao" aoRadius={spec.ao.radius} intensity={spec.ao.intensity} distanceFalloff={1} quality="medium" halfRes={quality !== "alta"} />);
-  if (spec.bloom) fx.push(<Bloom key="bloom" intensity={spec.bloom.intensity} luminanceThreshold={spec.bloom.threshold} luminanceSmoothing={0.2} radius={spec.bloom.radius ?? 0.6} mipmapBlur />);
+  if (spec.bloom && !light) fx.push(<Bloom key="bloom" intensity={spec.bloom.intensity} luminanceThreshold={spec.bloom.threshold} luminanceSmoothing={0.2} radius={spec.bloom.radius ?? 0.6} mipmapBlur />);
   fx.push(<ToneMapping key="tm" mode={ToneMappingMode.ACES_FILMIC} />);
   if (grade) fx.push(<primitive key="grade" object={grade} />);
   if (ink) fx.push(<primitive key="ink" object={ink} />);
-  if (spec.tiltShift) {
+  if (spec.tiltShift && !light) {
     // Linha de foco horizontal no meio da tela; borra para cima e para baixo (maquete).
     fx.push(<TiltShift2 key="tilt" blur={spec.tiltShift.blur} taper={spec.tiltShift.focus} start={[0, 0.5]} end={[1, 0.5]} samples={10} direction={[1, 1]} />);
   }
-  if (spec.chromatic) fx.push(<ChromaticAberration key="ca" offset={new THREE.Vector2(spec.chromatic, spec.chromatic)} radialModulation={false} modulationOffset={0} />);
+  if (spec.chromatic && !light) fx.push(<ChromaticAberration key="ca" offset={new THREE.Vector2(spec.chromatic, spec.chromatic)} radialModulation={false} modulationOffset={0} />);
   if (spec.vignette) fx.push(<Vignette key="vig" offset={0.3} darkness={spec.vignette} />);
-  if (spec.grain) fx.push(<Noise key="grain" opacity={spec.grain} blendFunction={BlendFunction.OVERLAY} premultiply={false} />);
+  if (spec.grain && !light) fx.push(<Noise key="grain" opacity={spec.grain} blendFunction={BlendFunction.OVERLAY} premultiply={false} />);
 
   return (
     <EffectComposer multisampling={lens === "3d" && !light ? 4 : 0} enableNormalPass={false}>

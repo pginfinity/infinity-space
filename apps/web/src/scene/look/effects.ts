@@ -40,10 +40,14 @@ uniform vec4 uShadows;
 uniform vec4 uHighlights;
 uniform float uLift;
 uniform vec4 uPaper;
+uniform float uProtect;
 ${COLOR_FNS}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor){
   vec3 c = toDisplay(inputColor.rgb);
+  vec3 orig = c;
   vec3 hsv = rgb2hsv(c);
+  // Cores muito saturadas e claras o bastante (a estrela da marca, o laranja, neon) ficam de fora.
+  float keep = uProtect * smoothstep(0.42, 0.8, hsv.y) * smoothstep(0.18, 0.45, hsv.z);
   // Papel: o que é quase branco (pouca saturação, claro) puxa para a cor do papel.
   float paper = uPaper.a * smoothstep(0.55, 0.95, hsv.z) * (1.0 - smoothstep(0.08, 0.3, hsv.y));
   // Faixas de matiz: desloca e (des)satura só a faixa, com borda suave.
@@ -71,6 +75,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = mix(c, mix(c, uHighlights.rgb, 0.5), uHighlights.a * smoothstep(0.45, 1.0, l));
   // Pretos levantados (filme desbotado).
   c = c * (1.0 - uLift) + uLift * vec3(0.5, 0.45, 0.4);
+  c = mix(c, orig, keep);
   outputColor = vec4(toLinear(clamp(c, 0.0, 1.0)), inputColor.a);
 }
 `;
@@ -100,6 +105,7 @@ export class GradeEffect extends Effect {
         ["uHighlights", new THREE.Uniform(rgba(g.highlights))],
         ["uLift", new THREE.Uniform(g.lift ?? 0)],
         ["uPaper", new THREE.Uniform(rgba(g.paper))],
+        ["uProtect", new THREE.Uniform(g.protect ?? 0)],
       ]),
     });
   }

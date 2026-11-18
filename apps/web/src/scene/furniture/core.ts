@@ -82,6 +82,32 @@ export const T = {
 
 // ---------------------------------------------------------------- pintura
 
+// ---------------------------------------------------------------- material por cor
+
+/**
+ * Aspereza e metal de cada cor da paleta, para a luz física do visual Cinema (no cel shading não
+ * muda nada). Os modelos não precisam saber: o material sai da cor que já usam. Cor fora da tabela
+ * (tons misturados, cor do objeto) fica com o padrão: fosco acetinado.
+ */
+const MAT_DEFAULT: [number, number] = [0.62, 0];
+const MAT_BY_COLOR = new Map<string, [number, number]>();
+function matOf(hex: string, translucent: boolean): [number, number] {
+  if (translucent) return [0.08, 0];
+  if (!MAT_BY_COLOR.size) {
+    const set = (cs: string[], m: [number, number]) => cs.forEach((c) => MAT_BY_COLOR.set(c.toLowerCase(), m));
+    set([PALETTE.metal, T.steel, T.steelDark], [0.3, 0.85]);
+    set([PALETTE.gold], [0.28, 1]);
+    set([T.screen, T.screenHi, PALETTE.ink, PALETTE.navyDeep], [0.16, 0.1]);
+    set([PALETTE.woodLight, PALETTE.wood, PALETTE.woodDark, T.creamDark], [0.55, 0]);
+    set([PALETTE.leather], [0.42, 0]);
+    set([PALETTE.leaf, PALETTE.leafLight, PALETTE.green, T.leafDark], [0.72, 0]);
+    set([PALETTE.offwhite, PALETTE.cream], [0.5, 0]);
+    set([PALETTE.graphite], [0.4, 0.2]);
+    set([T.felt], [0.95, 0]);
+  }
+  return MAT_BY_COLOR.get(hex.toLowerCase()) ?? MAT_DEFAULT;
+}
+
 /** Cor opaca (string) ou pintura especial. */
 export type Paint = string | { k: "g" | "t"; c: string; o: number };
 /** Brilha sem sombreamento (telas, LEDs, neon). */
@@ -138,21 +164,24 @@ export function furnitureShaderPatch(shader: { vertexShader: string; fragmentSha
   shader.vertexShader = shader.vertexShader
     .replace(
       "#include <common>",
-      "#include <common>\nattribute float aLit;\nvarying float vLit;\nattribute vec2 aSlot;\nattribute vec3 aTarget;\nattribute vec4 iColor;\nattribute vec4 iAccent;",
+      "#include <common>\nattribute float aLit;\nvarying float vLit;\nattribute vec2 aSlot;\nattribute vec3 aTarget;\nattribute vec4 iColor;\nattribute vec4 iAccent;\nattribute vec2 aMat;\nvarying vec2 vMat;",
     )
-    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLit = aLit;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLit = aLit;\nvMat = aMat;")
     .replace(
       "#include <color_vertex>",
       "#include <color_vertex>\nif (aSlot.x > 0.5) { vec4 src = aSlot.x > 1.5 ? iAccent : iColor; if (src.w > 0.5) vColor.rgb = mix(src.rgb, aTarget, aSlot.y); }",
     );
   shader.fragmentShader = shader.fragmentShader
-    .replace("#include <common>", "#include <common>\nvarying float vLit;")
+    .replace("#include <common>", "#include <common>\nvarying float vLit;\nvarying vec2 vMat;")
+    // Aspereza e metal por vértice (MeshStandardMaterial do visual Cinema; no toon estes trechos não existem).
+    .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = vMat.x;")
+    .replace("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\nmetalnessFactor = vMat.y;")
     .replace("#include <colorspace_fragment>", "gl_FragColor.rgb = mix(gl_FragColor.rgb, vColor.rgb, vLit);\n#include <colorspace_fragment>");
 }
 
 function patchLit(m: THREE.Material): void {
   m.onBeforeCompile = (shader) => furnitureShaderPatch(shader);
-  m.customProgramCacheKey = () => "mobilia-v2";
+  m.customProgramCacheKey = () => "mobilia-v3";
 }
 
 // ---------------------------------------------------------------- matrizes
@@ -342,6 +371,10 @@ export class Builder {
     g.setAttribute("aSlot", new THREE.BufferAttribute(aSlot, 2));
     g.setAttribute("aTarget", new THREE.BufferAttribute(aTarget, 3));
     g.setAttribute("aLit", new THREE.BufferAttribute(new Float32Array(n).fill(isLit(p) ? 1 : 0), 1));
+    const [rough, metal] = matOf(slot ? slot.target : hex, alphaOf(p) < 1);
+    const aMat = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) aMat.set([rough, metal], i * 2);
+    g.setAttribute("aMat", new THREE.BufferAttribute(aMat, 2));
     g.morphAttributes = {};
     g.clearGroups();
     const key = bucketOf(p);

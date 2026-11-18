@@ -366,7 +366,7 @@ function dryMaterial(base: THREE.Material): THREE.Material {
         }`,
       );
     };
-    m.customProgramCacheKey = () => "mobilia-v2-seca";
+    m.customProgramCacheKey = () => "mobilia-v3-seca";
     dryMats.set(base, m);
   }
   return m;

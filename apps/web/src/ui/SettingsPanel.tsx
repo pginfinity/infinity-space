@@ -379,9 +379,9 @@ function CamTest({ camId, quality, bg }: { camId: string | null; quality: VideoQ
 }
 
 const QUALITY_OPTIONS: { id: Quality; title: string; hint: string }[] = [
-  { id: "auto", title: "Automática", hint: "Ajusta sozinha ao computador" },
-  { id: "leve", title: "Leve", hint: "Para PC mais fraco" },
-  { id: "alta", title: "Alta", hint: "Mais nitidez no 3D" },
+  { id: "auto", title: "Automática", hint: "Efeitos completos; baixa a resolução se pesar" },
+  { id: "leve", title: "Leve", hint: "Sem sombras nem efeitos. Para PC mais fraco" },
+  { id: "alta", title: "Alta", hint: "Sombras mais nítidas e resolução cheia" },
 ];
 
 /** Ajuda: rever os primeiros passos com o Orbi e a lista de atalhos. */
@@ -411,8 +411,8 @@ function HelpSection({ onClose }: { onClose: () => void }) {
 function GraphicsSection() {
   const mode = useQuality((s) => s.mode);
   return (
-    <Section icon={<Gauge className="size-4" />} title="Gráficos do 3D">
-      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Qualidade do 3D">
+    <Section icon={<Gauge className="size-4" />} title="Gráficos">
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Qualidade dos gráficos">
         {QUALITY_OPTIONS.map((o) => (
           <button
             key={o.id}

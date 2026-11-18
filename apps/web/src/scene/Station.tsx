@@ -8,6 +8,7 @@ import { buildFurniture, registerFurniture } from "./furniture/index.ts";
 import { reapplyWallView } from "./wallFacing.ts";
 import { buildFloors } from "./floors.ts";
 import { buildWalls } from "./walls.ts";
+import { buildCoves } from "./coves.ts";
 import { buildSigns } from "./signs.ts";
 import { registerScreens } from "./tvs.ts";
 import { Sculpture } from "../lens3d/Sculpture.tsx";
@@ -23,7 +24,9 @@ export function Station({ lens }: { lens: Lens }) {
     const signs = buildSigns(map);
     const furniture = buildFurniture(map.objects);
     group.add(floors, walls, signs, furniture.group);
-    return { group, signs, furniture, owned: [floors, walls, signs] };
+    const coves = buildCoves(map);
+    if (coves) group.add(coves);
+    return { group, signs, furniture, owned: coves ? [floors, walls, signs, coves] : [floors, walls, signs] };
   }, [map]);
 
   // Registra as TVs só depois de montar: no StrictMode o useMemo roda duas vezes e uma cópia é descartada.

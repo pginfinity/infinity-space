@@ -71,6 +71,7 @@ registerActivity({
 - **Jogos originais.** Nada de recriar jogo existente: nome, personagens, arte ou fases.
 - **Textos em pt-BR, marca da `docs/marca.md`.** Laranja como único destaque por tela; o gradiente da estrela só em momentos especiais. Tokens de cor em `apps/web/src/styles.css`.
 - **UI de ferramenta.** Densa e clara, operável por teclado (Esc fecha, foco visível, `aria-label`), sem padrão de landing page.
+- **Materiais e luz (visual Cinema).** Use `toon()`, `glow()` e `lit()` de `scene/materials.ts`, nunca `new MeshToonMaterial`/`MeshStandardMaterial` direto: elas seguem o visual oficial. Nos móveis, aspereza e metal vêm da cor da paleta (`matOf` em `furniture/core.ts`): metal, madeira, couro, telas e folhas já saem certos se a cor for a da paleta. Sombras, oclusão e brilho saem no modo de qualidade "leve". Cada sala tem um filete de luz no rodapé na cor de destaque (`scene/coves.ts`).
 - **Móveis novos.** Tipo em `ObjectType` (`packages/world/src/map/types.ts`), entrada no `CATALOG`, modelo procedural em `apps/web/src/scene/furniture/` registrado no `MODELS` do `index.ts`, e posição no mapa (`map/estacao.ts`). Os testes do mapa (`world.test.ts`) precisam continuar passando.
 
 ## Próximas melhorias da base
