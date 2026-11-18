@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Trash2, Trophy } from "lucide-react";
+import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, MessageCircleMore, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Trash2, Trophy } from "lucide-react";
 import type { MapObject, ObjectType, Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 
@@ -24,6 +24,7 @@ const DEFS: GuideDef[] = [
   { key: "desenho", label: "Desenhe e adivinhe", hint: "Nos quadros brancos", group: "Jogos", icon: PenTool, types: ["whiteboard"] },
   { key: "stop", label: "Stop", hint: "Adedonha no cavalete da copa", group: "Jogos", icon: Rows3, types: ["stop-board"] },
   { key: "impostor", label: "Impostor na Estação", hint: "Terminal de missões", group: "Jogos", icon: Search, types: ["mission-console"] },
+  { key: "palavra", label: "Palavra secreta", hint: "Dicas e palpites em times", group: "Jogos", icon: MessageCircleMore, types: ["word-board"] },
   { key: "hockey", label: "Hockey de mesa", hint: "Para dois, em tempo real", group: "Jogos", icon: Gamepad2, types: ["airhockey"] },
   { key: "pingue", label: "Pingue-pongue", hint: "Para dois, em tempo real", group: "Jogos", icon: Gamepad2, types: ["pingpong"] },
   { key: "sinuca", label: "Sinuca", hint: "Bola 8, para dois", group: "Jogos", icon: Disc3, types: ["pool"] },

@@ -19,7 +19,7 @@ import { T } from "./strings.ts";
 
 // ---- painel aberto (um por vez) -------------------------------------------------------------
 
-export type GrupoGame = "quiz" | "draw" | "stop" | "impostor";
+export type GrupoGame = "quiz" | "draw" | "stop" | "impostor" | "palavra";
 
 interface GrupoUi {
   panel: { game: GrupoGame; id: string; view?: string } | null;

@@ -120,6 +120,7 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   jukebox: games.jukebox,
   "stop-board": grupo.stopBoard,
   "mission-console": grupo.missionConsole,
+  "word-board": grupo.wordBoard,
   // pacote escritorio
   "notice-board": escritorio.noticeBoard,
   telescope: vivo.telescope,

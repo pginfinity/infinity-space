@@ -14,5 +14,7 @@
   "stop-largada": { "prompt": "Short referee whistle blow to start a round, bright and quick", "seconds": 0.6 },
   "imp-papel": { "prompt": "Short suspenseful reveal sting for a secret role in a social deduction game, low synth swell with a soft hit, mysterious but friendly", "seconds": 2 },
   "imp-congelar": { "prompt": "Playful freezing sound, quick icy crackle and shimmering chime, like something turning into ice, cartoon style", "seconds": 1.2 },
-  "imp-reuniao": { "prompt": "Emergency meeting alarm for a space station game, two-tone synth siren repeated twice, urgent but not harsh", "seconds": 1.8 }
+  "imp-reuniao": { "prompt": "Emergency meeting alarm for a space station game, two-tone synth siren repeated twice, urgent but not harsh", "seconds": 1.8 },
+  "palavra-proibida": { "prompt": "Short playful referee whistle followed by two descending soft synth notes, meaning a forbidden word was said in a party word game, friendly not harsh", "seconds": 0.8 },
+  "palavra-pular": { "prompt": "Quick card flip swoosh with a tiny light chime, skipping to the next card in a word game", "seconds": 0.5 }
 }
