@@ -24,15 +24,31 @@ export function PresenceSettings() {
     if (!focus) return;
     // Espera o painel entrar (a animação de entrada leva 250 ms); rola sem animação, que um scroll
     // suave em andamento é cancelado por qualquer nova medida do painel. Confere de novo logo depois.
-    const go = () => ref.current?.scrollIntoView({ block: "start" });
-    const t1 = window.setTimeout(go, 280);
+    // Rola só a lista do painel (scrollIntoView rolava também os ancestrais com overflow escondido: o
+    // painel inteiro subia e o cabeçalho com o "fechar" saía da tela).
+    const container = ref.current?.closest(".overflow-y-auto") as HTMLElement | null;
+    const go = () => {
+      const sec = ref.current;
+      if (!sec || !container) return;
+      const offset = sec.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+      container.scrollTop = Math.max(0, offset);
+    };
+    // O que fica acima (lista de dispositivos, prévia da câmera) carrega depois e empurra a seção para
+    // baixo: enquanto o painel muda de tamanho nos primeiros 2 s, rola de novo até aqui.
+    const ro = typeof ResizeObserver !== "undefined" && container ? new ResizeObserver(() => go()) : null;
+    const t1 = window.setTimeout(() => {
+      go();
+      if (ro && container) for (const child of Array.from(container.children)) ro.observe(child);
+    }, 280);
     const t2 = window.setTimeout(() => {
       go();
+      ro?.disconnect();
       usePresence.setState({ focusSettings: false });
-    }, 600);
+    }, 2000);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
+      ro?.disconnect();
     };
   }, [focus]);
 

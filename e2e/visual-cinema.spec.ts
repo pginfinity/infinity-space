@@ -29,7 +29,7 @@ for (const lens of ["3d", "2d"] as const) {
     page.on("console", (m) => {
       if (m.type() === "error" && !/WebSocket|favicon/.test(m.text())) errors.push(m.text());
     });
-    await page.goto(`/?nome=Visual&lente=${lens}`);
+    await page.goto(`/?nome=Visual&lente=${lens}&visual=cinema`);
     await page.waitForFunction(() => !!(window as unknown as Partial<W>).__infinity?.store.getState().selfId, null, { timeout: 30_000 });
     if (lens === "3d") await page.waitForSelector('[role="application"][data-ready="true"]', { timeout: 120_000 });
     await page.evaluate(() => (window as unknown as W).__infinity.walkTo({ x: -18.4, z: 2.5 }));

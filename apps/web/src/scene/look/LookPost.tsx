@@ -16,15 +16,16 @@ import { useQuality } from "../quality.ts";
  *
  * Nitidez: com a etapa extra, o antisserrilhado do navegador não vale mais; no 3D a suavização de
  * bordas é feita aqui (MSAA 4x), menos no modo "leve". O 2D é pixel art: sem suavização, de propósito.
- * No modo "leve" ficam só o tone mapping, a paleta e a vinheta (sem oclusão, brilho, foco nem grão).
+ * No modo "leve" a etapa inteira sai (o tone mapping volta para o renderizador): cada passada de
+ * tela cheia custa caro em PC fraco. Fica a luz física e os materiais, sem gradação, brilho nem oclusão.
  */
 export function LookPost({ lens }: { lens: Lens }) {
   const spec = lens === "2d" ? LOOK.post2d : LOOK.post3d;
   const grade = useMemo(() => (spec.grade ? new GradeEffect(spec.grade) : null), [spec]);
   const ink = useMemo(() => (spec.ink ? new InkEffect(spec.ink) : null), [spec]);
   const quality = useQuality((s) => s.mode);
-  if (!hasPost(spec)) return null;
-  const light = quality === "leve";
+  if (!hasPost(spec) || quality === "leve") return null;
+  const light = false;
 
   const fx: ReactElement[] = [];
   if (spec.ao && lens === "3d" && !light) fx.push(<N8AO key="ao" aoRadius={spec.ao.radius} intensity={spec.ao.intensity} distanceFalloff={1} quality="medium" halfRes={quality !== "alta"} />);

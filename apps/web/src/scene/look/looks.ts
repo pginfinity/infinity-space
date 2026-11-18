@@ -234,7 +234,11 @@ export const LOOKS: Record<LookId, Look> = { atual: ATUAL, retro70: RETRO70, maq
 function resolve(): Look {
   if (!import.meta.env.DEV || typeof location === "undefined") return CINEMA;
   const id = new URLSearchParams(location.search).get("visual");
-  return id && id in LOOKS ? LOOKS[id as LookId] : CINEMA;
+  if (id && id in LOOKS) return LOOKS[id as LookId];
+  // Testes automatizados de fluxo (navegador sem placa de vídeo, renderizando por software): o visual
+  // antigo, mais barato, para não ficarem lentos. O Cinema tem o teste dele (e2e/visual-cinema.spec.ts).
+  if (typeof navigator !== "undefined" && navigator.webdriver) return ATUAL;
+  return CINEMA;
 }
 
 /** O visual desta página (fixo durante a visita: trocar exige recarregar). */

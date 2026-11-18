@@ -94,12 +94,17 @@ export function Palette() {
 
 function PaletteDialog() {
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
+  // Índice escolhido com setas ou mouse; -1 = o primeiro habilitado da lista atual.
+  const [picked, setPicked] = useState(-1);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const cmds = useCommands();
   const shown = useMemo(() => (query.trim() ? rank(cmds, query).slice(0, 60) : cmds.filter((c) => !c.onlyQuery)), [cmds, query]);
   const enabled = shown.map((c, i) => (c.disabled ? -1 : i)).filter((i) => i >= 0);
+  // Calculado na renderização (não num efeito depois): digitando rápido e apertando Enter, o item que
+  // roda é sempre o destacado na lista nova, nunca um índice antigo.
+  const active = enabled.includes(picked) ? picked : (enabled[0] ?? 0);
+  const setActive = setPicked;
   const current = shown[active];
 
   // Foco no campo ao abrir; devolve ao que estava focado ao fechar.
@@ -112,7 +117,6 @@ function PaletteDialog() {
     };
   }, []);
 
-  useEffect(() => setActive(enabled[0] ?? 0), [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
@@ -174,7 +178,10 @@ function PaletteDialog() {
           <input
             ref={input}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPicked(-1);
+            }}
             placeholder={T.palette.placeholder}
             role="combobox"
             aria-expanded="true"

@@ -53,6 +53,17 @@ function BackgroundThrottle() {
   const setFrameloop = useThree((s) => s.setFrameloop);
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
+    // Testes automatizados (desenvolvimento, Chrome sem placa de vídeo, várias janelas ao mesmo tempo):
+    // a cena desenha a ~12 quadros por segundo e sobra CPU para a interface responder no tempo do teste.
+    // O movimento tem laço próprio (engine/movement.ts) e não depende disto.
+    if (import.meta.env.DEV && typeof navigator !== "undefined" && navigator.webdriver && !new URLSearchParams(location.search).has("quadros")) {
+      setFrameloop("demand");
+      const id = window.setInterval(() => invalidate(), 80);
+      return () => {
+        window.clearInterval(id);
+        setFrameloop("always");
+      };
+    }
     let timer = 0;
     const slow = () => {
       setFrameloop("demand");
