@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   NavGrid,
+  PAL_COOP_NAME,
   PAL_FLAG_MS,
   PAL_GUESS_GAP_MS,
   PAL_HINT_GAP_MS,
+  PAL_MAX_CARDS,
+  PAL_MAX_THEMES,
   PAL_READY_MS,
   PAL_SKIPS,
   PAL_TURN_END_MS,
@@ -11,7 +14,10 @@ import {
   buildStationMap,
   dist,
   grupoFold,
+  palRole,
+  palSeedBank,
   wallBetween,
+  type PalBank,
   type PalCardEvent,
   type PalState,
   type Vec2,
@@ -25,7 +31,16 @@ class Host {
   readonly map = buildStationMap();
   readonly nav = NavGrid.fromMap(this.map);
   readonly zones = new ZoneIndex(this.map.zones);
-  readonly store = { get: <T>(_k: string, f: T): T => f, set: () => undefined } as unknown as Store;
+  /** Store em memória (como o de verdade: o mesmo objeto pode ser lido por uma atividade nova, "depois de reiniciar"). */
+  readonly data: Map<string, unknown>;
+  readonly store: Store;
+  constructor(data = new Map<string, unknown>()) {
+    this.data = data;
+    this.store = {
+      get: <T>(k: string, f: T): T => (data.has(k) ? (JSON.parse(JSON.stringify(data.get(k))) as T) : f),
+      set: <T>(k: string, v: T): void => void data.set(k, JSON.parse(JSON.stringify(v ?? null))),
+    } as unknown as Store;
+  }
   readonly pos = new Map<string, Vec2>();
   readonly names = new Map<string, string>();
   events: { ev: string; data: unknown; to?: string[] }[] = [];
@@ -40,7 +55,8 @@ class Host {
       zones: this.zones,
       store: this.store,
       changed: () => undefined,
-      event: (_a, ev, data, opts) => void this.events.push({ ev, data, ...(opts?.to ? { to: [...opts.to] } : {}) }),
+      // Cópia do que foi mandado (como na rede): mudanças depois do envio não alteram o evento.
+      event: (_a, ev, data, opts) => void this.events.push({ ev, data: JSON.parse(JSON.stringify(data ?? null)), ...(opts?.to ? { to: [...opts.to] } : {}) }),
       players: () => [...this.pos.keys()],
       playerName: (id) => this.names.get(id),
       playerPos: (id) => this.pos.get(id),
@@ -87,10 +103,10 @@ function texts(v: unknown, out: string[] = []): string[] {
 /**
  * A carta (palavra e proibidas) não aparece em nenhum texto do estado público. As cartas já
  * resolvidas podem aparecer (e uma delas pode ser proibida da carta atual), então ficam de fora,
- * assim como os ids dos temas ("espaco" é tema e também proibida de "astronauta").
+ * assim como os temas (ids e nomes: "espaco" é tema e também proibida de "astronauta").
  */
 function expectHidden(s: PalState, card: PalCardEvent): void {
-  const { done: _done, themes: _themes, feed, ...rest } = s;
+  const { done: _done, themes: _themes, catalog: _catalog, feed, ...rest } = s;
   const shown = [rest, feed.filter((f) => f.k !== "hit" && f.k !== "skip" && f.k !== "forbidden")];
   const folded = texts(shown).map(grupoFold);
   for (const w of [card.word, ...card.forbidden]) expect(folded).not.toContain(grupoFold(w));
@@ -402,5 +418,303 @@ describe("Palavra secreta no servidor: três pessoas, um time só", () => {
     expect(new Set(givers).size).toBe(3);
     expect(st()).toMatchObject({ phase: "final", winner: null });
     expect(st().teams[0]!.score).toBe(3);
+  });
+});
+
+describe("Palavra secreta no servidor: editor de cartas", () => {
+  const FAR = { x: -8.6, z: 0.5 };
+  const CARD = { word: "Titanic", forbidden: ["navio", "iceberg", "afundar", "Jack"] };
+  /** Último banco mandado (e para quem). */
+  const lastBank = () => {
+    const e = h.evs("bank").at(-1)!;
+    return { bank: e.data as PalBank, to: e.to };
+  };
+  const lastError = () => h.evs("bankError").at(-1);
+  const themeId = (label: string) => st().catalog.find((t) => t.label === label)!.id;
+  const count = (label: string) => st().catalog.find((t) => t.label === label)?.count;
+
+  beforeEach(() => {
+    ["Ana", "Bruno", "Caio", "Duda"].forEach((n, i) => h.add("abcd"[i]!, n, MKT(i)));
+    h.add("f", "Fábio", FAR);
+    h.add("x", "Xavier", LOBBY);
+  });
+
+  it("só perto do painel e sem partida; o banco vai só para quem pediu", () => {
+    expect(h.zones.zoneAt(FAR)?.id).toBe("marketing");
+    pal.handle("f", "bank", {});
+    pal.handle("x", "bank", {});
+    expect(h.evs("bank")).toHaveLength(0);
+    expect(h.evs("bankError").map((e) => [e.to, e.data])).toEqual([
+      [["f"], { reason: "near" }],
+      [["x"], { reason: "near" }],
+    ]);
+    // De longe, nada muda.
+    pal.handle("f", "themeAdd", { label: "Filmes" });
+    expect(st().catalog).toHaveLength(5);
+    pal.handle("a", "bank", {});
+    const { bank, to } = lastBank();
+    expect(to).toEqual(["a"]);
+    expect(bank.themes).toHaveLength(5);
+    expect(bank.themes.flatMap((t) => t.cards)).toHaveLength(150);
+    // O estado público tem só o resumo dos temas (nome e quantas cartas).
+    expect(st().catalog.map((t) => t.count)).toEqual([30, 30, 30, 30, 30]);
+    expect(Object.keys(st().catalog[0]!).sort()).toEqual(["count", "id", "label"]);
+    // Operação desconhecida não responde nada.
+    const before = h.events.length;
+    pal.handle("a", "bankDump", {});
+    expect(h.events).toHaveLength(before);
+  });
+
+  it("cria, edita, move e apaga cartas e temas, com validação no servidor", () => {
+    pal.handle("a", "themeAdd", { label: "x" });
+    expect(lastError()).toMatchObject({ to: ["a"], data: { reason: "label" } });
+    pal.handle("a", "themeAdd", { label: "  ESPACO " });
+    expect(lastError()!.data).toEqual({ reason: "themeDup" });
+    pal.handle("a", "themeAdd", { label: "Filmes" });
+    const filmes = themeId("Filmes");
+    expect(count("Filmes")).toBe(0);
+    // Todos os temas estavam escolhidos: o novo entra na escolha.
+    expect(st().themes).toContain(filmes);
+
+    // Carta: o servidor confere tudo (o cliente só avisa antes).
+    const save = (data: Record<string, unknown>) => pal.handle("a", "cardSave", { theme: filmes, ...data });
+    save({ ...CARD, forbidden: ["navio", "iceberg", "afundar"] });
+    expect(lastError()!.data).toEqual({ reason: "forbidden" });
+    save({ ...CARD, forbidden: ["navio", "iceberg", "Navio", "Jack"] });
+    expect(lastError()!.data).toEqual({ reason: "repeat" });
+    save({ ...CARD, forbidden: ["navio", "iceberg", "titanic", "Jack"] });
+    expect(lastError()!.data).toEqual({ reason: "repeat" });
+    save({ ...CARD, word: "Quasar" });
+    expect(lastError()!.data).toEqual({ reason: "reserved" });
+    save({ ...CARD, word: "" });
+    expect(lastError()!.data).toEqual({ reason: "word" });
+    expect(count("Filmes")).toBe(0);
+    save(CARD);
+    expect(count("Filmes")).toBe(1);
+    let card = lastBank().bank.themes.find((t) => t.id === filmes)!.cards[0]!;
+    expect(card).toMatchObject(CARD);
+    // A carta nunca aparece no estado público.
+    expect(JSON.stringify(st())).not.toContain("Titanic");
+    // Repetida no mesmo tema (sem acento nem maiúscula), não.
+    save({ ...CARD, word: "  TITANIC " });
+    expect(lastError()!.data).toEqual({ reason: "duplicate" });
+    // Tema que não existe: nada acontece.
+    const n = h.events.length;
+    pal.handle("a", "cardSave", { ...CARD, theme: "nao-existe" });
+    expect(h.events).toHaveLength(n);
+
+    // Editar a própria carta (mesma palavra) vale; ela continua uma só.
+    save({ ...CARD, id: card.id, forbidden: ["navio", "gelo", "afundar", "Rose"] });
+    card = lastBank().bank.themes.find((t) => t.id === filmes)!.cards[0]!;
+    expect(card.forbidden).toEqual(["navio", "gelo", "afundar", "Rose"]);
+    expect(count("Filmes")).toBe(1);
+    // Mudar de tema: sai de Filmes e entra em Espaço.
+    pal.handle("a", "cardSave", { ...CARD, id: card.id, theme: "espaco" });
+    expect(count("Filmes")).toBe(0);
+    expect(count("Espaço")).toBe(31);
+    pal.handle("a", "cardDelete", { id: card.id });
+    expect(count("Espaço")).toBe(30);
+
+    // Renomear (sem repetir nome de outro tema) e apagar tema.
+    pal.handle("a", "themeRename", { id: filmes, label: "cultura BRASILEIRA" });
+    expect(lastError()!.data).toEqual({ reason: "themeDup" });
+    pal.handle("a", "themeRename", { id: filmes, label: "Cinema" });
+    expect(st().catalog.find((t) => t.id === filmes)!.label).toBe("Cinema");
+    // Com a mesa aberta (lobby), a dona escolhe só o tema novo e depois o apaga.
+    pal.handle("a", "join", {});
+    pal.handle("a", "config", { themes: [filmes] });
+    expect(st().themes).toEqual([filmes]);
+    pal.handle("a", "themeDelete", { id: filmes });
+    expect(st().catalog.some((t) => t.id === filmes)).toBe(false);
+    // A escolha da mesa ficou vazia: volta a ter todos os temas.
+    expect(st().themes).toEqual(st().catalog.map((t) => t.id));
+    // Toda resposta do editor foi só para quem editou.
+    expect(h.evs("bank").every((e) => e.to?.length === 1 && e.to[0] === "a")).toBe(true);
+    expect(h.evs("bankError").every((e) => e.to?.length === 1 && e.to[0] === "a")).toBe(true);
+  });
+
+  it("limites: temas, cartas por tema e o último tema não sai", () => {
+    for (let i = st().catalog.length; i < PAL_MAX_THEMES; i++) pal.handle("a", "themeAdd", { label: `Tema ${i}` });
+    expect(st().catalog).toHaveLength(PAL_MAX_THEMES);
+    pal.handle("a", "themeAdd", { label: "Mais um" });
+    expect(lastError()!.data).toEqual({ reason: "full" });
+    const t = st().catalog.at(-1)!.id;
+    for (let i = 0; i < PAL_MAX_CARDS; i++) pal.handle("a", "cardSave", { theme: t, word: `palavra ${i}`, forbidden: ["um", "dois", "tres", "quatro"] });
+    expect(st().catalog.at(-1)!.count).toBe(PAL_MAX_CARDS);
+    pal.handle("a", "cardSave", { theme: t, word: "sobrando", forbidden: ["um", "dois", "tres", "quatro"] });
+    expect(lastError()!.data).toEqual({ reason: "full" });
+    // Mover para um tema cheio também não.
+    const lua = lastBank().bank.themes.find((x) => x.id === "espaco")!.cards[0]!;
+    pal.handle("a", "cardSave", { theme: t, id: lua.id, word: lua.word, forbidden: lua.forbidden });
+    expect(lastError()!.data).toEqual({ reason: "full" });
+    for (const x of st().catalog.slice(1)) pal.handle("a", "themeDelete", { id: x.id });
+    expect(st().catalog).toHaveLength(1);
+    pal.handle("a", "themeDelete", { id: st().catalog[0]!.id });
+    expect(lastError()!.data).toEqual({ reason: "lastTheme" });
+    expect(st().catalog).toHaveLength(1);
+  });
+
+  it("banco salvo no store sobrevive ao reinício; restaurar volta às 150 originais", () => {
+    expect(h.data.has("grupo/palavra-banco")).toBe(false);
+    pal.handle("a", "themeAdd", { label: "Filmes" });
+    pal.handle("a", "cardSave", { ...CARD, theme: themeId("Filmes") });
+    pal.handle("a", "cardDelete", { id: "espaco-1" });
+    expect(h.data.get("grupo/palavra-banco")).toMatchObject({ version: 1 });
+
+    // "Reinício": atividade nova, mesmo store.
+    let again = new PalavraActivity(h.api());
+    let s = again.snapshot() as PalState;
+    expect(s.catalog.map((t) => [t.label, t.count])).toContainEqual(["Filmes", 1]);
+    expect(s.catalog.find((t) => t.id === "espaco")!.count).toBe(29);
+    again.handle("a", "bank", {});
+    expect(lastBank().bank.themes.find((t) => t.label === "Filmes")!.cards[0]).toMatchObject(CARD);
+
+    // Restaurar: as 150 originais, e nada guardado (vale o banco do código).
+    again.handle("a", "bankReset", {});
+    const { bank, to } = lastBank();
+    expect(to).toEqual(["a"]);
+    expect(bank).toEqual(palSeedBank());
+    expect(h.data.get("grupo/palavra-banco")).toBeNull();
+    again = new PalavraActivity(h.api());
+    s = again.snapshot() as PalState;
+    expect(s.catalog.map((t) => t.count)).toEqual([30, 30, 30, 30, 30]);
+
+    // Arquivo estragado: volta ao original sem quebrar.
+    h.data.set("grupo/palavra-banco", { themes: "lixo" });
+    s = new PalavraActivity(h.api()).snapshot() as PalState;
+    expect(s.catalog).toHaveLength(5);
+  });
+
+  it("a partida usa o banco editado: tema novo com uma carta vai para quem dá as dicas", () => {
+    pal.handle("a", "themeAdd", { label: "Vazio" });
+    pal.handle("a", "themeAdd", { label: "Filmes" });
+    pal.handle("a", "cardSave", { ...CARD, theme: themeId("Filmes") });
+    for (const id of "abc") pal.handle(id, "join", {});
+    // Só um tema sem cartas: não começa.
+    pal.handle("a", "config", { themes: [themeId("Vazio")] });
+    pal.handle("a", "start", {});
+    expect(st().phase).toBe("lobby");
+    pal.handle("a", "config", { themes: [themeId("Filmes")] });
+    pal.handle("a", "start", {});
+    expect(st().phase).toBe("ready");
+    const giver = st().giver!;
+    pal.handle(giver, "go", {});
+    const { card, to } = h.lastCard();
+    expect(to).toEqual([giver]);
+    expect(card).toMatchObject({ word: "Titanic", forbidden: CARD.forbidden, theme: themeId("Filmes"), themeLabel: "Filmes" });
+    expectHidden(st(), card);
+    // Acertou: com uma carta só, ela volta.
+    const guesser = st().players.find((p) => p.id !== giver)!.id;
+    pal.handle(guesser, "guess", { text: "titanic" });
+    expect(st().teams[0]!.score).toBe(1);
+    expect(h.lastCard().card.word).toBe("Titanic");
+  });
+
+  it("não vaza: no meio da partida ninguém recebe o banco, nem quem chuta", () => {
+    for (const id of "abcd") pal.handle(id, "join", {});
+    // No lobby, quem está perto pode abrir o editor.
+    pal.handle("b", "bank", {});
+    expect(lastBank().to).toEqual(["b"]);
+    pal.handle("a", "start", {});
+    const banks = h.evs("bank").length;
+    const ops: [string, Record<string, unknown>][] = [
+      ["bank", {}],
+      ["themeAdd", { label: "Filmes" }],
+      ["cardSave", { ...CARD, theme: "espaco" }],
+      ["cardDelete", { id: "espaco-1" }],
+      ["themeDelete", { id: "espaco" }],
+      ["bankReset", {}],
+    ];
+    // Todo mundo (quem joga, quem está longe, quem está fora) tenta tudo: só recebe "partida em andamento".
+    const tryAll = () => {
+      for (const id of "abcdfx")
+        for (const [op, data] of ops) {
+          pal.handle(id, op, data);
+          expect(lastError()).toEqual({ ev: "bankError", data: { reason: "playing" }, to: [id] });
+        }
+    };
+    for (let t = 0; t < 4; t++) {
+      const s = st();
+      const giver = s.giver!;
+      const guesser = s.players.find((p) => p.team === s.team && p.id !== giver)!.id;
+      tryAll(); // pronto para começar
+      pal.handle(giver, "go", {});
+      tryAll(); // vez rolando
+      // Quem chuta, especificamente, pede o banco: nada chega.
+      pal.handle(guesser, "bank", {});
+      expect(h.evs("bank")).toHaveLength(banks);
+      advance(60_000);
+      tryAll(); // resumo da vez
+      advance(PAL_TURN_END_MS + 10);
+    }
+    expect(st().phase).toBe("final");
+    expect(h.evs("bank")).toHaveLength(banks);
+    // Nada mudou no banco durante a partida.
+    expect(st().catalog.map((t) => t.count)).toEqual([30, 30, 30, 30, 30]);
+    // Nenhum evento para todos (sem destinatário) leva a lista de cartas.
+    const broadcast = h.events.filter((e) => !e.to);
+    expect(broadcast.some((e) => JSON.stringify(e.data).includes('"cards"'))).toBe(false);
+    // Acabou a partida: o editor volta a funcionar.
+    pal.handle("a", "bank", {});
+    expect(lastBank().to).toEqual(["a"]);
+  });
+});
+
+describe("Palavra secreta no servidor: cooperativo com 4 ou mais", () => {
+  const ids = ["a", "b", "c", "d", "e"];
+  beforeEach(() => {
+    ["Ana", "Bruno", "Caio", "Duda", "Eva"].forEach((n, i) => h.add(ids[i]!, n, MKT(i)));
+    for (const id of ids) pal.handle(id, "join", {});
+  });
+
+  it("o dono escolhe todos juntos: um time só, só o dicador vê a carta, ninguém fiscaliza", () => {
+    expect(st().mode).toBe("teams");
+    pal.handle("b", "config", { mode: "coop" });
+    expect(st().mode).toBe("teams");
+    pal.handle("a", "config", { mode: "solo" });
+    expect(st().mode).toBe("teams");
+    pal.handle("a", "config", { mode: "coop", seconds: 30 });
+    expect(st()).toMatchObject({ mode: "coop", seconds: 30 });
+    pal.handle("a", "start", {});
+    expect(st()).toMatchObject({ phase: "ready", coop: true, turns: 5, teams: [{ name: PAL_COOP_NAME, score: 0 }] });
+    expect(st().players.every((p) => p.team === 0)).toBe(true);
+    const givers: string[] = [];
+    for (let t = 0; t < 5; t++) {
+      const giver = st().giver!;
+      givers.push(giver);
+      const others = st().players.filter((p) => p.id !== giver).map((p) => p.id);
+      pal.handle(giver, "go", {});
+      const { card, to } = h.lastCard();
+      expect(to).toEqual([giver]);
+      expectHidden(st(), card);
+      // Todo mundo chuta; ninguém aponta "Proibida!".
+      for (const o of others) expect(palRole(st(), o)).toBe("guesser");
+      pal.handle(others[0]!, "flag", {});
+      expect(st().flag).toBeNull();
+      pal.handle(others[t % others.length]!, "guess", { text: card.word });
+      expect(st().teams[0]!.score).toBe(t + 1);
+      advance(30_000);
+      advance(PAL_TURN_END_MS + 10);
+    }
+    expect(new Set(givers).size).toBe(5);
+    expect(st()).toMatchObject({ phase: "final", coop: true, winner: null });
+    expect(h.evs("final").at(-1)!.data).toMatchObject({ coop: true, winner: null });
+
+    // Jogar de novo: o modo continua; voltando a dois times, os times saem equilibrados.
+    pal.handle("c", "again", {});
+    expect(st()).toMatchObject({ phase: "lobby", mode: "coop" });
+    pal.handle("a", "config", { mode: "teams" });
+    const sizes = [0, 1].map((t) => st().players.filter((p) => p.team === t).length).sort();
+    expect(sizes).toEqual([2, 3]);
+    pal.handle("a", "start", {});
+    expect(st()).toMatchObject({ coop: false, turns: 6 });
+  });
+
+  it("com 3 pessoas, dois times não vale: a partida é cooperativa", () => {
+    pal.handle("d", "leave", {});
+    pal.handle("e", "leave", {});
+    expect(st().mode).toBe("teams");
+    pal.handle("a", "start", {});
+    expect(st()).toMatchObject({ coop: true, turns: 3 });
   });
 });

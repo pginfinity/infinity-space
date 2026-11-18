@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Ban, Check, Clock, Flag, MessageCircleMore, Play, Shuffle, SkipForward, Users } from "lucide-react";
+import { Ban, Check, Clock, Flag, MessageCircleMore, Pencil, Play, Shuffle, SkipForward, Users } from "lucide-react";
 import {
+  PAL_EDIT_RANGE,
   PAL_GUESS_GAP_MS,
   PAL_GUESS_MAX,
   PAL_HINT_GAP_MS,
@@ -13,12 +14,15 @@ import {
   PAL_ROUNDS,
   PAL_SECONDS,
   PAL_TEAMS_FROM,
-  PAL_THEMES,
   PAL_ZONE,
+  palDeckSize,
   palRole,
+  palUsesTeams,
+  type PalBank,
   type PalCardEvent,
   type PalDone,
   type PalFeedItem,
+  type PalMode,
   type PalPlayer,
   type PalRole,
   type PalState,
@@ -28,15 +32,17 @@ import { useApp } from "../../state/store.ts";
 import { useInteract } from "../../engine/interact.ts";
 import { walkTo } from "../../engine/movement.ts";
 import { registerCommand } from "../../presence/store.ts";
-import { ChipDock, FloatChip, GamePanelShell, GhostButton, Podium, PrimaryButton, Seconds, Segmented, TimeBar, closePanel, openPanel, playSfx, selfZone, useLeft, usePanel, useSelfId, useSelfZone, type ScoreRow } from "./shared.tsx";
-import { PAL_TEAM_COLORS, PalavraScene, palBoardPoint, palBoardPos } from "./palavraScene.tsx";
+import { ChipDock, FloatChip, GamePanelShell, GhostButton, Podium, PrimaryButton, Seconds, Segmented, TimeBar, closePanel, openPanel, playSfx, selfZone, useGrupoUi, useLeft, usePanel, useSelfId, useSelfZone, type ScoreRow } from "./shared.tsx";
+import { PAL_TEAM_COLORS, PalavraScene, palBoardPoint, palBoardPos, useNearBoard } from "./palavraScene.tsx";
+import { PalEditor } from "./palavraEditor.tsx";
 import { cardMatches, usePalLocal } from "./palavraStore.ts";
 import { T } from "./strings.ts";
 
 /**
  * Palavra secreta no Marketing Studio: entra pelo painel de letras (E), pelo convite ou pela busca.
  * Quem dá as dicas vê a carta (palavra e proibidas); o time da vez chuta; o outro time fiscaliza.
- * A carta só chega por evento a quem pode ver; quem chuta nunca a recebe.
+ * A carta só chega por evento a quem pode ver; quem chuta nunca a recebe. O banco de cartas só chega
+ * a quem abre o editor, perto do painel e sem partida em andamento.
  */
 
 const send = (op: string, data?: unknown) => sendAct(PAL_ID, op, data);
@@ -82,6 +88,12 @@ export const palavraClient: ActivityClient = {
     switch (e.ev) {
       case "card":
         usePalLocal.setState({ card: e.data as PalCardEvent });
+        break;
+      case "bank":
+        usePalLocal.setState({ bank: e.data as PalBank, bankError: null });
+        break;
+      case "bankError":
+        usePalLocal.setState({ bankError: (e.data as { reason: string }).reason });
         break;
       case "close":
         usePalLocal.setState({ close: { text: (e.data as { text: string }).text, key: performance.now() } });
@@ -149,6 +161,7 @@ function PalOverlay() {
   const atBoard = useInteract((i) => i.target?.object?.type === "word-board");
   const mine = inPal(s, me);
   useCardSync(s, me);
+  useCloseEditorOnPlay(s);
 
   let chip: ReactNode = null;
   if (!panel && s && s.phase !== "idle" && !atBoard) {
@@ -177,7 +190,7 @@ function PalOverlay() {
   }
   return (
     <>
-      <AnimatePresence>{panel && <PalPanel key="pal-panel" />}</AnimatePresence>
+      <AnimatePresence>{panel && <PalPanel key="pal-panel" view={panel.view} />}</AnimatePresence>
       <ChipDock>
         <AnimatePresence>{chip}</AnimatePresence>
       </ChipDock>
@@ -205,6 +218,30 @@ function useCardSync(s: PalState | undefined, me: string | null): void {
   }, [need, key]);
 }
 
+/** Começou uma partida: o banco sai da memória e o editor fecha (no meio do jogo, ninguém olha as cartas). */
+function useCloseEditorOnPlay(s: PalState | undefined): void {
+  const playing = !!s && inTurn(s);
+  useEffect(() => {
+    if (!playing) return;
+    usePalLocal.setState({ bank: null, bankError: null });
+    const p = useGrupoUi.getState().panel;
+    if (p?.game === "palavra" && p.view === "editor") openPanel("palavra", PAL_ID);
+  }, [playing]);
+}
+
+/** Botão do editor de cartas: só perto do painel de letras. */
+function EditCardsButton() {
+  // Um pouco antes do limite do servidor (as posições dos dois lados diferem um tiquinho).
+  const near = useNearBoard(PAL_EDIT_RANGE - 0.3);
+  if (!near) return null;
+  return (
+    <button type="button" onClick={() => openPanel("palavra", PAL_ID, "editor")} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-signal hover:bg-signal/10">
+      <Pencil className="size-3" aria-hidden />
+      {T.pal.editCards}
+    </button>
+  );
+}
+
 /** A carta atual, se esta pessoa pode vê-la. */
 function useCard(s: PalState): PalCardEvent | null {
   return usePalLocal((l) => (cardMatches(l.card, s) ? l.card : null));
@@ -212,9 +249,10 @@ function useCard(s: PalState): PalCardEvent | null {
 
 // ---- painel ---------------------------------------------------------------------------------
 
-function PalPanel() {
+function PalPanel({ view }: { view?: string }) {
   const s = usePal();
   const me = useSelfId();
+  if (view === "editor") return <PalEditor />;
   if (!s) return null;
   const mine = inPal(s, me);
   const n = s.players.filter((p) => !p.away).length;
@@ -255,9 +293,10 @@ function Outside({ s }: { s: PalState }) {
     <>
       <Rules />
       {zone === PAL_ZONE ? (
-        <PrimaryButton onClick={joinPal} className="self-start">
-          {T.pal.action}
-        </PrimaryButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrimaryButton onClick={joinPal}>{T.pal.action}</PrimaryButton>
+          {!inTurn(s) && <EditCardsButton />}
+        </div>
       ) : (
         <p className="text-xs text-slate">{T.pal.lobbyHint}</p>
       )}
@@ -272,34 +311,42 @@ function Lobby({ s, me }: { s: PalState; me: string }) {
   const owner = s.owner === me;
   const act = s.players.filter((p) => !p.away);
   const n = act.length;
-  const teams = n >= PAL_TEAMS_FROM;
+  const teams = palUsesTeams(n, s.mode);
+  const cards = palDeckSize(s.catalog, s.themes);
   return (
     <>
       <Rules />
       <section className="flex flex-col gap-1.5" aria-label={T.pal.themes}>
-        <span className="label-caps">{T.pal.themes}</span>
+        <div className="flex items-center justify-between">
+          <span className="label-caps">{T.pal.themes}</span>
+          <EditCardsButton />
+        </div>
         <div className="flex flex-wrap gap-1.5">
-          {PAL_THEMES.map((t) => {
+          {s.catalog.map((t) => {
             const on = s.themes.includes(t.id);
             return (
               <button
                 key={t.id}
                 type="button"
                 aria-pressed={on}
-                disabled={!owner || (on && s.themes.length === 1)}
+                disabled={!owner || (on && s.themes.length === 1) || (!on && t.count === 0)}
                 onClick={() => send("config", { themes: on ? s.themes.filter((x) => x !== t.id) : [...s.themes, t.id] })}
                 className={clsx(
                   "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ring-1 transition-colors disabled:cursor-default",
                   on ? "bg-offwhite/[0.1] text-offwhite ring-offwhite/25" : "text-slate ring-offwhite/10 enabled:hover:text-offwhite",
                 )}
+                data-pal-theme={t.label}
               >
                 {on && <Check className="size-3" aria-hidden />}
                 {t.label}
+                <span className="tabular-nums opacity-60">{t.count}</span>
               </button>
             );
           })}
         </div>
+        {cards === 0 && <p className="text-[11px] text-warn">{T.pal.emptyThemes}</p>}
       </section>
+      {n >= PAL_TEAMS_FROM && <ModePick mode={s.mode} owner={owner} />}
       <section className="flex flex-col gap-2 rounded-xl bg-offwhite/[0.03] p-3 ring-1 ring-offwhite/8">
         <Segmented label={T.pal.seconds} value={s.seconds} options={PAL_SECONDS} disabled={!owner} onChange={(v) => send("config", { seconds: v })} format={(v) => `${v}s`} />
         <Segmented label={T.pal.rounds} value={s.rounds} options={PAL_ROUNDS} disabled={!owner} onChange={(v) => send("config", { rounds: v })} />
@@ -324,7 +371,7 @@ function Lobby({ s, me }: { s: PalState; me: string }) {
         ) : (
           <>
             <Members list={act} me={me} />
-            <p className="text-[11px] text-slate">{T.pal.coopHint}</p>
+            {n < PAL_TEAMS_FROM && <p className="text-[11px] text-slate">{T.pal.coopHint}</p>}
           </>
         )}
         <p className="text-xs text-slate">{T.pal.lobbyHint}</p>
@@ -332,7 +379,7 @@ function Lobby({ s, me }: { s: PalState; me: string }) {
       <div className="flex items-center gap-2">
         <GhostButton onClick={leavePal}>{T.leave}</GhostButton>
         {owner && (
-          <PrimaryButton className="ml-auto" onClick={() => send("start")} disabled={n < PAL_MIN_PLAYERS}>
+          <PrimaryButton className="ml-auto" onClick={() => send("start")} disabled={n < PAL_MIN_PLAYERS || cards === 0}>
             <Play className="size-4" />
             {T.pal.start}
           </PrimaryButton>
@@ -340,6 +387,47 @@ function Lobby({ s, me }: { s: PalState; me: string }) {
       </div>
       {owner && n < PAL_MIN_PLAYERS && <p className="-mt-1 text-right text-[11px] text-slate">{T.pal.needPlayers(PAL_MIN_PLAYERS)}</p>}
     </>
+  );
+}
+
+/** Com 4 pessoas ou mais, quem abriu a mesa escolhe: dois times ou todos juntos. */
+function ModePick({ mode, owner }: { mode: PalMode; owner: boolean }) {
+  const options: { v: PalMode; title: string; hint: string }[] = [
+    { v: "teams", title: T.pal.modeTeams, hint: T.pal.modeTeamsHint },
+    { v: "coop", title: T.pal.modeCoop, hint: T.pal.modeCoopHint },
+  ];
+  return (
+    <section className="flex flex-col gap-1.5">
+      <span className="label-caps" id="pal-mode-label">
+        {T.pal.mode}
+      </span>
+      <div className="grid gap-1.5 sm:grid-cols-2" role="radiogroup" aria-labelledby="pal-mode-label">
+        {options.map((o) => {
+          const on = mode === o.v;
+          return (
+            <button
+              key={o.v}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              disabled={!owner}
+              onClick={() => send("config", { mode: o.v })}
+              className={clsx(
+                "flex flex-col items-start gap-0.5 rounded-xl px-3 py-2 text-left ring-1 transition-colors disabled:cursor-default",
+                on ? "bg-signal/12 ring-signal/50" : "bg-offwhite/[0.035] ring-offwhite/8 enabled:hover:bg-offwhite/[0.07]",
+              )}
+              data-pal-mode={o.v}
+            >
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                {on && <Check className="size-3.5 text-signal" aria-hidden />}
+                {o.title}
+              </span>
+              <span className="text-[11px] leading-snug text-slate">{o.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -452,7 +540,7 @@ function Ready({ s, role, left }: { s: PalState; role: PalRole | null; left: num
 
 /** A carta: palavra secreta e as proibidas (só para quem dá as dicas e para quem fiscaliza). */
 function SecretCard({ card, giver }: { card: PalCardEvent; giver: boolean }) {
-  const theme = PAL_THEMES.find((t) => t.id === card.theme)?.label ?? "";
+  const theme = card.themeLabel;
   return (
     <motion.section key={`${card.turn}:${card.n}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="rounded-2xl bg-deep/70 p-4 ring-1 ring-offwhite/12" aria-label={T.pal.secret} data-pal-card>
       <p className="label-caps">

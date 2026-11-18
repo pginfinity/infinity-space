@@ -9,3 +9,4 @@ export * from "./draw.ts";
 export * from "./stop.ts";
 export * from "./impostor.ts";
 export * from "./palavra.ts";
+export * from "./palavraEdit.ts";
