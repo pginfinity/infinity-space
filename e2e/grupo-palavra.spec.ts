@@ -73,7 +73,10 @@ test("Palavra secreta: times, carta escondida, dica barrada, acerto, proibida e 
     await p.getByRole("button", { name: "Palavra secreta no Marketing" }).click();
     await expect(panel(p).getByText("Ana", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   }
-  // Quatro pessoas: dois times de dois; uma rodada (cada um dá dicas uma vez).
+  // Quatro pessoas: dois times de dois (o modo fica de uma partida para a outra, então escolhe);
+  // uma rodada (cada um dá dicas uma vez).
+  await panel(ana).getByRole("radio", { name: /^Dois times/ }).click();
+  await expect(panel(ana).getByRole("radio", { name: /^Dois times/ })).toHaveAttribute("aria-checked", "true");
   await expect(panel(ana).locator("[data-pal-teambox]")).toHaveCount(2);
   await panel(ana).getByRole("radiogroup", { name: "Tempo por vez" }).getByRole("radio", { name: "60s" }).click();
   await panel(ana).getByRole("radiogroup", { name: "Rodadas" }).getByRole("radio", { name: "1", exact: true }).click();

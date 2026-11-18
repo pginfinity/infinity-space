@@ -3,6 +3,8 @@
  * pacotes evoluírem ao mesmo tempo sem conflito. Migram para o i18n quando estabilizarem.
  */
 
+import { PAL_MAX_CARDS, PAL_MAX_THEMES } from "@infinity/world";
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const ord = (n: number) => `${n}º`;
 
@@ -302,7 +304,13 @@ export const T = {
     roundsHint: "Em cada rodada, todo mundo dá dicas uma vez.",
     teams: "Times",
     coopTeam: "Um time só, cooperativo",
-    coopHint: "Com 4 pessoas ou mais, a mesa vira dois times.",
+    coopHint: "Com 4 pessoas ou mais, dá para jogar em dois times.",
+    mode: "Modo",
+    modeTeams: "Dois times",
+    modeTeamsHint: "Um time contra o outro; quem não chuta fiscaliza as proibidas.",
+    modeCoop: "Todos juntos (cooperativo)",
+    modeCoopHint: "Um time só: todo mundo chuta e os acertos somam juntos.",
+    emptyThemes: "Os temas escolhidos não têm cartas.",
     shuffle: "Sortear times",
     start: "Começar",
     needPlayers: (n: number) => `Precisa de pelo menos ${n} pessoas.`,
@@ -372,6 +380,53 @@ export const T = {
     boardTie: "EMPATE",
     boardWinner: (team: string) => `${team} VENCEU`,
     boardCoop: (n: number) => `${n} ${n === 1 ? "ACERTO" : "ACERTOS"}`,
+    boardAllTogether: "TODOS JUNTOS",
+    // etiqueta do painel no 2D (placar e tempo legíveis sem zoom)
+    labelAria: "Placar da Palavra secreta",
+    labelAtTable: (n: number) => `${n} na mesa`,
+    labelTeams: "dois times",
+    labelCoop: "todos juntos",
+    labelGives: (name: string) => `Dicas: ${name}`,
+    labelReady: "Preparando a vez",
+    labelTurnEnd: (gain: string) => `Fim da vez: ${gain}`,
+    labelHits: (n: number) => plural(n, "acerto", "acertos"),
+    // editor de cartas
+    editCards: "Editar cartas",
+    editor: "Cartas da Palavra secreta",
+    editorHint: "Ficam salvas no servidor para as próximas partidas.",
+    loading: "Carregando as cartas…",
+    newTheme: "Novo tema",
+    themeName: "Nome do tema",
+    renameTheme: "Renomear",
+    deleteTheme: "Apagar tema",
+    deleteThemeConfirm: (t: string, n: number) => `Apagar “${t}” e ${plural(n, "carta", "cartas")}?`,
+    cardsCount: (n: number) => (n === 0 ? "Nenhuma carta" : plural(n, "carta", "cartas")),
+    newCard: "Nova carta",
+    word: "Palavra secreta",
+    forbiddenN: (i: number) => `Proibida ${i}`,
+    forbiddenLegend: "Proibidas · as 4 dicas mais óbvias",
+    themeField: "Tema",
+    deleteCard: "Apagar carta",
+    deleteCardConfirm: "Apagar esta carta?",
+    emptyTheme: "Nenhuma carta neste tema. Crie a primeira.",
+    search: "Buscar carta neste tema",
+    noMatch: "Nenhuma carta com esse texto.",
+    reset: "Restaurar as cartas originais",
+    resetConfirm: "Voltar às 150 cartas originais? Temas e cartas criados aqui serão apagados.",
+    resetDo: "Restaurar",
+    editErrors: {
+      near: "Chegue perto do painel de letras para editar as cartas.",
+      playing: "Com uma partida em andamento, as cartas ficam fechadas.",
+      label: "Dê ao tema um nome com pelo menos 2 letras.",
+      themeDup: "Já existe um tema com esse nome.",
+      full: `Limite atingido: até ${PAL_MAX_THEMES} temas e ${PAL_MAX_CARDS} cartas por tema.`,
+      word: "Escreva a palavra secreta (pelo menos 2 letras).",
+      forbidden: "Preencha as 4 proibidas.",
+      repeat: "A palavra e as proibidas precisam ser todas diferentes.",
+      duplicate: "Este tema já tem uma carta com essa palavra.",
+      reserved: "Pulsar, Quasar e Nebulosa são nomes dos times: use outra palavra.",
+      lastTheme: "O banco precisa de pelo menos um tema.",
+    } as Record<string, string>,
     // busca (Ctrl+K)
     commandHint: "Jogo de dicas em times, no Marketing Studio",
     commandKeywords: "jogo palavras palavra dicas adivinhar times grupo marketing proibida",
