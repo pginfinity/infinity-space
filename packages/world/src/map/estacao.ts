@@ -50,7 +50,7 @@ const STYLE = {
   arcade: { accent: "#9B8CFF", icon: "gamepad-2", floor: "neon-grid", wall: "#241B3D" },
   cafe: { accent: "#C68A4A", icon: "coffee", floor: "tile-white", wall: "#EADBC8" },
   gestao: { accent: "#2EC4B6", icon: "kanban", floor: "carpet-navy", wall: "#DCEFEC" },
-  auditorio: { accent: "#46AFE3", icon: "presentation", floor: "carpet-navy", wall: "#1B2A44" },
+  auditorio: { accent: "#46AFE3", icon: "presentation", floor: "carpet-navy", wall: "#24375A" },
   corredor: { accent: "#00B7FF", icon: "", floor: "tile-dark", wall: HALL },
 } satisfies Record<string, RoomStyle>;
 

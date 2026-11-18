@@ -33,9 +33,10 @@ function stationEnvironment(): THREE.Scene {
 }
 
 /**
- * Ambiente do visual (ver looks.ts): reflexos, exposição, luz de recorte e quais malhas projetam
+ * Ambiente do visual (ver looks.ts): reflexos, luz de recorte e quais malhas projetam
  * sombra (paredes e avatares também, além dos móveis). Ligar as sombras e mover a luz do Sol é da
- * lente (Canvas `shadows`) e do SunLights (WorldScene.tsx). No modo "leve" não há sombras.
+ * lente (Canvas `shadows`) e do SunLights (WorldScene.tsx), que também cuida da exposição (sobe à
+ * noite). No modo "leve" não há sombras.
  */
 export function LookRig() {
   const gl = useThree((s) => s.gl);
@@ -63,10 +64,6 @@ export function LookRig() {
       pmrem.dispose();
     };
   }, [gl, scene]);
-
-  useEffect(() => {
-    gl.toneMappingExposure = LOOK.exposure;
-  }, [gl]);
 
   // Paredes, avatares e o resto também projetam sombra (de tempos em tempos, para o que chega depois).
   useEffect(() => {

@@ -123,6 +123,8 @@ const SHADOW_REACH = 32;
 const FRAME_PAD = 1 / (1 - 2 * SHADOW_FADE) + 0.04;
 /** Altura máxima de quem projeta sombra (paredes, escultura) e um pouco de margem, em metros. */
 const CASTER_SPAN = 14;
+/** Quanto a exposição sobe na sombra da Terra (fração da exposição do visual). */
+const NIGHT_EXPOSURE = 0.45;
 /** O rumo e a altura da luz andam em degraus de meio grau: menos recálculo de sombra e nada de tremer. */
 const DIR_STEP = THREE.MathUtils.degToRad(0.5);
 
@@ -182,8 +184,11 @@ function SunLights() {
       h.groundColor.setRGB(l.groundColor[0], l.groundColor[1], l.groundColor[2], THREE.SRGBColorSpace);
       if (LOOK.lights.skyColor) h.color.lerp(_skyLook.set(LOOK.lights.skyColor), 0.7 * l.sun);
       if (LOOK.lights.groundColor) h.groundColor.lerp(_groundLook.set(LOOK.lights.groundColor), 0.7 * l.sun);
-      // Na sombra da Terra as luzes internas seguram o lugar: o ambiente do visual sobe.
-      h.intensity = l.sky * LOOK.lights.sky * (1 + (1 - l.sun) * (LOOK.lights.sky < 1 ? 3.2 : 0));
+      // Na sombra da Terra as luzes internas seguram o lugar: o ambiente do visual sobe e a exposição
+      // também (como o olho se acostumando), senão as salas de piso escuro (Dev Lab, IA, auditório) somem.
+      const dim = LOOK.lights.sky < 1 ? 1 - l.sun : 0;
+      h.intensity = l.sky * LOOK.lights.sky * (1 + dim * 3.2);
+      gl.toneMappingExposure = LOOK.exposure * (1 + dim * NIGHT_EXPOSURE);
       s.lit = l.intensity > 0.01;
     }
     // Na sombra da Terra não há sombra do Sol para desenhar: o mapa fica parado (desligar a sombra da

@@ -74,14 +74,16 @@ function planks(g: CanvasRenderingContext2D, s: number, base: string, dark: stri
   }
 }
 
+// Pisos escuros (carpete grafite e marinho, piso escuro) um pouco mais claros que a cor "real": no visual
+// Cinema, com pouca luz ambiente, eles viravam preto e a sala parecia um vão para o espaço.
 const SPECS: Record<FloorStyle, FloorSpec> = {
-  "carpet-navy": { meters: 2, draw: (g, s) => (fill(g, s, "#1C3156"), speckle(g, s, "#2A4570", 900, 0.5, 3), grid(g, s, 4, "#16284A", 2, 0.6)) },
-  "carpet-graphite": { meters: 2, draw: (g, s) => (fill(g, s, "#2B303A"), speckle(g, s, "#3A414E", 900, 0.5, 5), grid(g, s, 4, "#232831", 2, 0.6)) },
+  "carpet-navy": { meters: 2, draw: (g, s) => (fill(g, s, "#22396A"), speckle(g, s, "#30507F", 900, 0.5, 3), grid(g, s, 4, "#1B3058", 2, 0.6)) },
+  "carpet-graphite": { meters: 2, draw: (g, s) => (fill(g, s, "#3A404B"), speckle(g, s, "#4A5260", 900, 0.5, 5), grid(g, s, 4, "#30353F", 2, 0.6)) },
   "carpet-warm": { meters: 2, draw: (g, s) => (fill(g, s, "#7B5148"), speckle(g, s, "#8E6257", 900, 0.5, 7), grid(g, s, 4, "#6A443C", 2, 0.5)) },
   "wood-light": { meters: 2, draw: (g, s) => planks(g, s, "#D6B68A", "#B8946A", "#DDBF95", 11) },
   "wood-warm": { meters: 2, draw: (g, s) => planks(g, s, "#A5734C", "#7E5537", "#AE7C54", 13) },
   "tile-white": { meters: 1.2, draw: (g, s) => (fill(g, s, "#E9E6E1"), speckle(g, s, "#D9D5CF", 300, 0.6, 17), grid(g, s, 2, "#CFCAC3", 3)) },
-  "tile-dark": { meters: 1.2, draw: (g, s) => (fill(g, s, "#1D2533"), speckle(g, s, "#253042", 300, 0.6, 19), grid(g, s, 2, "#2E3A50", 3)) },
+  "tile-dark": { meters: 1.2, draw: (g, s) => (fill(g, s, "#26314A"), speckle(g, s, "#2F3B55", 300, 0.6, 19), grid(g, s, 2, "#3B4A66", 3)) },
   concrete: { meters: 3, draw: (g, s) => (fill(g, s, "#9AA1AB"), speckle(g, s, "#8A919B", 1500, 0.5, 23)) },
   "neon-grid": { meters: 2, draw: (g, s) => (fill(g, s, "#16102B"), grid(g, s, 4, "#9B8CFF", 3, 0.85)), emissive: true },
   marble: {
