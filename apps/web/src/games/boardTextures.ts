@@ -222,10 +222,16 @@ function drawTruco(ctx: CanvasRenderingContext2D, s: TrucoState | undefined): vo
   ctx.restore();
 
   // Vaza: a carta de cada um à frente de quem jogou; com a mesa vazia, a última vaza apagadinha.
+  // Carta coberta fica de costas no tampo para todo mundo (até para quem jogou: é assim que ela está na mesa).
   const cards = s.table.length ? s.table : (s.prevTrick?.cards ?? []);
   ctx.globalAlpha = s.table.length ? 1 : 0.5;
   for (const p of cards) {
     atSeat(ctx, p.seat, () => {
+      if (p.covered || p.card === null) {
+        ctx.rotate(((p.seat % 3) - 1) * 0.06);
+        drawCardBack(ctx, -36, 4, 72, 106);
+        return;
+      }
       ctx.rotate(((p.card % 7) - 3) * 0.03);
       drawCard(ctx, p.card, -36, 4, 72, 106);
     });

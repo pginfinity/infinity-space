@@ -1,7 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { Packr } from "msgpackr";
 import { encode } from "../codec.ts";
-import { dominoFits, dominoPlayable, type DominoState, type GameSnapshot, type MapDef, type MapObject, type ServerMsg, type TableState, type TrucoState } from "@infinity/world";
+import {
+  dominoFits,
+  dominoPlayable,
+  trucoCanCover,
+  trucoNext,
+  type DominoState,
+  type GameSnapshot,
+  type MapDef,
+  type MapObject,
+  type ServerMsg,
+  type TableState,
+  type TrucoState,
+} from "@infinity/world";
 import { GamesManager, type GameHost } from "./manager.ts";
 
 /**
@@ -93,13 +105,27 @@ function assertNoLeak(snap: GameSnapshot, viewer: string): void {
   if (Array.isArray(state.stock)) expect(state.stock, "monte nunca sai").toEqual([]);
   if (!state.hands || (snap.kind === "domino" && state.over)) return;
   const t = state as unknown as Partial<TrucoState>;
+  // Truco: na mão de onze, a dupla com 11 vê a mão do parceiro; na mão de ferro, ninguém vê nada.
+  const partner = (i: number) => snap.kind === "truco" && t.eleven !== null && t.eleven !== undefined && seat >= 0 && t.teamOf?.[seat] === t.eleven && t.teamOf?.[i] === t.eleven;
   state.hands.forEach((h, i) => {
-    // Truco: na mão de onze, a dupla com 11 vê a mão do parceiro; na mão de ferro, ninguém vê nada.
-    const partner = snap.kind === "truco" && t.eleven !== null && t.eleven !== undefined && seat >= 0 && t.teamOf?.[seat] === t.eleven && t.teamOf?.[i] === t.eleven;
-    const visible = !t.iron && (i === seat || partner);
+    const visible = !t.iron && (i === seat || partner(i));
     if (!visible) expect(h, `${viewer} não vê a mão do lugar ${i}`).toBeNull();
   });
+  // Carta coberta: na mesa, na última vaza e no fim, só quem cobriu (e o parceiro, na mão de onze) sabe qual foi.
+  for (const p of [...(t.table ?? []), ...(t.prevTrick?.cards ?? [])]) {
+    if (p.covered && p.seat !== seat && !partner(p.seat)) expect(p.card, `${viewer} não vê a carta coberta do lugar ${p.seat}`).toBeNull();
+  }
 }
+
+/** Jogadas cobertas que chegaram a uma pessoa (na mesa e na última vaza), em todas as mensagens do truco. */
+const coveredSeen = (id: string) =>
+  host
+    .games(id)
+    .filter((g) => g.table === "truco")
+    .flatMap((g) => {
+      const s = g.state as TrucoState;
+      return [...s.table, ...(s.prevTrick?.cards ?? [])].filter((p) => p.covered);
+    });
 
 describe("dominó pelo servidor", () => {
   it("com 4: começa quando enche, e cada um recebe só a própria mão", () => {
@@ -277,6 +303,49 @@ describe("truco pelo servidor", () => {
     expect(eva.hands).toEqual([null, null, null, null]);
     expect(eva.hand).toBe(2);
   });
+
+  it("carta coberta: só quem cobriu recebe a carta; o outro e quem assiste recebem só as costas", () => {
+    games.handle("ana", "truco", "sit", { seat: 0 });
+    games.handle("bruno", "truco", "sit", { seat: 1 });
+    games.handle("ana", "truco", "start", undefined);
+    const ids = ["ana", "bruno"];
+    const s0 = full<TrucoState>("truco");
+    // Na primeira vaza o servidor recusa a coberta.
+    games.handle(ids[s0.turn]!, "truco", "move", { play: 0, cover: true });
+    expect(full<TrucoState>("truco").moves).toBe(s0.moves);
+    games.handle(ids[s0.turn]!, "truco", "move", { play: 0 });
+    games.handle(ids[trucoNext(s0, s0.turn)]!, "truco", "move", { play: 0 });
+    const s1 = full<TrucoState>("truco");
+    expect(s1.tricks).toHaveLength(1);
+    // Segunda vaza: quem abre cobre a primeira carta da mão.
+    const coverer = s1.turn;
+    const card = s1.hands[coverer]![0]!;
+    games.handle(ids[coverer]!, "truco", "move", { play: 0, cover: true });
+    expect(full<TrucoState>("truco").table).toEqual([{ seat: coverer, card, covered: true }]);
+    const mine = host.last(ids[coverer]!, "truco")!.state as TrucoState;
+    const theirs = host.last(ids[1 - coverer]!, "truco")!.state as TrucoState;
+    const eva = host.last("eva", "truco")!.state as TrucoState;
+    expect(mine.table).toEqual([{ seat: coverer, card, covered: true }]);
+    expect(theirs.table).toEqual([{ seat: coverer, card: null, covered: true }]);
+    expect(eva.table).toEqual([{ seat: coverer, card: null, covered: true }]);
+    // O welcome de quem entra agora também vem sem a carta.
+    expect((games.snapshots("eva").find((g) => g.table === "truco")!.state as TrucoState).table[0]?.card).toBeNull();
+    expect((games.snapshots(ids[coverer]).find((g) => g.table === "truco")!.state as TrucoState).table[0]?.card).toBe(card);
+
+    // O outro responde e a vaza fecha (a coberta perde); a carta continua escondida na última vaza.
+    games.handle(ids[1 - coverer]!, "truco", "move", { play: 0 });
+    const s2 = full<TrucoState>("truco");
+    if (s2.hand === s1.hand) {
+      expect(s2.prevTrick?.cards[0]).toEqual({ seat: coverer, card, covered: true });
+      expect((host.last(ids[1 - coverer]!, "truco")!.state as TrucoState).prevTrick?.cards[0]).toEqual({ seat: coverer, card: null, covered: true });
+      expect((host.last(ids[coverer]!, "truco")!.state as TrucoState).prevTrick?.cards[0]).toEqual({ seat: coverer, card, covered: true });
+    }
+    // Em nenhuma mensagem a carta chegou a quem não cobriu.
+    expect(coveredSeen(ids[1 - coverer]!).length).toBeGreaterThan(0);
+    for (const id of [ids[1 - coverer]!, "eva", "carla"]) for (const p of coveredSeen(id)) expect(p.card, id).toBeNull();
+    for (const p of coveredSeen(ids[coverer]!)) expect(p.card).toBe(card);
+    for (const id of PEOPLE) for (const g of host.games(id).filter((x) => x.table === "truco")) assertNoLeak(g, id);
+  });
 });
 
 describe("truco: partida inteira", () => {
@@ -293,6 +362,8 @@ describe("truco: partida inteira", () => {
       if (s.deciding) games.handle(ids[s.turn]!, "truco", "move", { eleven: step % 3 === 0 ? "run" : "play" });
       else if (s.raise) games.handle(ids[s.acting!.at(-1)!]!, "truco", "move", { answer: step % 4 === 0 ? "run" : step % 4 === 1 ? "raise" : "accept" });
       else if (step % 5 === 0 && s.eleven === null && !s.iron && s.raisedBy !== s.teamOf[s.turn] && s.stake < 12) games.handle(ids[s.turn]!, "truco", "move", { truco: true });
+      // De vez em quando, da segunda vaza em diante, a carta vai coberta.
+      else if (step % 3 === 1 && trucoCanCover(s)) games.handle(ids[s.turn]!, "truco", "move", { play: step % (s.counts[s.turn] ?? 1), cover: true });
       else games.handle(ids[s.turn]!, "truco", "move", { play: step % (s.counts[s.turn] ?? 1) });
       expect(full<TrucoState>("truco").moves, "todo lance da simulação é aceito").toBeGreaterThan(s.moves);
     }
@@ -304,6 +375,9 @@ describe("truco: partida inteira", () => {
       expect(list.length).toBeGreaterThan(20);
       for (const g of list) assertNoLeak(g, id);
     }
+    // A simulação cobriu cartas de verdade, e quem assiste nunca viu nenhuma.
+    expect(coveredSeen("eva").length).toBeGreaterThan(0);
+    expect(coveredSeen("eva").every((p) => p.card === null)).toBe(true);
   });
 });
 

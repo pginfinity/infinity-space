@@ -33,9 +33,9 @@ Ainda não: foto do grupo no mural da copa.
 | Onde | Jogo | Tipo |
 |---|---|---|
 | Arcade | Xadrez, Lig 4, Jogo da velha | Mesa, 2 pessoas, por turnos |
-| Café | Damas (regras brasileiras: captura obrigatória, lei da maioria, dama voadora) | Mesa, 2 pessoas, por turnos |
+| Café | Damas (regras brasileiras: captura obrigatória, lei da maioria, dama voadora; empate por 20 lances só de damas, repetição e finais especiais oficiais: 3 damas contra 1 e parecidos em 16 lances de cada lado, 2 contra 1 e parecidos em 5, com a contagem no painel) | Mesa, 2 pessoas, por turnos |
 | Café | Dominó duplo-seis (com 4, em duplas; compra do monte com 2 ou 3; batida ou tranca) | Mesa, 2 a 4 pessoas, por turnos, **mãos escondidas** |
-| Café | Truco paulista (baralho espanhol, vira e manilha, truco/seis/nove/doze, mão de onze, até 12) | Mesa, 2 ou 4 pessoas (em duplas), **mãos escondidas** |
+| Café | Truco paulista (baralho espanhol, vira e manilha, truco/seis/nove/doze, mão de onze, mão de ferro, carta coberta da segunda vaza em diante, até 12) | Mesa, 2 ou 4 pessoas (em duplas), **mãos e cartas cobertas escondidas** |
 | Arcade | Hockey de mesa | Física em tempo real, 2 pessoas |
 | Arcade | Pingue-pongue | Física em tempo real, 2 pessoas |
 | Arcade | 3 fliperamas com jogos originais (nave no campo de asteroides, cobrinha orbital, quebra-blocos) | 1 pessoa, **ranking do escritório** gravado na máquina |

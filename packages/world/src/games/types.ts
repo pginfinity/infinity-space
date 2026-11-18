@@ -21,6 +21,8 @@ export type EndReason =
   | "nomoves"
   /** 20 lances seguidos só de damas, sem captura (damas). */
   | "kings"
+  /** Final especial sem vitória no limite de lances (damas: 3 damas contra 1 em 16 lances de cada lado, 2 contra 1 em 5...). */
+  | "endgame"
   /** Alguém bateu: jogou a última pedra (dominó). */
   | "domino"
   /** Jogo trancado: ninguém tem pedra que sirva (dominó). Vence quem tem menos pontos na mão. */

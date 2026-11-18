@@ -16,9 +16,16 @@ import { forfeitGroup, type BaseState, type CreateOptions, type GameRules } from
  * - Mão de onze: a dupla com 11 vê as cartas da dupla e decide se joga (a mão vale 3) ou corre (os outros
  *   marcam 1). Não se pede truco na mão de onze.
  * - Mão de ferro: as duas duplas com 11. Todos jogam às cegas (ninguém vê as próprias cartas), valendo 1.
+ * - Carta coberta: da segunda vaza em diante, quem está na vez pode jogar a carta virada para baixo. Ela não
+ *   vale nada: perde para qualquer carta aberta e não empata com ninguém. Se todas as cartas da vaza vierem
+ *   cobertas, a vaza empata (como "cangou") e quem a começou começa a próxima.
+ *   Na mão de ferro não se cobre: as cartas já vão às cegas, e cobrir só jogaria fora uma carta que nem
+ *   quem joga conhece. Na mão de onze pode cobrir normalmente.
  *
  * Informação escondida: cada pessoa vê só a própria mão (na mão de onze, também a do parceiro). Quem assiste
- * vê só quantas cartas cada um tem. A semente do embaralhamento nunca sai do servidor.
+ * vê só quantas cartas cada um tem. A carta coberta fica escondida na mesa, na vaza já fechada e no fim:
+ * só quem pode ver a mão de quem cobriu (ele mesmo; na mão de onze, também o parceiro, que já tinha visto
+ * essa carta na mão) sabe qual foi. A semente do embaralhamento nunca sai do servidor.
  */
 
 /** Valores, do mais fraco para o mais forte (fora as manilhas). */
@@ -50,7 +57,10 @@ export const trucoNextStake = (v: number): number => (v < 3 ? 3 : Math.min(TRUCO
 
 export interface TrucoPlay {
   seat: number;
-  card: number;
+  /** A carta jogada. Na visão de quem não pode ver uma carta coberta, vem null. */
+  card: number | null;
+  /** Jogada virada para baixo (não vale nada). Ausente = carta aberta. */
+  covered?: true;
 }
 
 export interface TrucoRaise {
@@ -119,8 +129,8 @@ export interface TrucoState extends BaseState {
 
 /** Lances do truco. */
 export type TrucoMove =
-  /** Joga a carta na posição `play` da própria mão. */
-  | { play: number }
+  /** Joga a carta na posição `play` da própria mão; com `cover`, virada para baixo (da segunda vaza em diante). */
+  | { play: number; cover?: boolean }
   /** Pede truco (ou o próximo valor). */
   | { truco: true }
   /** Responde a um pedido: aceita, corre ou pede mais. */
@@ -159,13 +169,21 @@ export function trucoHandWinner(tricks: readonly number[]): number | null {
   return a !== -1 ? a : b !== -1 ? b : -1;
 }
 
-/** Quem levou a vaza: dupla vencedora (-1 empate) e o lugar que joga primeiro na próxima. */
+/**
+ * Quem levou a vaza: dupla vencedora (-1 empate) e o lugar que joga primeiro na próxima.
+ * Carta coberta não conta: só as abertas disputam. Tudo coberto: empate, e quem começou a vaza começa a próxima.
+ */
 export function trucoTrick(plays: readonly TrucoPlay[], manilha: number, teamOf: readonly number[]): { team: number; seat: number } {
-  const best = Math.max(...plays.map((p) => trucoPower(p.card, manilha)));
-  const top = plays.filter((p) => trucoPower(p.card, manilha) === best);
+  const open = plays.filter((p): p is TrucoPlay & { card: number } => !p.covered && p.card !== null);
+  if (open.length === 0) return { team: -1, seat: plays[0]?.seat ?? 0 };
+  const best = Math.max(...open.map((p) => trucoPower(p.card, manilha)));
+  const top = open.filter((p) => trucoPower(p.card, manilha) === best);
   const teams = new Set(top.map((p) => teamOf[p.seat]));
   return { team: teams.size > 1 ? -1 : (teamOf[top[0]!.seat] ?? -1), seat: top[0]!.seat };
 }
+
+/** Dá para jogar coberta agora? Só da segunda vaza em diante, e nunca na mão de ferro. */
+export const trucoCanCover = (s: Pick<TrucoState, "tricks" | "iron">): boolean => s.tricks.length > 0 && !s.iron;
 
 /** Força da carta para ordenar a mão (da mais fraca para a mais forte). */
 const sortHand = (hand: number[], manilha: number) => hand.sort((x, y) => trucoPower(x, manilha) - trucoPower(y, manilha));
@@ -284,7 +302,7 @@ export const truco: GameRules<TrucoState> = {
 
   move(state, seat, data, seed) {
     if (state.over || !state.active.includes(seat)) return null;
-    const d = (data ?? {}) as Partial<{ play: unknown; truco: unknown; answer: unknown; eleven: unknown }>;
+    const d = (data ?? {}) as Partial<{ play: unknown; cover: unknown; truco: unknown; answer: unknown; eleven: unknown }>;
     const team = state.teamOf[seat]!;
     const fresh = seed ?? state.seed ?? 0;
     const moves = state.moves + 1;
@@ -322,12 +340,17 @@ export const truco: GameRules<TrucoState> = {
     const index = d.play;
     const hand = state.hands[seat] ?? [];
     if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= hand.length) return null;
+    if (d.cover !== undefined && typeof d.cover !== "boolean") return null;
+    // Coberta: nunca na primeira vaza nem na mão de ferro.
+    const cover = d.cover === true;
+    if (cover && !trucoCanCover(state)) return null;
     const card = hand[index]!;
     const hands = state.hands.slice();
     hands[seat] = hand.filter((_, i) => i !== index);
     const counts = state.counts.slice();
     counts[seat] = hands[seat]!.length;
-    const table = [...state.table, { seat, card }];
+    const play: TrucoPlay = cover ? { seat, card, covered: true } : { seat, card };
+    const table = [...state.table, play];
     const played: TrucoState = { ...state, hands, counts, table, moves };
     if (table.length < state.active.length) return { ...played, turn: trucoNext(state, seat) };
 
@@ -344,13 +367,18 @@ export const truco: GameRules<TrucoState> = {
 
   view(state, viewer) {
     const mine = viewer >= 0 ? state.teamOf[viewer] : undefined;
-    const sees = (i: number) => {
-      if (state.iron) return false;
-      if (i === viewer) return true;
-      // Mão de onze: a dupla com 11 vê as cartas do parceiro.
-      return state.eleven !== null && mine === state.eleven && state.teamOf[i] === mine;
-    };
+    // Mão de onze: a dupla com 11 vê as cartas do parceiro.
+    const partner = (i: number) => state.eleven !== null && mine === state.eleven && state.teamOf[i] === mine;
+    const sees = (i: number) => !state.iron && (i === viewer || partner(i));
+    // Carta coberta: só quem podia ver aquela mão sabe qual foi (na mesa, na última vaza e no fim da partida).
+    const seesCover = (i: number) => i === viewer || partner(i);
+    const hide = (p: TrucoPlay): TrucoPlay => (p.covered && !seesCover(p.seat) ? { seat: p.seat, card: null, covered: true } : { ...p });
     const { seed: _hidden, ...rest } = state;
-    return { ...rest, hands: state.hands.map((h, i) => (sees(i) ? (h ?? []).slice() : null)) };
+    return {
+      ...rest,
+      hands: state.hands.map((h, i) => (sees(i) ? (h ?? []).slice() : null)),
+      table: state.table.map(hide),
+      prevTrick: state.prevTrick ? { ...state.prevTrick, cards: state.prevTrick.cards.map(hide) } : null,
+    };
   },
 };

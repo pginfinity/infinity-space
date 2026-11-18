@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { checkersDark, checkersIsKing, checkersMoves, checkersOwner, checkersSquareName, type CheckersState } from "@infinity/world";
+import { Hourglass } from "lucide-react";
+import { checkersDark, checkersEndgameLeft, checkersEnding, checkersIsKing, checkersMoves, checkersOwner, checkersSquareName, type CheckersState } from "@infinity/world";
 import { sendGame, type Table } from "./api.ts";
 import { CHECKERS_DARK, CHECKERS_LIGHT } from "./palette.ts";
 import { CheckerArt } from "./Art.tsx";
@@ -118,8 +119,29 @@ export function CheckersBoard({ t, seat, canMove }: Props) {
           {S.mustCapture}
         </p>
       )}
+      {t.phase === "playing" && <EndgameCount s={s} />}
     </div>
   );
+}
+
+/** Final especial (3 damas contra 1, 2 contra 1...): quantos lances faltam para o empate. */
+function EndgameCount({ s }: { s: CheckersState }) {
+  const left = checkersEndgameLeft(s);
+  const what = checkersEndingText(s);
+  if (left === null || !what || !s.endgame) return null;
+  return (
+    <p className="flex items-center gap-2 rounded-lg bg-offwhite/[0.04] px-3 py-1.5 text-xs ring-1 ring-offwhite/10" role="status" title={S.endgameHint(s.endgame.each)} data-endgame>
+      <Hourglass className="size-3.5 shrink-0 text-slate" aria-hidden />
+      <span className="shrink-0 font-medium text-offwhite">{S.endgameLeft(left)}</span>
+      <span className="min-w-0 truncate text-slate">· {what}</span>
+    </p>
+  );
+}
+
+/** Nome do final especial no tabuleiro ("3 damas contra 1 dama"), ou null. */
+export function checkersEndingText(s: Pick<CheckersState, "board">): string | null {
+  const e = checkersEnding(s.board);
+  return e ? S.endgameOf(S.pieces(e.kings, e.men)) : null;
 }
 
 /** Quantas peças cada lado perdeu (fileirinha ao lado do nome). */

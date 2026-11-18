@@ -157,6 +157,23 @@ export const S = {
   ranBy: (names: string, plural: boolean) => `${names} ${plural ? "correram" : "correu"}`,
   cards: (n: number) => (n === 1 ? "1 carta" : `${n} cartas`),
   handTie: "Mão empatada: ninguém marcou.",
+  cover: "Jogar coberta",
+  coverHint: "A carta vai virada para baixo e não vale nada. Atalho: Shift + clique na carta.",
+  coverShortcut: "Shift + clique: jogar coberta",
+  coverPick: "Escolha a carta que vai coberta.",
+  coverThis: (card: string) => `Cobrir ${card}`,
+  coveredCard: "carta coberta",
+  coveredOwn: (card: string) => `${card}, coberta`,
+  coveredTag: "Coberta",
+  onTable: "Na mesa",
+
+  // damas: finais especiais
+  endgameLeft: (n: number) => (n === 1 ? "Empate em 1 lance" : `Empate em ${n} lances`),
+  endgameOf: (strong: string) => `${strong} contra 1 dama`,
+  endgameHint: (each: number) => `Final especial: empate depois de ${each} lances de cada lado sem vitória.`,
+  endgameReason: (what: string, each: number) => `${what}: ${each} lances de cada lado sem vitória`,
+  pieces: (kings: number, men: number) =>
+    [kings ? (kings === 1 ? "1 dama" : `${kings} damas`) : "", men ? (men === 1 ? "1 pedra" : `${men} pedras`) : ""].filter(Boolean).join(" e "),
 };
 
 /** Explicação curta do fim de jogo. `loser` é o nome de quem perdeu (desistência/abandono). */
@@ -184,6 +201,8 @@ export function endReasonText(reason: EndReason | null, loser: string | null): s
       return "Sem lances possíveis";
     case "kings":
       return "20 lances seguidos só de damas";
+    case "endgame":
+      return "Final sem vitória no limite de lances";
     case "domino":
       return "Bateu: jogou a última pedra";
     case "locked":

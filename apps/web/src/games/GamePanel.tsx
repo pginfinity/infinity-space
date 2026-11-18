@@ -9,7 +9,7 @@ import { closeGame, leaveSeat, mySeat, seatPlayerName, sendGame, tableKind, useG
 import { ChessBoard, Captured } from "./ChessBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
-import { CheckersBoard, CheckersLost } from "./CheckersBoard.tsx";
+import { CheckersBoard, CheckersLost, checkersEndingText } from "./CheckersBoard.tsx";
 import { DominoBoard } from "./DominoBoard.tsx";
 import { TrucoBoard } from "./TrucoBoard.tsx";
 import { GameIcon, SeatToken } from "./tokens.tsx";
@@ -399,7 +399,10 @@ function EndBanner({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
   const celebrate = winner !== null && !iLost;
   const winnersText = team ? S.wonMany(S.and(winners.map((w) => playedBy(w) ?? ""))) : S.won(winnerName ?? "");
   const title = s.draw ? (kind === "tictactoe" ? S.drawTicTacToe : S.draw) : iWon ? (team ? S.teamWon : S.youWon) : iLost ? (team ? S.teamLost : S.youLost) : winnersText;
-  const reason = endReasonText(s.reason, s.reason === "resign" || s.reason === "left" ? loserName : null);
+  // Damas, final especial: diz qual final e quantos lances valiam ("3 damas contra 1 dama: 16 lances de cada lado...").
+  const ending = kind === "checkers" && s.reason === "endgame" ? (s as unknown as CheckersState) : null;
+  const endingText = ending?.endgame ? checkersEndingText(ending) : null;
+  const reason = ending?.endgame && endingText ? S.endgameReason(endingText, ending.endgame.each) : endReasonText(s.reason, s.reason === "resign" || s.reason === "left" ? loserName : null);
 
   // Revanche: nas mesas de dois, com quem está do outro lado; nas de vários, com todos os sentados.
   const others = seatedOf(t).filter((x) => x !== seat);
