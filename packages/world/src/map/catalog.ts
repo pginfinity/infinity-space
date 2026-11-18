@@ -100,6 +100,7 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   // jogos de grupo (pacote grupo)
   "stop-board": { w: 1.0, d: 0.66, h: 1.78, blocks: true, action: "use", label: "Jogar Stop", look: "Cavalete de quadro-negro do café: moldura de madeira, letreiro STOP em giz, roleta de letras no topo e bandeja com gizes." },
   "mission-console": { w: 0.9, d: 0.7, h: 1.3, blocks: true, action: "use", label: "Impostor na Estação", look: "Terminal de missões da estação: pedestal escuro com tampo inclinado, mapa holográfico da estação acima e faixa de luz azul." },
+  "word-board": { w: 1.2, d: 0.5, h: 2.05, blocks: true, action: "use", label: "Jogar Palavra secreta", look: "Painel de letras do Marketing: quadro de feltro escuro numa moldura de madeira clara, sobre dois pés, com um balão de fala aceso no topo. A face fica lisa: o jogo desenha por cima o placar e o tempo (nunca a palavra)." },
   // pacote vivo (estação viva)
   telescope: { w: 0.8, d: 0.8, h: 1.6, blocks: true, action: "use", label: "Olhar pelo telescópio", look: "Telescópio de latão e azul-marinho num tripé de madeira, apontado para a janela." },
   chalkboard: { w: 0.7, d: 0.5, h: 1.25, blocks: true, look: "Cavalete de quadro de giz (A-frame) da copa, moldura de madeira. O texto do dia é desenhado à parte." },
