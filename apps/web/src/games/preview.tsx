@@ -25,7 +25,14 @@ const MAP: MapDef = {
   floors: [],
   walls: [],
   zones: [],
-  objects: [mesa("xadrez-1", "chess-table"), mesa("lig4-1", "connect4-table"), mesa("velha-1", "tictactoe-table")],
+  objects: [
+    mesa("xadrez-1", "chess-table"),
+    mesa("lig4-1", "connect4-table"),
+    mesa("velha-1", "tictactoe-table"),
+    mesa("damas-1", "checkers-table"),
+    mesa("domino-1", "domino-table"),
+    mesa("truco-1", "cards-table"),
+  ],
   desks: [],
   signs: [],
   labels: [],
@@ -33,7 +40,7 @@ const MAP: MapDef = {
 };
 
 const person = (id: string, name: string, status: PlayerInfo["status"]): PlayerInfo => ({ id, name, look: DEFAULT_LOOK, status, lens: "2d", mic: false, cam: false, screen: false });
-const PEOPLE = [person("ana", "Ana Ribeiro", "available"), person("bruno", "Bruno", "focus"), person("carla", "Carla", "listening")];
+const PEOPLE = [person("ana", "Ana Ribeiro", "available"), person("bruno", "Bruno", "focus"), person("carla", "Carla", "listening"), person("duda", "Duda", "available")];
 
 const q = new URLSearchParams(location.search);
 let me = q.get("eu") ?? "ana";
@@ -42,12 +49,17 @@ const manager = new GamesManager(MAP, {
   broadcast: (msg) => {
     if (msg.t === "game") useApp.getState().setGame(msg.game);
   },
+  // Dominó e truco: a prévia mostra a visão de quem está escolhido na barra (cada um vê só a própria mão).
+  broadcastEach: (msgFor) => {
+    const msg = msgFor(me);
+    if (msg.t === "game") useApp.getState().setGame(msg.game);
+  },
   playerName: (id) => PEOPLE.find((p) => p.id === id)?.name,
   playerPos: () => ({ x: 0.5, z: 0.5 }),
 });
 
 useApp.setState({ phase: "world", conn: "open", selfId: me, players: Object.fromEntries(PEOPLE.map((p) => [p.id, p])) });
-useApp.getState().setGames(manager.snapshots());
+useApp.getState().setGames(manager.snapshots(me));
 useApp.getState().openGame(q.get("mesa") ?? "lig4-1");
 setGameTransport((table, op, data) => manager.handle(me, table, op, data));
 
@@ -59,6 +71,7 @@ Object.assign(window, {
     as(id: string) {
       me = id;
       useApp.setState({ selfId: id });
+      useApp.getState().setGames(manager.snapshots(id));
     },
     act(id: string, table: string, op: string, data?: unknown) {
       manager.handle(id, table, op, data);

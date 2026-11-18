@@ -13,6 +13,7 @@ Pronto e integrado (base em `docs/atividades.md`):
 
 - **Escritório:** gongo do Comercial, status no avatar, botão de deploy com foguete, mural de recados, aviãozinho de papel, toca aqui / brinde / abraço, cabine de fotos.
 - **Estação viva:** itens na mão, copa (café, chá, água, suco, pipoca) com contador do dia, plantas que murcham e estação de rega, Orbi (robô mascote), jukebox com fila, telescópio, prancha flutuante.
+- **Jogos de mesa do café:** damas, dominó (2 a 4) e truco (2 ou 4), com a partida ao vivo no tampo. Cada pessoa recebe do servidor só a própria mão; quem assiste vê quantas pedras ou cartas cada um tem.
 - **Arcade:** tabuleiros ao vivo nas mesas, jogo da velha, hockey de mesa e pingue-pongue em tempo real, 3 fliperamas originais com ranking (Faxina Orbital, Cauda de Cometa, Estilhaço), bolinha de papel com recorde do dia, sinuca.
 - **Grupo:** Quiz Show com banco de perguntas editável, Desenhe e adivinhe, Stop, Impostor na Estação, Palavra secreta.
 - **Reuniões:** gravação da sala com envio ao Google Drive.
@@ -32,6 +33,9 @@ Ainda não: foto do grupo no mural da copa.
 | Onde | Jogo | Tipo |
 |---|---|---|
 | Arcade | Xadrez, Lig 4, Jogo da velha | Mesa, 2 pessoas, por turnos |
+| Café | Damas (regras brasileiras: captura obrigatória, lei da maioria, dama voadora) | Mesa, 2 pessoas, por turnos |
+| Café | Dominó duplo-seis (com 4, em duplas; compra do monte com 2 ou 3; batida ou tranca) | Mesa, 2 a 4 pessoas, por turnos, **mãos escondidas** |
+| Café | Truco paulista (baralho espanhol, vira e manilha, truco/seis/nove/doze, mão de onze, até 12) | Mesa, 2 ou 4 pessoas (em duplas), **mãos escondidas** |
 | Arcade | Hockey de mesa | Física em tempo real, 2 pessoas |
 | Arcade | Pingue-pongue | Física em tempo real, 2 pessoas |
 | Arcade | 3 fliperamas com jogos originais (nave no campo de asteroides, cobrinha orbital, quebra-blocos) | 1 pessoa, **ranking do escritório** gravado na máquina |

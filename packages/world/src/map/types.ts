@@ -147,6 +147,10 @@ export type ObjectType =
   | "pingpong"
   | "chess-table"
   | "connect4-table"
+  // jogos de mesa do café (damas, dominó, truco)
+  | "checkers-table"
+  | "domino-table"
+  | "cards-table"
   // pacote arcade
   | "tictactoe-table"
   | "arcade-board"

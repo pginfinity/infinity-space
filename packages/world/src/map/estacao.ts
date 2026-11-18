@@ -202,7 +202,7 @@ class Builder {
   }
 
   /** Mesa de jogo com duas cadeiras frente a frente (lugar 0 e 1 da partida). */
-  gameTable(type: "chess-table" | "connect4-table" | "tictactoe-table", x: number, z: number, axis: "x" | "z", gameId: string, zoneId: string): void {
+  gameTable(type: "chess-table" | "connect4-table" | "tictactoe-table" | "checkers-table", x: number, z: number, axis: "x" | "z", gameId: string, zoneId: string): void {
     this.put(type, x, z, axis === "x" ? E : N, { gameId, zoneId });
     const off = 0.78;
     if (axis === "x") {
@@ -212,6 +212,20 @@ class Builder {
       this.put("chair", x, z + off, N, { gameId, gameSeat: 0, zoneId });
       this.put("chair", x, z - off, S, { gameId, gameSeat: 1, zoneId });
     }
+  }
+
+  /**
+   * Mesa de jogo quadrada para quatro. Lugares em sentido anti-horário visto de cima (a vez gira assim):
+   * 0 ao sul, 1 a leste, 2 ao norte, 3 a oeste. Parceiros (0 e 2, 1 e 3) ficam frente a frente.
+   */
+  gameTable4(type: "domino-table" | "cards-table", x: number, z: number, gameId: string, zoneId: string, color?: string): void {
+    this.put(type, x, z, N, { gameId, zoneId });
+    const off = CATALOG[type].d / 2 + 0.38;
+    const extra = { gameId, zoneId, ...(color ? { color } : {}) };
+    this.put("chair", x, z + off, N, { ...extra, gameSeat: 0 });
+    this.put("chair", x + off, z, W, { ...extra, gameSeat: 1 });
+    this.put("chair", x, z - off, S, { ...extra, gameSeat: 2 });
+    this.put("chair", x - off, z, E, { ...extra, gameSeat: 3 });
   }
 }
 
@@ -642,6 +656,13 @@ export function buildStationMap(): MapDef {
   b.put("ramen-bowl", -11.56, 15.42, E, { zoneId: cafe.id, elevation: 0.92 });
   // Família Soprano: patinhos de borracha na mesa de centro do lounge do Átrio.
   b.put("duck-family", 4.94, -1.69, N, { zoneId: "atrio", elevation: 0.42 });
+
+  // ── Jogos de mesa do café: damas, dominó e truco ────────────────────────────────────
+  // No vão livre entre a mesa alta e as mesinhas bistrô, com passagem dos dois lados de cada mesa.
+  // Dominó e truco são para quatro (parceiros frente a frente); damas, para dois.
+  b.gameTable4("domino-table", -9.3, 18.1, "cafe-domino-1", cafe.id, "#C68A4A");
+  b.gameTable("checkers-table", -7.05, 18.1, "z", "cafe-damas-1", cafe.id);
+  b.gameTable4("cards-table", -4.8, 18.1, "cafe-truco-1", cafe.id, "#C68A4A");
 
   // pacote portas: uma porta no vão de cada sala fechada (reunião, suítes e cabines de foco).
   // `rot` aponta de dentro para fora; `size.w` é a largura do vão; variante 1 = folha de vidro.

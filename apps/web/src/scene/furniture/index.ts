@@ -17,6 +17,7 @@ import * as vivo from "./vivo.ts";
 import * as arcade from "./arcade.ts";
 import * as easter from "./easter.ts";
 import * as foco from "./foco.ts";
+import * as cafeGames from "./cafeGames.ts";
 
 /**
  * Catálogo de móveis 3D estilizados (cel shading), feito em código.
@@ -131,6 +132,10 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   "tictactoe-table": arcade.tictactoeTable,
   "arcade-board": arcade.arcadeBoard,
   "trash-bin": arcade.trashBin,
+  // jogos de mesa do café
+  "checkers-table": cafeGames.checkersTable,
+  "domino-table": cafeGames.dominoTable,
+  "cards-table": cafeGames.cardsTable,
   // pacote easter (homenagens discretas)
   "lens-rack": easter.lensRack,
   "crooked-book": easter.crookedBook,

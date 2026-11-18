@@ -4,10 +4,11 @@ import { GAME_OF_TABLE, type MapObject } from "@infinity/world";
 import { world } from "../../world/world.ts";
 import { objectMatrix } from "../../scene/furniture/index.ts";
 import { liveTopPlane } from "../../scene/furniture/arcade.ts";
+import { cafeTopPlane } from "../../scene/furniture/cafeGames.ts";
 import { boardTexture } from "../../games/boardTextures.ts";
 
 /**
- * Tabuleiro ao vivo no tampo das mesas de jogo (xadrez, Lig 4, jogo da velha): quem passa vê a
+ * Tabuleiro ao vivo no tampo das mesas de jogo (xadrez, Lig 4, jogo da velha, e no café damas, dominó e truco): quem passa vê a
  * partida nas duas lentes. Os móveis são instanciados, então cada mesa ganha um plano próprio
  * com a textura da partida (`boardTexture`, que se redesenha sozinha quando o estado muda).
  */
@@ -25,7 +26,7 @@ function buildBoards(objects: readonly MapObject[]): { root: THREE.Group; dispos
   const owned: Array<THREE.BufferGeometry | THREE.Material> = [];
   for (const o of objects) {
     if (!o.gameId || !(o.type in GAME_OF_TABLE)) continue;
-    const plane = liveTopPlane(o.type);
+    const plane = liveTopPlane(o.type) ?? cafeTopPlane(o.type);
     if (!plane) continue;
     const mat = new THREE.MeshBasicMaterial({
       map: boardTexture(o.gameId),

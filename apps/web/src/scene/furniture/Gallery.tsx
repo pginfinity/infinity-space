@@ -70,6 +70,9 @@ const NAMES: Record<string, string> = {
   pingpong: "Pingue-pongue",
   "chess-table": "Xadrez",
   "connect4-table": "Lig 4",
+  "checkers-table": "Damas",
+  "domino-table": "Dominó",
+  "cards-table": "Truco",
   arcade: "Fliperama",
   jukebox: "Jukebox",
   "lens-rack": "Rack da lente",
@@ -90,7 +93,7 @@ const GROUPS: { id: string; name: string; types: ObjectType[] }[] = [
   { id: "tecnologia", name: "Tecnologia e estúdio", types: ["backdrop", "server-rack", "holo-table", "robot-arm", "big-button", "ring-light", "camera-tripod"] },
   { id: "copa", name: "Copa", types: ["counter", "kitchen-counter", "coffee-machine", "fridge", "water-cooler"] },
   { id: "decoracao", name: "Decoração e palco", types: ["plant", "plant-tall", "plant-small", "bookshelf", "lamp-floor", "rug", "gong", "lectern"] },
-  { id: "jogos", name: "Jogos", types: ["airhockey", "pool", "pingpong", "chess-table", "connect4-table", "arcade", "jukebox"] },
+  { id: "jogos", name: "Jogos", types: ["airhockey", "pool", "pingpong", "chess-table", "connect4-table", "checkers-table", "domino-table", "cards-table", "arcade", "jukebox"] },
   { id: "homenagens", name: "Homenagens", types: ["lens-rack", "brick-pillar", "barrel", "crooked-book", "pill-dish", "fancy-pen", "ramen-bowl", "duck-family"] },
 ];
 

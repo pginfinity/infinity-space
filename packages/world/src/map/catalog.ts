@@ -91,6 +91,10 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   pingpong: { w: 1.5, d: 2.7, h: 0.76, blocks: true, action: "play", label: "Jogar pingue-pongue", look: "Mesa de pingue-pongue azul com rede no meio." },
   "chess-table": { w: 0.8, d: 0.8, h: 0.74, blocks: true, action: "play", label: "Jogar xadrez", look: "Mesinha com tabuleiro de xadrez e peças." },
   "connect4-table": { w: 0.9, d: 0.7, h: 0.74, blocks: true, action: "play", label: "Jogar Lig 4", look: "Mesinha com o tabuleiro vertical de ligar 4 (grade azul, fichas laranja e brancas)." },
+  // jogos de mesa do café
+  "checkers-table": { w: 0.8, d: 0.8, h: 0.74, blocks: true, action: "play", label: "Jogar damas", look: "Mesinha de madeira com tabuleiro de damas em tons de madeira clara e escura (as peças da partida aparecem ao vivo no tampo)." },
+  "domino-table": { w: 0.9, d: 0.9, h: 0.74, blocks: true, action: "play", label: "Jogar dominó", look: "Mesa quadrada de boteco, tampo de madeira com borda escura, para quatro (a fileira de pedras aparece ao vivo no tampo)." },
+  "cards-table": { w: 0.9, d: 0.9, h: 0.74, blocks: true, action: "play", label: "Jogar truco", look: "Mesa quadrada de carteado com feltro verde e borda de madeira, para quatro (vira, vaza e placar aparecem ao vivo no feltro)." },
   // pacote arcade
   "tictactoe-table": { w: 0.8, d: 0.8, h: 0.74, blocks: true, action: "play", label: "Jogar jogo da velha", look: "Mesinha quadrada com tampo de acrílico escuro e a grade do jogo da velha acesa (a partida aparece ao vivo no tampo)." },
   "arcade-board": { w: 2.2, d: 0.08, h: 1.2, blocks: false, action: "use", label: "Ver recordes", wallMounted: 1.75, look: "Placar de recordes dos fliperamas: moldura retrô com filete neon e tela larga (a textura com os rankings é desenhada à parte)." },

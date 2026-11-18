@@ -72,6 +72,7 @@ export class OfficeRoom {
   private readonly members = new Map<string, Member>();
   readonly games = new GamesManager(this.map, {
     broadcast: (msg) => this.broadcast(msg),
+    broadcastEach: (msgFor) => this.broadcastEach(msgFor),
     playerName: (id) => this.members.get(id)?.info.name,
     playerPos: (id) => {
       const m = this.members.get(id);
@@ -293,7 +294,8 @@ export class OfficeRoom {
       players: [...this.members.values()].map((m) => m.info),
       poses: [...this.members.values()].map(pose),
       serverTime: Date.now(),
-      games: this.games.snapshots(),
+      // Cada um recebe a própria visão das mesas (mãos do dominó e do truco ficam escondidas).
+      games: this.games.snapshots(id),
       acts: this.acts.snapshots(),
     });
     this.broadcast({ t: "join", player: member.info, pose: pose(member) }, member);
@@ -501,6 +503,21 @@ export class OfficeRoom {
     const data = encode(msg);
     for (const m of this.members.values()) {
       if (m !== except && m.socket.readyState === m.socket.OPEN) m.socket.send(data);
+    }
+  }
+
+  /** Uma mensagem escolhida por pessoa (visão própria de um jogo). Mensagens iguais são codificadas uma vez. */
+  private broadcastEach(msgFor: (id: string) => ServerMsg): void {
+    const cache = new Map<ServerMsg, ReturnType<typeof encode>>();
+    for (const m of this.members.values()) {
+      if (m.socket.readyState !== m.socket.OPEN) continue;
+      const msg = msgFor(m.info.id);
+      let data = cache.get(msg);
+      if (!data) {
+        data = encode(msg);
+        cache.set(msg, data);
+      }
+      m.socket.send(data);
     }
   }
 }
