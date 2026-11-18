@@ -9,12 +9,15 @@ import type { ActivityClient } from "../registry.ts";
 import { sfx } from "../../audio/sfx.ts";
 import { self } from "../../world/registry.ts";
 import { Space } from "../../scene/Space.tsx";
+import { getSky } from "../../scene/astro/live.ts";
+import { EARTH_ANGULAR_RADIUS } from "../../scene/astro/astro.ts";
 import { SPACE } from "../../world/theme.ts";
 import { T } from "./strings.ts";
 
 /**
  * Telescópio da Diretoria: abre uma vista em tela cheia, com câmera lenta e cinematográfica
- * olhando a Terra e as estrelas (o mesmo espaço que se vê pelas janelas). Esc fecha.
+ * olhando o céu de verdade (a Lua, quando está acima da borda da Terra) e a Terra lá embaixo:
+ * o mesmo espaço que se vê pelas janelas. Esc fecha.
  * Não mexe na câmera das lentes: é um Canvas próprio, só enquanto está aberto.
  */
 
@@ -42,6 +45,7 @@ function TelescopeOverlay() {
 }
 
 function TelescopeView() {
+  const aim = useMemo(telescopeAim, []);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const close = () => useTele.setState({ open: false, at: null });
   useEffect(() => {
@@ -85,9 +89,7 @@ function TelescopeView() {
         }}
       >
         <Space />
-        <Moon />
-        <SunGlow />
-        <Cinematic />
+        <Cinematic aim={aim} />
       </Canvas>
       {/* ocular: escurece as bordas num círculo suave */}
       <div
@@ -100,7 +102,7 @@ function TelescopeView() {
           <TelescopeIcon className="size-4 text-sky" aria-hidden />
           {T.telescope.title}
         </p>
-        <p className="text-sm text-slate">{T.telescope.caption}</p>
+        <p className="text-sm text-slate">{aim.moon ? T.telescope.captionMoon : T.telescope.caption}</p>
       </div>
       <button
         ref={closeBtn}
@@ -116,89 +118,48 @@ function TelescopeView() {
   );
 }
 
+interface Aim {
+  dir: THREE.Vector3;
+  fov: number;
+  moon: boolean;
+}
+
+/** Para onde o telescópio olha ao abrir: a Lua, se estiver acima da borda da Terra; senão, a borda do lado do Sol. */
+function telescopeAim(): Aim {
+  const sky = getSky();
+  const moon = new THREE.Vector3(...sky.moon.dir);
+  const fromNadir = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(-moon.y, -1, 1)));
+  if (fromNadir > EARTH_ANGULAR_RADIUS + 4) return { dir: moon, fov: 10, moon: true };
+  const sun = new THREE.Vector3(...sky.sun.dir);
+  const az = Math.atan2(sun.x, -sun.z);
+  // ~4° acima da borda da Terra, no rumo do Sol
+  const alt = THREE.MathUtils.degToRad(-(90 - EARTH_ANGULAR_RADIUS) + 4);
+  return { dir: new THREE.Vector3(Math.cos(alt) * Math.sin(az), Math.sin(alt), -Math.cos(alt) * Math.cos(az)), fov: 34, moon: false };
+}
+
 /**
- * Câmera lenta: gira devagar em volta, sobe e desce o olhar e aproxima um pouco no começo
- * (como quem ajusta o foco do telescópio).
+ * Câmera lenta: aproxima devagar (como quem ajusta o foco) e passeia em volta do alvo. O passeio é proporcional ao
+ * campo de visão (com a Lua de perto, mexe pouco para ela não sair do quadro).
  */
-function Cinematic() {
+function Cinematic({ aim }: { aim: Aim }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const t0 = useRef(-1);
   const look = useMemo(() => new THREE.Vector3(), []);
+  const yaw0 = Math.atan2(aim.dir.x, -aim.dir.z);
+  const pitch0 = Math.asin(THREE.MathUtils.clamp(aim.dir.y, -1, 1));
   useFrame((state) => {
     if (t0.current < 0) t0.current = state.clock.elapsedTime;
     const t = state.clock.elapsedTime - t0.current;
-    const yaw = 0.35 + t * 0.018;
-    const pitch = THREE.MathUtils.degToRad(-21 + Math.sin(t * 0.07) * 6);
     const zoom = Math.min(1, t / 6);
     const ease = 1 - Math.pow(1 - zoom, 3);
-    camera.fov = 62 - ease * 22 + Math.sin(t * 0.05) * 1.5;
+    camera.fov = THREE.MathUtils.lerp(60, aim.fov, ease) * (1 + Math.sin(t * 0.05) * 0.03);
     camera.updateProjectionMatrix();
-    camera.position.set(Math.sin(t * 0.03) * 6, 24 + Math.sin(t * 0.04) * 3, Math.cos(t * 0.025) * 6);
-    look.set(camera.position.x + Math.sin(yaw) * Math.cos(pitch) * 100, camera.position.y + Math.sin(pitch) * 100, camera.position.z - Math.cos(yaw) * Math.cos(pitch) * 100);
+    const wander = THREE.MathUtils.degToRad(aim.fov * 0.18);
+    const yaw = yaw0 + Math.sin(t * 0.021) * wander;
+    const pitch = pitch0 + Math.sin(t * 0.033) * wander * 0.45;
+    camera.position.set(0, 24, 0);
+    look.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(100).add(camera.position);
     camera.lookAt(look);
   });
   return null;
-}
-
-/** Lua distante, com crateras desenhadas por ruído (sem textura baixada). */
-function Moon() {
-  const ref = useRef<THREE.Mesh>(null);
-  const { geo, mat } = useMemo(() => {
-    const g = new THREE.SphereGeometry(1, 48, 32);
-    const m = new THREE.ShaderMaterial({
-      uniforms: { uSun: { value: new THREE.Vector3(0.45, 0.55, 0.7).normalize() } },
-      vertexShader: /* glsl */ `varying vec3 vN; varying vec3 vP; void main(){ vN = normalize(mat3(modelMatrix) * normal); vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: /* glsl */ `
-        uniform vec3 uSun; varying vec3 vN; varying vec3 vP;
-        float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
-        float n(vec3 p){ vec3 i = floor(p); vec3 f = fract(p); f = f*f*(3.0-2.0*f);
-          return mix(mix(mix(h(i), h(i+vec3(1,0,0)), f.x), mix(h(i+vec3(0,1,0)), h(i+vec3(1,1,0)), f.x), f.y),
-                     mix(mix(h(i+vec3(0,0,1)), h(i+vec3(1,0,1)), f.x), mix(h(i+vec3(0,1,1)), h(i+vec3(1,1,1)), f.x), f.y), f.z); }
-        void main(){
-          vec3 p = normalize(vP);
-          float maria = smoothstep(0.45, 0.6, n(p * 2.5));
-          float crater = smoothstep(0.72, 0.8, n(p * 9.0)) * 0.35;
-          vec3 col = mix(vec3(0.78, 0.78, 0.8), vec3(0.45, 0.46, 0.5), maria) - crater * 0.3;
-          float light = clamp(dot(vN, uSun) * 1.1 + 0.05, 0.0, 1.0);
-          gl_FragColor = vec4(col * light, 1.0);
-        }`,
-    });
-    return { geo: g, mat: m };
-  }, []);
-  useEffect(
-    () => () => {
-      geo.dispose();
-      mat.dispose();
-    },
-    [geo, mat],
-  );
-  useFrame((s) => {
-    if (ref.current) ref.current.rotation.y = s.clock.elapsedTime * 0.01;
-  });
-  return <mesh ref={ref} geometry={geo} material={mat} position={[860, 120, -690]} scale={34} />;
-}
-
-/** Brilho suave do Sol, fora do quadro na maior parte do tempo. */
-function SunGlow() {
-  const tex = useMemo(() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 128;
-    const g = c.getContext("2d")!;
-    const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    r.addColorStop(0, "rgba(255,244,224,1)");
-    r.addColorStop(0.15, "rgba(255,226,180,0.55)");
-    r.addColorStop(1, "rgba(255,226,180,0)");
-    g.fillStyle = r;
-    g.fillRect(0, 0, 128, 128);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, []);
-  useEffect(() => () => tex.dispose(), [tex]);
-  const dir = new THREE.Vector3(0.45, 0.55, 0.7).normalize().multiplyScalar(1400);
-  return (
-    <sprite position={dir} scale={[420, 420, 1]}>
-      <spriteMaterial map={tex} transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
-    </sprite>
-  );
 }

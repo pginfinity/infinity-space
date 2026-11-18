@@ -7,6 +7,7 @@ import { SPACE } from "../world/theme.ts";
 import { WorldScene } from "../scene/WorldScene.tsx";
 import { wallUniforms } from "../scene/walls.ts";
 import { self } from "../world/registry.ts";
+import { useQuality } from "../scene/quality.ts";
 import { setHeading, walkTo } from "../engine/movement.ts";
 
 /**
@@ -22,6 +23,8 @@ const MAX_ZOOM = 96;
 const WALL_CUT = 1.0;
 
 export default function LensIso() {
+  // Sombras do Sol também no 2D (baratas: o mapa só é refeito quando o Sol anda); no modo leve, sem.
+  const shadows = useQuality((s) => s.mode) !== "leve";
   useEffect(() => {
     wallUniforms.uCut.value = WALL_CUT;
     wallUniforms.uSee.value = 0;
@@ -33,7 +36,9 @@ export default function LensIso() {
   return (
     <div className="absolute inset-0" aria-label="Escritório em 2D isométrico" role="application">
       <Canvas
+        key={shadows ? "sombras" : "leve"}
         orthographic
+        shadows={shadows ? "percentage" : false}
         dpr={1 / PIXEL}
         gl={{ antialias: false, powerPreference: "high-performance" }}
         camera={{ zoom: initialZoom(), near: -400, far: 1200, position: [30, 30, 30] }}

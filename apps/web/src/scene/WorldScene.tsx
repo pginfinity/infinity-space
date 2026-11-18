@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { officeLight, sunAt } from "./sun.ts";
+import { getSky, retainSky, skyVersion } from "./astro/live.ts";
+import { officeLight } from "./astro/light.ts";
+import { world } from "../world/world.ts";
 import type { Lens } from "@infinity/world";
 import { Station } from "./Station.tsx";
 import { Avatars } from "./Avatars.tsx";
@@ -17,7 +19,7 @@ export function WorldScene({ lens }: { lens: Lens }) {
       <SunLights />
       <directionalLight position={[-24, 18, -16]} intensity={0.35} color="#8FD0FF" />
       <ambientLight intensity={0.18} />
-      <Space />
+      <Space lens={lens} />
       <Station lens={lens} />
       <Avatars />
       <ScreenTVs />
@@ -66,23 +68,87 @@ function BackgroundThrottle() {
   return null;
 }
 
-/** Luz principal do escritório: dourada no fim de tarde, mais suave à noite (horário real de Florianópolis). */
+/** Centro e raio da estação (para mirar a luz do Sol e enquadrar as sombras). */
+function stationBounds(): { x: number; z: number; r: number } {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const f of world().map.floors) {
+    for (const p of f.polygon) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minZ = Math.min(minZ, p.z);
+      maxZ = Math.max(maxZ, p.z);
+    }
+  }
+  if (!Number.isFinite(minX)) return { x: 0, z: 0, r: 40 };
+  return { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: Math.hypot(maxX - minX, maxZ - minZ) / 2 + 3 };
+}
+
+/** Distância da luz ao centro da estação (só define de onde a sombra é projetada). */
+const LIGHT_DIST = 90;
+
+/**
+ * Luz principal do escritório: vem do Sol de verdade, visto da estação (astro/light.ts). Dourada quando o Sol
+ * encosta na borda da Terra; na sombra da Terra some e ficam as luzes internas, mais quentes.
+ * Sombras (se a lente ligou): o mapa é refeito quando o Sol anda e a cada meio segundo (móveis animados),
+ * nunca a cada quadro. A luz nunca é desligada (só a intensidade vai a 0): mudar o número de luzes
+ * recompilaria todos os materiais.
+ */
 function SunLights() {
   const key = useRef<THREE.DirectionalLight>(null);
   const sky = useRef<THREE.HemisphereLight>(null);
-  const last = useRef(-Infinity);
+  const gl = useThree((s) => s.gl);
+  const box = useMemo(stationBounds, []);
+  const last = useRef({ version: -1, t: -Infinity, lit: true });
+
+  useEffect(() => retainSky(), []);
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
+    const k = key.current;
+    if (k) {
+      const cam = k.shadow.camera;
+      cam.left = -box.r;
+      cam.right = box.r;
+      cam.top = box.r;
+      cam.bottom = -box.r;
+      cam.near = LIGHT_DIST - box.r - 10;
+      cam.far = LIGHT_DIST + box.r + 10;
+      cam.updateProjectionMatrix();
+      k.target.position.set(box.x, 0, box.z);
+      k.target.updateMatrixWorld();
+    }
+    return () => {
+      gl.shadowMap.autoUpdate = true;
+    };
+  }, [gl, box]);
+
   useFrame((state) => {
-    if (state.clock.elapsedTime - last.current < 60 || !key.current || !sky.current) return;
-    last.current = state.clock.elapsedTime;
-    const l = officeLight(sunAt().altitude);
-    key.current.color.copy(l.color);
-    key.current.intensity = l.intensity;
-    sky.current.intensity = l.sky;
+    const k = key.current;
+    const h = sky.current;
+    if (!k || !h) return;
+    const st = last.current;
+    const v = skyVersion();
+    if (v !== st.version) {
+      st.version = v;
+      const l = officeLight(getSky());
+      k.position.set(box.x + l.dir[0] * LIGHT_DIST, l.dir[1] * LIGHT_DIST, box.z + l.dir[2] * LIGHT_DIST);
+      k.color.setRGB(l.color[0], l.color[1], l.color[2], THREE.SRGBColorSpace);
+      k.intensity = l.intensity;
+      h.color.setRGB(l.skyColor[0], l.skyColor[1], l.skyColor[2], THREE.SRGBColorSpace);
+      h.groundColor.setRGB(l.groundColor[0], l.groundColor[1], l.groundColor[2], THREE.SRGBColorSpace);
+      h.intensity = l.sky;
+      st.lit = l.intensity > 0.01;
+      gl.shadowMap.needsUpdate = true;
+    }
+    if (st.lit && gl.shadowMap.enabled && state.clock.elapsedTime - st.t > 0.5) {
+      st.t = state.clock.elapsedTime;
+      gl.shadowMap.needsUpdate = true;
+    }
   });
   return (
     <>
       <hemisphereLight ref={sky} args={["#D8E8FF", "#2A3550", 1.15]} />
-      <directionalLight ref={key} position={[28, 46, 22]} intensity={1.7} color="#FFF1DE" />
+      <directionalLight ref={key} position={[28, 46, 22]} intensity={1.7} color="#FFF1DE" castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0006} shadow-normalBias={0.04} />
     </>
   );
 }
