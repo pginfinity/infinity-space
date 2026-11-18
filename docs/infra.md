@@ -79,9 +79,8 @@ As reuniões gravadas dentro do Infinity Space (salas de reunião, diretoria e a
 4. Na VPS, guardar o JSON fora do repositório (ex.: `/etc/infinity/google.json`, permissão 600) e pôr no `.env` de produção:
    - `GOOGLE_APPLICATION_CREDENTIALS=/etc/infinity/google.json`
    - `DRIVE_FOLDER_ID=<id da pasta>`
-   - `LIVEKIT_INTERNAL_URL=ws://livekit:7880` (endereço do LiveKit visto de dentro da VPS)
    - `TZ_DISPLAY=America/Sao_Paulo` (fuso usado no nome dos arquivos)
-5. O servidor precisa do `ffmpeg`: ele entra na imagem Docker do servidor quando o deploy for montado. Fora do Docker: `apt install ffmpeg` e `FFMPEG_PATH=/usr/bin/ffmpeg`.
+5. O endereço do LiveKit visto de dentro do app (`LIVEKIT_INTERNAL_URL`) já vem definido no `deploy/docker-compose.yml`, e o `ffmpeg` já vem na imagem Docker. Fora do Docker: `apt install ffmpeg` e `FFMPEG_PATH=/usr/bin/ffmpeg`.
 
 Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração, os participantes e quem iniciou. A transcrição fica com o time de IA, lendo dessa pasta.
 

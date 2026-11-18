@@ -5,6 +5,9 @@
 # - livekit: áudio, vídeo, tela e TURN (rede do host: WebRTC precisa das portas UDP diretas)
 # - caddy: HTTPS (certificado de origem da Cloudflare no domínio principal; Let's Encrypt em rtc/turn)
 
+# Nome fixo do projeto: volumes como infinity-space_dados (o backup em docs/infra.md usa esse nome).
+name: infinity-space
+
 services:
   app:
     build:
