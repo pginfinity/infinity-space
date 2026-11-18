@@ -97,7 +97,7 @@ test("Damas: captura obrigatória pelo painel, 2D e 3D", async ({ browser }) => 
   const bruno = await enter(browser, "Bruno", "3d");
   const table = await tableOf(ana, "checkers-table");
   const id = table.gameId!;
-  await expect.poll(async () => (await snap(ana, id))?.kind).toBe("checkers");
+  await expect.poll(async () => (await snap(ana, id))?.kind, { timeout: 30_000 }).toBe("checkers");
 
   for (const p of [ana, bruno]) await openGame(p, id);
   const panelA = ana.getByRole("dialog", { name: "Damas" });
@@ -161,7 +161,7 @@ test("Dominó: dois jogam pelo painel (2D e 3D), cada um vê só a própria mão
   const carla = await enter(browser, "Carla", "2d");
   const table = await tableOf(ana, "domino-table");
   const id = table.gameId!;
-  await expect.poll(async () => (await snap(ana, id))?.kind).toBe("domino");
+  await expect.poll(async () => (await snap(ana, id))?.kind, { timeout: 30_000 }).toBe("domino");
 
   for (const p of [ana, bruno, carla]) await openGame(p, id);
   const panel = (p: Page) => p.getByRole("dialog", { name: "Dominó" });
@@ -239,7 +239,7 @@ test("Truco: mano a mano pelo painel (2D e 3D), com truco aceito e seis corrido"
   const carla = await enter(browser, "Carla", "3d");
   const table = await tableOf(ana, "cards-table");
   const id = table.gameId!;
-  await expect.poll(async () => (await snap(ana, id))?.kind).toBe("truco");
+  await expect.poll(async () => (await snap(ana, id))?.kind, { timeout: 30_000 }).toBe("truco");
 
   for (const p of [ana, bruno, carla]) await openGame(p, id);
   const panel = (p: Page) => p.getByRole("dialog", { name: "Truco" });

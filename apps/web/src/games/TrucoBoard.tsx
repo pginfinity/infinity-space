@@ -65,7 +65,7 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
       >
         {playing && (
           <>
-            <div className="absolute left-[5%] top-1/2 flex -translate-y-1/2 flex-col items-center gap-1">
+            <div className="absolute left-[4%] top-[6%] flex flex-col items-center gap-1">
               <CardArt card={s.vira} w={46} h={68} className="rotate-[-8deg] drop-shadow-[0_3px_4px_rgb(0_0_0/0.35)]" />
               <span className="rounded-full bg-space/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-offwhite/90">{S.manilha(TRUCO_RANKS[s.manilha]!)}</span>
             </div>
@@ -177,7 +177,7 @@ function ScoreBar({ s, teamName, myTeam }: { s: TrucoState; teamName: (team: num
       {order.map((team, i) => (
         <div key={team} className={clsx("flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-1.5 ring-1", i === 0 ? "flex-row" : "flex-row-reverse text-right", "bg-offwhite/[0.04] ring-offwhite/10")}>
           <span className="min-w-0 flex-1 truncate text-xs text-offwhite/85">{teamName(team)}</span>
-          <span className="font-display text-xl font-bold tabular-nums leading-none">{s.score[team]}</span>
+          <span className="text-xl font-bold tabular-nums leading-none">{s.score[team]}</span>
         </div>
       ))}
       <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-offwhite/[0.04] px-2.5 ring-1 ring-offwhite/10">

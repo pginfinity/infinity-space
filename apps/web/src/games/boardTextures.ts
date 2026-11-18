@@ -214,11 +214,11 @@ function drawTruco(ctx: CanvasRenderingContext2D, s: TrucoState | undefined): vo
   ctx.strokeRect(22, 22, SIZE - 44, SIZE - 44);
   if (!s || s.active.length === 0) return;
 
-  // Vira, deitada de lado perto do centro.
+  // Vira no canto (longe das mãos e da vaza), um pouco torta.
   ctx.save();
-  ctx.translate(SIZE / 2 - 150, SIZE / 2 + 6);
-  ctx.rotate(-0.12);
-  drawCard(ctx, s.vira, -28, -41, 56, 82);
+  ctx.translate(92, 104);
+  ctx.rotate(-0.14);
+  drawCard(ctx, s.vira, -34, -50, 68, 100);
   ctx.restore();
 
   // Vaza: a carta de cada um à frente de quem jogou; com a mesa vazia, a última vaza apagadinha.
@@ -227,7 +227,7 @@ function drawTruco(ctx: CanvasRenderingContext2D, s: TrucoState | undefined): vo
   for (const p of cards) {
     atSeat(ctx, p.seat, () => {
       ctx.rotate(((p.card % 7) - 3) * 0.03);
-      drawCard(ctx, p.card, -32, 6, 64, 94);
+      drawCard(ctx, p.card, -36, 4, 72, 106);
     });
   }
   ctx.globalAlpha = 1;
@@ -238,9 +238,9 @@ function drawTruco(ctx: CanvasRenderingContext2D, s: TrucoState | undefined): vo
     atSeat(ctx, seat, () => {
       for (let i = 0; i < n; i++) {
         ctx.save();
-        ctx.translate((i - (n - 1) / 2) * 26, SIZE / 2 - 50);
+        ctx.translate((i - (n - 1) / 2) * 30, SIZE / 2 - 52);
         ctx.rotate((i - (n - 1) / 2) * 0.18);
-        drawCardBack(ctx, -18, -26, 36, 54);
+        drawCardBack(ctx, -21, -30, 42, 60);
         ctx.restore();
       }
     });

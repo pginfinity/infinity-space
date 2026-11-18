@@ -9,7 +9,7 @@ O escritório virtual da AI Infinity. Um mundo só, visto em **2D** (isométrico
 - **Ajustes por pessoa:** microfone, alto-falante e câmera; supressão de ruído em quatro níveis (navegador, RNNoise, GTCRN); volume de cada pessoa; qualidade do 3D (automática, leve, alta).
 - **Gravação de reuniões** nas salas de reunião, diretoria e auditório, com aviso para todos e envio ao Google Drive do time.
 - **Interatividade:** gongo, foguete de deploy, mural de recados, aviãozinho de papel, toca aqui, cabine de fotos, copa, plantas, o robô Orbi, jukebox, telescópio, status no avatar.
-- **Jogos originais:** xadrez, Lig 4, jogo da velha, hockey de mesa e pingue-pongue em tempo real, sinuca, três fliperamas com ranking, bolinha de papel, Quiz Show, Desenhe e adivinhe, Stop e Impostor na Estação.
+- **Jogos originais:** xadrez, Lig 4, jogo da velha, damas, dominó e truco (com as mãos escondidas de quem não deve ver), hockey de mesa e pingue-pongue em tempo real, sinuca, três fliperamas com ranking, bolinha de papel, Quiz Show, Desenhe e adivinhe, Stop e Impostor na Estação.
 - **Guia da estação** no mapa ampliado ("o que fazer aqui", com ir até lá).
 - **Login por convite** com link mágico no e-mail; app instalável no computador; versão para celular.
 

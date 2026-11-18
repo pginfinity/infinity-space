@@ -173,7 +173,8 @@ function SeatGrid({ t, kind, me }: { t: Table; kind: string; me: number }) {
   const { requestSeat, cancelSeat } = useGamesUi.getState();
   const players = useApp((s) => s.players);
   const st = t.state as unknown as { counts?: number[]; active?: number[]; teamOf?: number[] };
-  const teams = (st.active?.length ?? 0) === 4 || (t.phase !== "playing" && kind === "truco");
+  // "Dupla" só com quatro na partida (mano a mano, cada um é a própria dupla).
+  const teams = (st.active?.length ?? 0) === 4;
   return (
     <div className="grid grid-cols-2 gap-1.5" role="list">
       {t.seats.map((id, seat) => {
