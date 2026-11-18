@@ -113,6 +113,7 @@ test("Palavra secreta: editor de cartas, tema novo na partida, todos juntos e pl
   await ed.getByRole("tab", { name: /Espaço/ }).click();
   await ed.getByRole("button", { name: "Editar: Lua" }).click();
   await expect(ed.getByRole("form", { name: "Editar: Lua" }).getByRole("textbox", { name: "Proibida 4" })).not.toHaveValue("");
+  await ana.waitForTimeout(600); // (a ficha abre com animação)
   await shot(ana, "grupo-palavra-editor-carta");
   await ed.getByRole("form", { name: "Editar: Lua" }).getByRole("button", { name: "Cancelar" }).click();
 
