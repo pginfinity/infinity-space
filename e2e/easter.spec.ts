@@ -331,7 +331,28 @@ async function meetOrbi(page: Page): Promise<void> {
     )
     .toMatch(/Chamar o Orbi|Fazer carinho no Orbi/);
   await page.evaluate(() => (window as unknown as W).__infinity.acts.send("orbi", "call"));
-  await expect.poll(() => promptLabel(page), { timeout: 20_000 }).toBe("Fazer carinho no Orbi");
+  // Com o Orbi seguindo, vai para o ponto do Átrio mais longe de qualquer coisa com E (cadeiras,
+  // terminais, quadros): perto deles, outra ação ganha a prioridade do E e o carinho não aparece.
+  const spot = await page.evaluate(() => {
+    const h = (window as unknown as { __infinity: { world(): { map: { objects: Array<{ pos: { x: number; z: number }; interact?: unknown }> }; zones: { zoneAt(p: { x: number; z: number }): { id: string } | undefined } } } }).__infinity;
+    const w = h.world();
+    const things = w.map.objects.filter((o) => o.interact).map((o) => o.pos);
+    let best = { x: 2, z: 3 };
+    let bestD = -1;
+    for (let x = -3.5; x <= 6; x += 0.5) {
+      for (let z = -2.5; z <= 8; z += 0.5) {
+        if (w.zones.zoneAt({ x, z })?.id !== "atrio") continue;
+        const d = Math.min(...things.map((q) => Math.hypot(q.x - x, q.z - z)));
+        if (d > bestD) {
+          bestD = d;
+          best = { x, z };
+        }
+      }
+    }
+    return best;
+  });
+  await page.evaluate((p) => (window as unknown as W).__infinity.walkTo(p), spot);
+  await expect.poll(() => promptLabel(page), { timeout: 30_000 }).toBe("Fazer carinho no Orbi");
 }
 
 /**

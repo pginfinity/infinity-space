@@ -69,19 +69,29 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer({ sl
   const set = (text: string) => setDraft(slot, text);
   const syncCaret = () => setCaret(area.current?.selectionStart ?? 0);
 
+  // Cursor depois de inserir uma menção: aplicado no mesmo commit do texto novo, antes da próxima
+  // tecla. (Num quadro seguinte, com a máquina ocupada, as letras já digitadas iam parar depois do
+  // cursor reposicionado e a frase saía embaralhada.)
+  const pendingCaret = useRef<{ text: string; pos: number } | null>(null);
+  useLayoutEffect(() => {
+    const p = pendingCaret.current;
+    const el = area.current;
+    if (!p || !el || el.value !== p.text) return;
+    pendingCaret.current = null;
+    el.focus();
+    el.setSelectionRange(p.pos, p.pos);
+    setCaret(p.pos);
+  }, [value]);
+
   const pick = (name: string) => {
     if (!query) return;
     const before = value.slice(0, query.start);
     const after = value.slice(caret);
     const insert = `@${name} `;
-    set(before + insert + after.replace(/^ /, ""));
-    const pos = before.length + insert.length;
+    const text = before + insert + after.replace(/^ /, "");
+    pendingCaret.current = { text, pos: before.length + insert.length };
+    set(text);
     setActive(0);
-    requestAnimationFrame(() => {
-      area.current?.focus();
-      area.current?.setSelectionRange(pos, pos);
-      setCaret(pos);
-    });
   };
 
   const submit = () => {
