@@ -17,6 +17,25 @@ export function screenMesh(screenId: string): THREE.Mesh | undefined {
   return meshes.get(screenId);
 }
 
+// ---- telas ocupadas por atividades ----------------------------------------------------------
+
+const claims = new Map<string, THREE.Material>();
+
+/**
+ * Uma atividade ocupa a tela de uma TV com o próprio material (ex.: "Assistindo junto" na TV do
+ * lounge); `null` devolve a tela. Compartilhamento de tela de alguém na sala tem prioridade; sem
+ * nenhum dos dois, a TV mostra a tela de espera (sala e hora). Quem ocupa cuida do material.
+ */
+export function claimScreen(screenId: string, material: THREE.Material | null): void {
+  if (material) claims.set(screenId, material);
+  else claims.delete(screenId);
+}
+
+/** Material com que uma atividade ocupa a tela (ou undefined). */
+export function screenClaim(screenId: string): THREE.Material | undefined {
+  return claims.get(screenId);
+}
+
 /** TV usada por quem está em `pos` (null se não há TV na sala). */
 export function tvFor(pos: Vec2): { screenId: string; label: string } | null {
   const { map, zones } = world();
