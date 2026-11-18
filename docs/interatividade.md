@@ -22,8 +22,10 @@ Pronto e integrado (base em `docs/atividades.md`):
 - **Espaço vivo em tempo real:** estação a 400 km sobre São Paulo; Sol, Lua com a fase real, planetas, estrelas reais e Via Láctea; Terra da NASA com dia, noite e luzes das cidades; meteoros nas datas reais (iguais para todos) e eclipses; a luz do escritório vem do Sol de verdade e some na sombra da Terra. Painel "Agora no espaço" no Ctrl+K.
 - **Homenagens (easter eggs):** 12 referências discretas a filmes e séries, com arte original (2001, Interestelar, Matrix, Plataforma 9¾, "me venda esta caneta", Chaves, lámen, Soprano, De Volta para o Futuro às 22:04, Konami, Mapa do Maroto, frases do Orbi). Onde fica cada uma: bloco "Homenagens" em `packages/world/src/map/estacao.ts`.
 - **Visual Cinema** (oficial): luz física, sombras do Sol, reflexos e gradação de cor; modo "leve" nos ajustes.
+- **Mesa de foco (Pomodoro compartilhado):** mesa de quatro lugares no corredorzinho Foco. Quem senta entra no ciclo do grupo (25 min de foco, 5 de pausa, 15 a cada 4 focos), com um relógio só, no servidor; quem chega no meio entra no ciclo em andamento. Anel de progresso sobre a mesa nas duas lentes, chip no HUD para quem está sentado, som suave na troca de fase e status "Foco" automático durante o foco. Pausar, retomar e reiniciar só quando todos os sentados concordam; mesa vazia zera. Nada é contado nem guardado por pessoa.
+- **TV do lounge (assistir junto):** no lounge do Átrio, alguém cola um link do YouTube e todos que estão lá veem o mesmo vídeo no mesmo ponto (o player se ajusta quando fica mais de 1,5 s fora do tempo). Fila simples; play, pausa, ±10 s, próximo e trocar para quem está no lounge. O vídeo aparece num painel do HUD (youtube-nocookie); a TV do mundo mostra "Assistindo junto", o título e o progresso. Volume próprio (começa em 35%), abaixa sozinho quando alguém que você ouve fala e só toca no lounge. O servidor guarda só o id do vídeo e o título, em memória.
 
-Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no mural da copa.
+Ainda não: foto do grupo no mural da copa.
 
 ## Jogos
 
@@ -55,7 +57,7 @@ Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no 
 | **Cabine de fotos (Marketing)** | Foto do grupo posando, que vai para o mural de fotos da copa. |
 | **Telescópio (janela)** | Câmera cinematográfica olhando a Terra. |
 | **Jukebox** | Fila de músicas compartilhada, ouvida por proximidade, com trilhas próprias geradas para a Infinity. |
-| **TV do lounge** | Assistir vídeo junto (sincronizado) num happy hour. |
+| **TV do lounge** | Assistir vídeo do YouTube junto, sincronizado, num happy hour: link colado no painel da TV, fila e controles para quem está no lounge. |
 | **Mesas** | Check-in na mesa rotativa, objetos pessoais e recado deixado na mesa. |
 | **Status no avatar** | Balão com status curto (almoço, foco, em call) acima da cabeça. |
 | **Prancha flutuante** | Shift vira uma prancha antigravidade para cruzar a estação mais rápido. |
@@ -63,7 +65,7 @@ Ainda não: Pomodoro compartilhado, TV do lounge sincronizada, foto do grupo no 
 ## Rituais
 
 - Daily na sala do time (lista, timer suave, passa-a-vez).
-- Mesa de foco compartilhada com Pomodoro.
+- Mesa de foco compartilhada com Pomodoro (corredorzinho Foco): um relógio para a mesa toda, mudanças só com o acordo de todos.
 - Palco do auditório: quem sobe é ouvido por todos; reações da plateia (aplausos, confete) aparecem no palco.
 
 ## Ordem de entrega
