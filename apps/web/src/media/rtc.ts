@@ -7,10 +7,12 @@ import {
   ScreenSharePresets,
   Track,
   VideoPresets,
+  type ElementInfo,
   type LocalAudioTrack,
   type LocalVideoTrack,
   type LocalTrackPublication,
   type RemoteParticipant,
+  type RemoteVideoTrack,
   type RemoteTrack,
   type RemoteTrackPublication,
 } from "livekit-client";
@@ -352,28 +354,45 @@ async function applySettings(s: MediaSettings, prev: MediaSettings): Promise<voi
 export type ShareIntent = "document" | "video";
 
 /**
+ * Teto de bitrate da tela: ~0,08 bit por pixel por quadro (a mesma conta dos presets do LiveKit:
+ * 1080p15 = 2,5 Mbps), entre 1,5 e 8 Mbps. É só teto: a voz sai com prioridade alta e o
+ * estimador de banda do WebRTC dá à tela o que sobra, então a tela não sufoca o áudio.
+ */
+export function shareBitrate(width: number, height: number, fps: number): number {
+  return Math.round(Math.min(8_000_000, Math.max(1_500_000, width * height * fps * 0.08)));
+}
+
+/**
  * Compartilha a tela. "document" prioriza nitidez (texto, código, planilha); "video" prioriza fluidez.
  * A imagem vai direto do navegador para quem assiste, sem passar por canvas.
  */
 export async function startShare(intent: ShareIntent, withAudio: boolean): Promise<void> {
   if (!room) return;
+  const lp = room.localParticipant;
+  let tracks: (LocalVideoTrack | LocalAudioTrack)[] = [];
   try {
-    const pub = await room.localParticipant.setScreenShareEnabled(
-      true,
-      {
-        audio: withAudio,
-        contentHint: intent === "document" ? "detail" : "motion",
-        resolution: intent === "document" ? ScreenSharePresets.h1080fps15.resolution : ScreenSharePresets.h1080fps30.resolution,
-        selfBrowserSurface: "exclude",
-        surfaceSwitching: "include",
-        systemAudio: withAudio ? "include" : "exclude",
-      },
-      {
-        videoCodec: "vp9",
-        screenShareEncoding: intent === "document" ? ScreenSharePresets.h1080fps15.encoding : ScreenSharePresets.h1080fps30.encoding,
-        degradationPreference: intent === "document" ? "maintain-resolution" : "maintain-framerate",
-      },
-    );
+    // 0x0 = sem teto: captura na resolução nativa da tela (sem isso o LiveKit limita a 1080p).
+    tracks = (await lp.createScreenTracks({
+      audio: withAudio,
+      contentHint: intent === "document" ? "detail" : "motion",
+      resolution: ScreenSharePresets.original.resolution,
+      selfBrowserSurface: "exclude",
+      surfaceSwitching: "include",
+      systemAudio: withAudio ? "include" : "exclude",
+    })) as (LocalVideoTrack | LocalAudioTrack)[];
+    const video = tracks.find((t) => t.kind === Track.Kind.Video)!;
+    const fps = intent === "document" ? 15 : 30;
+    const { width = 1920, height = 1080 } = video.mediaStreamTrack.getSettings();
+    const opts = {
+      // VP9 com simulcast + L1T3: único caminho em que o LiveKit não troca "detail" por "motion" na
+      // tela (Chrome/Edge 113+). O Safari publica VP9 de camada única; quem não decodifica VP9 recebe o VP8 reserva.
+      videoCodec: "vp9" as const,
+      simulcast: true,
+      scalabilityMode: "L1T3" as const,
+      screenShareEncoding: { maxBitrate: shareBitrate(width, height, fps), maxFramerate: fps },
+      degradationPreference: intent === "document" ? ("maintain-resolution" as const) : ("maintain-framerate" as const),
+    };
+    const [pub] = await Promise.all(tracks.map((t) => lp.publishTrack(t, opts)));
     if (!pub?.track) return;
     const media = pub.track.mediaStreamTrack;
     // Janela compartilhada minimizada: o navegador para de mandar quadros e a faixa fica "muda".
@@ -391,9 +410,49 @@ export async function startShare(intent: ShareIntent, withAudio: boolean): Promi
     useMedia.setState({ screen: true });
     pendingInfo?.({ screen: true, screenPaused: false });
   } catch (e) {
+    // Captura aberta e publicação falhou: solta a tela (senão o navegador segue mostrando "compartilhando").
+    if (!lp.getTrackPublication(Track.Source.ScreenShare)) for (const t of tracks) t.stop();
     const name = e instanceof DOMException ? e.name : "";
     if (name !== "NotAllowedError" && name !== "AbortError") useMedia.setState({ error: "Não foi possível compartilhar a tela." });
   }
+}
+
+/**
+ * Enquanto a tela de alguém está aberta grande, pede ao LiveKit a camada mais alta. O adaptiveStream
+ * só mede o <video> anexado (o escondido de 2px que alimenta a TV do mundo) e, sem isto, pediria a
+ * camada mais baixa. Devolve a função que desfaz (ao minimizar, fechar ou trocar de tela).
+ */
+export function focusScreen(id: string): () => void {
+  const track = room?.remoteParticipants.get(id)?.getTrackPublication(Track.Source.ScreenShare)?.videoTrack as RemoteVideoTrack | undefined;
+  if (!track) return () => undefined;
+  const info: ElementInfo = {
+    element: {},
+    width: () => 7680,
+    height: () => 4320,
+    visible: true,
+    pictureInPicture: false,
+    visibilityChangedAt: undefined,
+    observe: () => undefined,
+    stopObserving: () => undefined,
+  };
+  track.observeElementInfo(info);
+  return () => track.stopObservingElementInfo(info);
+}
+
+/** Id da publicação de tela de alguém: muda a cada novo compartilhamento (a UI lembra o que já abriu). */
+export function screenSid(id: string): string | undefined {
+  return room?.remoteParticipants.get(id)?.getTrackPublication(Track.Source.ScreenShare)?.trackSid;
+}
+
+/** O que chega da tela de alguém (prova de resolução nos testes): largura, altura, quadros/s e codec. */
+export async function screenStats(id: string): Promise<{ width: number; height: number; fps: number; codec: string } | null> {
+  const report = await room?.remoteParticipants.get(id)?.getTrackPublication(Track.Source.ScreenShare)?.videoTrack?.getRTCStatsReport();
+  if (!report) return null;
+  for (const s of report.values()) {
+    if (s.type !== "inbound-rtp" || s.kind !== "video") continue;
+    return { width: s.frameWidth ?? 0, height: s.frameHeight ?? 0, fps: s.framesPerSecond ?? 0, codec: report.get(s.codecId)?.mimeType ?? "?" };
+  }
+  return null;
 }
 
 export async function stopShare(): Promise<void> {

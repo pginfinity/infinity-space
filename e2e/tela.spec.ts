@@ -1,15 +1,19 @@
 import { expect, test, type Page } from "./setup.ts";
 
 /**
- * Compartilhamento de tela: a Ana compartilha dentro da Sala Eclipse, o Bruno (na mesma sala)
- * recebe a tela, vê na faixa do topo e abre em tela cheia. Precisa do LiveKit rodando.
+ * Compartilhamento de tela: a Ana compartilha dentro da Sala Eclipse; para o Bruno (na mesma sala,
+ * ouve a Ana) a tela abre sozinha, grande, na resolução da captura. Ele minimiza, fecha (não reabre
+ * sozinha) e reabre pela faixa do topo. Precisa do LiveKit rodando.
  */
 
 interface Hook {
   store: { getState(): { selfId: string | null } };
   self: { x: number; z: number };
   walkTo(p: { x: number; z: number }): boolean;
-  media: { state: { getState(): { status: string; screen: boolean; screens: Record<string, HTMLVideoElement> } } };
+  media: {
+    state: { getState(): { status: string; screen: boolean; screens: Record<string, HTMLVideoElement> } };
+    screenStats(id: string): Promise<{ width: number; height: number; fps: number; codec: string } | null>;
+  };
 }
 type W = { __infinity: Hook };
 
@@ -45,11 +49,40 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
 
   const anaId = await a.evaluate(() => (window as unknown as W).__infinity.store.getState().selfId!);
 
-  // Bruno recebe a tela e ela aparece na faixa do topo.
+  // Bruno recebe a tela e ela abre sozinha, grande (ele ouve a Ana: mesma sala).
   await expect.poll(() => b.evaluate(() => Object.keys((window as unknown as W).__infinity.media.state.getState().screens)), { timeout: 20_000 }).toContain(anaId);
+  const viewer = b.getByRole("dialog", { name: /Tela de Ana/ });
+  await expect(viewer).toBeVisible({ timeout: 10_000 });
+  await expect(b.getByRole("button", { name: "Aumentar zoom" })).toBeVisible();
+  // A doca (microfone, câmera) continua à mão com a tela aberta.
+  await b.getByRole("button", { name: /microfone/i }).first().click({ trial: true, timeout: 3000 });
+
+  // Resolução: o Bruno recebe a camada de cima, do tamanho que a Ana captura (getStats do receptor).
+  const sent = await a.evaluate((id) => {
+    const v = (window as unknown as W).__infinity.media.state.getState().screens[id]!;
+    return { width: v.videoWidth, height: v.videoHeight };
+  }, anaId);
+  expect(sent.width).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await b.evaluate((id) => (window as unknown as W).__infinity.media.screenStats(id), anaId))?.width ?? 0, { timeout: 20_000, message: `largura recebida = capturada (${sent.width})` })
+    .toBe(sent.width);
+  await expect.poll(async () => (await b.evaluate((id) => (window as unknown as W).__infinity.media.screenStats(id), anaId))?.fps ?? 0, { timeout: 10_000 }).toBeGreaterThan(0);
+  const got = await b.evaluate((id) => (window as unknown as W).__infinity.media.screenStats(id), anaId);
+  console.log(`[tela] capturada ${sent.width}x${sent.height}; recebida ${got?.width}x${got?.height} a ${got?.fps} q/s (${got?.codec})`);
+  await b.waitForTimeout(600);
+  await b.screenshot({ path: "test-results/screens/v3-tela-aberta.png" });
+
+  // Minimizar: fica num quadro pequeno; fechar: vai para a faixa do topo e não reabre sozinha.
+  await b.getByRole("button", { name: "Minimizar" }).click();
+  await expect(b.getByRole("button", { name: "Aumentar zoom" })).toHaveCount(0);
+  await b.waitForTimeout(400);
+  await b.screenshot({ path: "test-results/screens/v3-tela-mini.png" });
+  await viewer.getByRole("button", { name: "Fechar" }).click();
   const thumb = b.getByRole("button", { name: /Tela de Ana/ });
   await expect(thumb).toBeVisible();
-  // A imagem chega de fato (o vídeo tem quadros).
+  await b.waitForTimeout(1500);
+  await expect(viewer).toHaveCount(0);
+  // A imagem segue chegando (o vídeo tem quadros).
   await expect.poll(() => b.evaluate((id) => (window as unknown as W).__infinity.media.state.getState().screens[id]?.videoWidth ?? 0, anaId), { timeout: 20_000 }).toBeGreaterThan(0);
   await expect
     .poll(() =>
@@ -65,7 +98,7 @@ test("compartilha a tela na sala de reunião", async ({ browser }) => {
   await b.waitForTimeout(800);
   await b.screenshot({ path: "test-results/screens/v3-tela-sala.png" });
 
-  // Tela cheia com zoom.
+  // Reabre pela faixa, com zoom.
   await thumb.click();
   await expect(b.getByRole("button", { name: "Aumentar zoom" })).toBeVisible();
   await b.getByRole("button", { name: "Aumentar zoom" }).click();
