@@ -5,7 +5,7 @@
 # ---- compila o app web ----
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/world/package.json packages/world/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
@@ -27,7 +27,7 @@ ENV NODE_ENV=production \
     FFMPEG_PATH=/usr/bin/ffmpeg \
     DATA_DIR=/var/lib/infinity/data \
     PORT=2567
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/world/package.json packages/world/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
@@ -36,6 +36,7 @@ RUN npm ci --omit=dev --ignore-scripts --workspace @infinity/server --workspace 
 COPY packages/world ./packages/world
 COPY apps/server ./apps/server
 COPY --from=build /app/apps/web/dist ./apps/web/dist
+COPY apps/web/src/activities/vivo/tracks.json ./apps/web/src/activities/vivo/tracks.json
 RUN mkdir -p /var/lib/infinity/data && chown -R node:node /var/lib/infinity
 USER node
 EXPOSE 2567

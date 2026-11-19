@@ -1,0 +1,23 @@
+# LiveKit do Infinity Space no sp1 (ver deploy/docker-compose.sp1.yml).
+# As chaves vêm de LIVEKIT_KEYS (compose), nunca deste arquivo.
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+log_level: info
+
+rtc:
+  tcp_port: 7881
+  # Uma porta UDP só para toda a mídia (UDP mux), no lugar da faixa 50000-60000.
+  udp_port: 7882
+  # O sp1 fica atrás de NAT: o LiveKit descobre o IP público por STUN e o anuncia.
+  use_external_ip: true
+
+turn:
+  enabled: true
+  domain: space-turn.ai-infinity.io
+  # Só UDP: sem Caddy não há certificado para o TURN/TLS (5349).
+  udp_port: 3478
+
+room:
+  empty_timeout: 300
+  max_participants: 60

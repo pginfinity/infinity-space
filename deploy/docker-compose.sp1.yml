@@ -1,0 +1,65 @@
+# Infinity Space no sp1 (servidor compartilhado da AI Infinity), atrás do túnel da Cloudflare + Traefik.
+# Diferenças para deploy/docker-compose.yml (VPS própria):
+# - sem Caddy: o HTTPS termina na Cloudflare, e o Traefik roteia pela rede do projeto;
+# - LiveKit na rede do projeto, com a sinalização (7880) pelo Traefik e a mídia numa porta UDP só
+#   (7882, UDP mux) em vez da faixa 50000-60000: o sp1 é de todos os clientes;
+# - TURN só por UDP (3478): o TURN/TLS (5349) usava o certificado do Caddy.
+# Domínios: space.ai-infinity.io (app) e space-rtc.ai-infinity.io (sinalização), os dois pelo túnel;
+# space-turn.ai-infinity.io em DNS only, apontando para o IP público do sp1.
+# Portas que precisam chegar do IP público ao sp1: 7881/tcp, 7882/udp, 3478/udp.
+# Preparo, uma vez: /srv/platform/bin/rede-projeto iainfinity infinity-space --externa (SMTP e API do Drive)
+name: iainfinity-infinity-space
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ../.env
+        format: raw
+    environment:
+      LIVEKIT_INTERNAL_URL: ws://livekit:7880
+    volumes:
+      - dados:/var/lib/infinity/data
+      # JSON da conta de serviço do Google (gravações no Drive), se houver; ver docs/infra.md, seção 7.
+      - ../credenciais:/etc/infinity:ro
+    mem_limit: 1g
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=p-iainfinity-infinity-space
+      - traefik.http.routers.iainfinity-infinity-space.rule=Host(`space.ai-infinity.io`)
+      - traefik.http.routers.iainfinity-infinity-space.entrypoints=web
+      - traefik.http.services.iainfinity-infinity-space.loadbalancer.server.port=2567
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    # LIVEKIT_KEYS="<api key>: <api secret>" vem do .env (as mesmas LIVEKIT_API_KEY/SECRET do app),
+    # sem interpolação: o compose roda de deploy/ e não acharia o ../.env para ${...}.
+    env_file:
+      - path: ../.env
+        format: raw
+    volumes:
+      - ./livekit.sp1.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+      - "3478:3478/udp"
+    mem_limit: 1g
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=p-iainfinity-infinity-space
+      - traefik.http.routers.iainfinity-infinity-space-rtc.rule=Host(`space-rtc.ai-infinity.io`)
+      - traefik.http.routers.iainfinity-infinity-space-rtc.entrypoints=web
+      - traefik.http.services.iainfinity-infinity-space-rtc.loadbalancer.server.port=7880
+
+volumes:
+  dados:
+
+networks:
+  default:
+    name: p-iainfinity-infinity-space
+    external: true
