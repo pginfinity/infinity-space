@@ -228,6 +228,8 @@ function step(dt: number): void {
   // Sentado: fica parado até alguém mexer no teclado.
   if (seated) {
     if (!manual) {
+      // O corpo segue o assento: atividade que vira o avatar (bolinha de papel, regar) não o deixa de costas na cadeira.
+      self.yaw = seated.yaw;
       self.anim = "sit";
       return;
     }

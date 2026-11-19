@@ -151,9 +151,8 @@ export function activate(target = useInteract.getState().target): void {
   }
   switch (target.action) {
     case "sit": {
-      const yaw = it.point === target.point ? it.yaw : it.yaw;
       const sit = () => {
-        sitAt(target.point, yaw, o.id);
+        sitAt(target.point, it.yaw, o.id);
         if (o.gameId) {
           openGame(o.gameId);
           if (o.gameSeat !== undefined) useGamesUi.getState().requestSeat(o.gameId, o.gameSeat);

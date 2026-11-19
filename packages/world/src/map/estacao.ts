@@ -375,7 +375,7 @@ export function buildStationMap(): MapDef {
   b.put("big-button", -14.4, -8.4, W, { zoneId: dev.id, label: "Botão de deploy" });
   b.put("rug", -23.3, -9.4, N, { zoneId: dev.id, size: { w: 3.4, d: 2.4, h: 0.02 }, color: "#1E242E", accent: s.dev.accent });
   b.put("beanbag", -24.4, -9.6, E, { zoneId: dev.id, color: s.dev.accent });
-  b.put("beanbag", -23.2, -10.3, N, { zoneId: dev.id, color: "#3A4250" });
+  b.put("beanbag", -23.2, -10.3, S, { zoneId: dev.id, color: "#3A4250" });
   b.put("beanbag", -22.1, -9.4, W, { zoneId: dev.id, color: s.dev.accent });
   b.onWall("tv", -12, -16.5, W, { zoneId: dev.id, screenId: "dev" });
   b.put("plant-tall", -12.6, -7.6, N, { zoneId: dev.id });
