@@ -47,9 +47,9 @@ test("convite, link mágico, entrar e remover", async ({ browser }) => {
 
   // Admin convida o Bruno pelo painel Pessoas.
   await a.getByRole("button", { name: "Pessoas", exact: true }).click();
-  await a.getByRole("button", { name: "Convidar" }).click();
-  const dialog = a.getByRole("dialog", { name: "Convidar pessoas" });
-  await dialog.getByRole("textbox").fill(bruno);
+  await a.getByRole("button", { name: "Usuários" }).click();
+  const dialog = a.getByRole("dialog", { name: "Usuários" });
+  await dialog.getByPlaceholder(/ana@empresa/).fill(bruno);
   await dialog.getByRole("button", { name: "Convidar" }).click();
   await expect(dialog.getByText(`Convite enviado para ${bruno}.`)).toBeVisible();
   await a.screenshot({ path: "test-results/screens/v3-convidar.png" });

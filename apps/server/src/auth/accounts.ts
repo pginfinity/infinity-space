@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { AvatarLook } from "@infinity/world";
 import type { Store } from "../store.ts";
 
@@ -16,6 +16,8 @@ export interface User {
   role: Role;
   look?: AvatarLook;
   createdAt: number;
+  /** Senha guardada só como scrypt ("scrypt$sal$hash"). Sem ela, a pessoa define no próximo acesso. */
+  pw?: string;
 }
 
 export interface Invite {
@@ -49,6 +51,20 @@ export function cleanEmail(v: unknown): string | null {
 
 const hash = (s: string) => createHash("sha256").update(s).digest("base64url");
 const secret = () => randomBytes(32).toString("base64url");
+
+export const MIN_PASSWORD = 8;
+
+function hashPassword(pw: string): string {
+  const salt = randomBytes(16);
+  return `scrypt$${salt.toString("base64url")}$${scryptSync(pw, salt, 64).toString("base64url")}`;
+}
+
+function samePassword(pw: string, stored: string): boolean {
+  const [kind, salt, h] = stored.split("$");
+  if (kind !== "scrypt" || !salt || !h) return false;
+  const want = Buffer.from(h, "base64url");
+  return timingSafeEqual(scryptSync(pw, Buffer.from(salt, "base64url"), want.length), want);
+}
 
 function listEnv(name: string): string[] {
   return (process.env[name] ?? "")
@@ -136,15 +152,56 @@ export class Accounts {
     const l = this.links.get(k);
     this.links.delete(k);
     if (!l || l.exp < Date.now() || !this.canEnter(l.email)) return null;
-    if (!this.user(l.email)) {
-      const inv = this.invites()[l.email];
-      const name = l.email.split("@")[0]!.replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 32);
-      this.store.set(USERS, { ...this.users(), [l.email]: { email: l.email, name, role: inv?.role ?? "member", createdAt: Date.now() } });
-      const invites = { ...this.invites() };
-      delete invites[l.email];
-      this.store.set(INVITES, invites);
-    }
+    this.ensureUser(l.email);
     return l.email;
+  }
+
+  /** Cria a conta se ainda não existe (o convite vira conta). */
+  ensureUser(email: string, name?: string, role?: Role): User {
+    const have = this.user(email);
+    if (have) return have;
+    const inv = this.invites()[email];
+    const auto = email.split("@")[0]!.replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 32);
+    const u: User = { email, name: name || auto, role: role ?? inv?.role ?? "member", createdAt: Date.now() };
+    this.store.set(USERS, { ...this.users(), [email]: u });
+    const invites = { ...this.invites() };
+    delete invites[email];
+    this.store.set(INVITES, invites);
+    return u;
+  }
+
+  // ---- senha ----
+
+  hasPassword(email: string): boolean {
+    return !!this.user(email)?.pw;
+  }
+
+  /**
+   * Pode definir a senha agora (primeiro acesso ou senha redefinida pelo admin)?
+   * Admin da configuração, convidado ou conta sem senha. Domínio liberado não basta:
+   * qualquer um do domínio criaria conta sem provar o e-mail.
+   */
+  canSetFirstPassword(email: string): boolean {
+    return !this.hasPassword(email) && (this.admins().includes(email) || !!this.invites()[email] || !!this.user(email));
+  }
+
+  setPassword(email: string, pw: string): void {
+    const u = this.ensureUser(email);
+    this.store.set(USERS, { ...this.users(), [email]: { ...u, pw: hashPassword(pw) } });
+  }
+
+  /** Admin redefine: apaga a senha e as sessões; a pessoa cria outra no próximo acesso. */
+  clearPassword(email: string): void {
+    const u = this.user(email);
+    if (!u) return;
+    const { pw: _, ...rest } = u;
+    this.store.set(USERS, { ...this.users(), [email]: rest });
+    this.store.set(SESSIONS, Object.fromEntries(Object.entries(this.sessions()).filter(([, s]) => s.email !== email)));
+  }
+
+  checkPassword(email: string, pw: string): boolean {
+    const stored = this.user(email)?.pw;
+    return !!stored && this.canEnter(email) && samePassword(pw, stored);
   }
 
   // ---- sessões ----

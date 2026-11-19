@@ -69,6 +69,22 @@ export async function requestLink(email: string): Promise<LinkResult> {
   return "offline";
 }
 
+export type PasswordResult = "in" | "first" | "short" | "mismatch" | "wrong" | "invalid" | "limit" | "offline";
+
+/** Entra com e-mail e senha. Sem senha ainda, o servidor pede a confirmação (primeiro acesso) e cria. */
+export async function loginWithPassword(email: string, password: string, confirm?: string): Promise<PasswordResult> {
+  const r = await api<{ error?: string }>("/auth/senha", { method: "POST", body: JSON.stringify({ email, password, confirm }) });
+  if (r.status === 200) {
+    await loadAuth();
+    return "in";
+  }
+  if (r.status === 409) return "first";
+  if (r.status === 401) return "wrong";
+  if (r.status === 429) return "limit";
+  if (r.status === 400) return r.data?.error === "senha-curta" ? "short" : r.data?.error === "confirmacao" ? "mismatch" : "invalid";
+  return "offline";
+}
+
 /** Guarda nome e visual na conta (ao entrar no escritório). */
 export async function saveProfile(name: string, look: AvatarLook): Promise<void> {
   if (useAuth.getState().status !== "in") return;
@@ -98,7 +114,7 @@ export async function recheckSession(): Promise<boolean> {
 // ---- administração ----
 
 export interface People {
-  users: { email: string; name: string; role: "admin" | "member" }[];
+  users: { email: string; name: string; role: "admin" | "member"; password: boolean }[];
   invites: { email: string; role: "admin" | "member"; at: number }[];
   mail: boolean;
 }
@@ -114,4 +130,15 @@ export async function invite(emails: string[], role: "admin" | "member"): Promis
 
 export async function removePerson(email: string): Promise<boolean> {
   return (await api(`/admin/pessoas/${encodeURIComponent(email)}`, { method: "DELETE" })).status === 200;
+}
+
+/** Cria a conta direto; a pessoa define a senha no primeiro acesso. */
+export async function createUser(email: string, name: string, role: "admin" | "member"): Promise<"ok" | "exists" | "invalid"> {
+  const r = await api("/admin/usuarios", { method: "POST", body: JSON.stringify({ email, name, role }) });
+  return r.status === 200 ? "ok" : r.status === 409 ? "exists" : "invalid";
+}
+
+/** Apaga a senha da pessoa e encerra as sessões dela; ela cria outra no próximo acesso. */
+export async function resetPassword(email: string): Promise<boolean> {
+  return (await api(`/admin/pessoas/${encodeURIComponent(email)}/senha`, { method: "POST" })).status === 200;
 }

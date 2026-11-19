@@ -53,7 +53,7 @@ export function PeoplePanel() {
           {isAdmin && (
             <button type="button" onClick={() => setInviting(true)} className="flex items-center gap-1.5 rounded-lg border border-offwhite/10 px-2.5 py-1.5 text-xs hover:border-signal hover:text-signal">
               <UserPlus className="size-3.5" />
-              Convidar
+              Usuários
             </button>
           )}
           <button type="button" onClick={close} className="rounded-lg p-2 text-slate hover:bg-offwhite/8 hover:text-offwhite" aria-label="Fechar">

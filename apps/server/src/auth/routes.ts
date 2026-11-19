@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cleanLook, cleanName } from "../clean.ts";
-import { Accounts, INVITE_LINK_MS, SESSION_MS, cleanEmail, type Role } from "./accounts.ts";
+import { Accounts, INVITE_LINK_MS, MIN_PASSWORD, SESSION_MS, cleanEmail, type Role } from "./accounts.ts";
 import { linkMail, mailConfigured, outbox, sendMail } from "./mail.ts";
 
 /**
@@ -99,13 +99,38 @@ export function authRoutes(accounts: Accounts, events: AuthEvents): Hono {
     return c.json({ ok: true, sent: true });
   });
 
+  const startSession = (c: Context, email: string) =>
+    setCookie(c, COOKIE, accounts.createSession(email), { httpOnly: true, secure: SECURE, sameSite: "Lax", path: "/", maxAge: Math.floor(SESSION_MS / 1000) });
+
   /** Link do e-mail: entra, cria a sessão e volta para o app. */
   app.get("/auth/entrar", (c) => {
     const email = accounts.consumeLink(c.req.query("t") ?? "");
     if (!email) return c.redirect("/?login=expirado");
-    const id = accounts.createSession(email);
-    setCookie(c, COOKIE, id, { httpOnly: true, secure: SECURE, sameSite: "Lax", path: "/", maxAge: Math.floor(SESSION_MS / 1000) });
+    startSession(c, email);
     return c.redirect("/");
+  });
+
+  /**
+   * Entrar com e-mail e senha. Quem ainda não tem senha (primeiro acesso ou senha redefinida)
+   * recebe 409 "primeiro-acesso" e manda de novo com `confirm` igual à senha para criá-la.
+   */
+  const byEmailPw = new Limiter(10, 15 * 60 * 1000);
+  app.post("/auth/senha", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { email?: unknown; password?: unknown; confirm?: unknown };
+    const email = cleanEmail(body.email);
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!email || !password || password.length > 200) return c.json({ error: "email" }, 400);
+    if (!byIp.allow(ip(c)) || !byEmailPw.allow(email)) return c.json({ error: "muitas-tentativas" }, 429);
+    if (accounts.canSetFirstPassword(email)) {
+      if (body.confirm === undefined) return c.json({ error: "primeiro-acesso" }, 409);
+      if (password.length < MIN_PASSWORD) return c.json({ error: "senha-curta" }, 400);
+      if (body.confirm !== password) return c.json({ error: "confirmacao" }, 400);
+      accounts.setPassword(email, password);
+    } else if (!accounts.checkPassword(email, password)) {
+      return c.json({ error: "senha" }, 401);
+    }
+    startSession(c, email);
+    return c.json({ ok: true });
   });
 
   app.get("/me", (c) => {
@@ -141,7 +166,7 @@ export function authRoutes(accounts: Accounts, events: AuthEvents): Hono {
 
   app.get("/admin/pessoas", (c) => {
     if (!admin(c)) return c.json({ error: "admin" }, 403);
-    const users = Object.values(accounts.users()).map((u) => ({ email: u.email, name: u.name, role: accounts.roleOf(u.email) }));
+    const users = Object.values(accounts.users()).map((u) => ({ email: u.email, name: u.name, role: accounts.roleOf(u.email), password: !!u.pw }));
     const invites = Object.values(accounts.invites()).map((i) => ({ email: i.email, role: i.role, at: i.at }));
     return c.json({ users, invites, mail: mailConfigured() });
   });
@@ -164,6 +189,28 @@ export function authRoutes(accounts: Accounts, events: AuthEvents): Hono {
       invited.push(email);
     }
     return c.json({ invited });
+  });
+
+  /** Cria a conta direto (sem e-mail). A pessoa define a senha no primeiro acesso. */
+  app.post("/admin/usuarios", async (c) => {
+    if (!admin(c)) return c.json({ error: "admin" }, 403);
+    const body = (await c.req.json().catch(() => ({}))) as { email?: unknown; name?: unknown; role?: unknown };
+    const email = cleanEmail(body.email);
+    if (!email) return c.json({ error: "email" }, 400);
+    if (accounts.user(email)) return c.json({ error: "existe" }, 409);
+    const name = typeof body.name === "string" && body.name.trim() ? cleanName(body.name) : undefined;
+    accounts.ensureUser(email, name, body.role === "admin" ? "admin" : "member");
+    return c.json({ ok: true });
+  });
+
+  /** Redefine a senha: apaga a atual e derruba as sessões; a pessoa cria outra no próximo acesso. */
+  app.post("/admin/pessoas/:email/senha", (c) => {
+    if (!admin(c)) return c.json({ error: "admin" }, 403);
+    const email = cleanEmail(decodeURIComponent(c.req.param("email")));
+    if (!email || !accounts.user(email)) return c.json({ error: "email" }, 400);
+    accounts.clearPassword(email);
+    events.removed(email);
+    return c.json({ ok: true });
   });
 
   app.delete("/admin/pessoas/:email", (c) => {

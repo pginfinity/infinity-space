@@ -130,3 +130,57 @@ describe("login por convite", () => {
     expect((await app.request("/me", { headers: { Cookie: admin } })).status).toBe(401);
   });
 });
+
+describe("login com senha", () => {
+  const senha = (app: App, body: unknown) => post(app, "/auth/senha", body);
+
+  it("admin define a senha no primeiro acesso e depois entra com ela", async () => {
+    const { app, accounts } = setup();
+    expect((await senha(app, { email: "admin@empresa.com", password: "segredo-123" })).status).toBe(409);
+    expect((await senha(app, { email: "admin@empresa.com", password: "curta", confirm: "curta" })).status).toBe(400);
+    expect((await senha(app, { email: "admin@empresa.com", password: "segredo-123", confirm: "outra-coisa" })).status).toBe(400);
+    const first = await senha(app, { email: "admin@empresa.com", password: "segredo-123", confirm: "segredo-123" });
+    expect(first.status).toBe(200);
+    expect(JSON.stringify(accounts.user("admin@empresa.com"))).not.toContain("segredo-123");
+    expect((await senha(app, { email: "admin@empresa.com", password: "errada-000" })).status).toBe(401);
+    const ok = await senha(app, { email: "Admin@Empresa.com", password: "segredo-123" });
+    expect(ok.status).toBe(200);
+    const cookie = ok.headers.get("set-cookie")!.split(";")[0]!;
+    expect(await (await app.request("/me", { headers: { Cookie: cookie } })).json()).toMatchObject({ role: "admin" });
+    // Com senha definida, não dá para "definir de novo".
+    expect((await senha(app, { email: "admin@empresa.com", password: "tomar-conta-1", confirm: "tomar-conta-1" })).status).toBe(401);
+  });
+
+  it("e-mail sem convite não cria senha", async () => {
+    const { app } = setup();
+    expect((await senha(app, { email: "estranho@fora.com", password: "qualquer-1", confirm: "qualquer-1" })).status).toBe(401);
+  });
+
+  it("admin cria usuário, redefine a senha e só admin gerencia", async () => {
+    const { app, removed } = setup();
+    const admin = await login(app, "admin@empresa.com");
+    const criar = (body: unknown, cookie = admin) => post(app, "/admin/usuarios", body, { Cookie: cookie });
+    expect((await criar({ email: "dani@empresa.com", name: "Dani Souza", role: "member" })).status).toBe(200);
+    expect((await criar({ email: "dani@empresa.com" })).status).toBe(409);
+    const list = (await (await app.request("/admin/pessoas", { headers: { Cookie: admin } })).json()) as { users: { email: string; name: string; password: boolean }[] };
+    expect(list.users.find((u) => u.email === "dani@empresa.com")).toMatchObject({ name: "Dani Souza", password: false });
+
+    const dani1 = await senha(app, { email: "dani@empresa.com", password: "senha-da-dani", confirm: "senha-da-dani" });
+    const dani = dani1.headers.get("set-cookie")!.split(";")[0]!;
+    expect((await criar({ email: "outro@empresa.com" }, dani)).status).toBe(403);
+    expect((await post(app, "/admin/pessoas/dani%40empresa.com/senha", {}, { Cookie: dani })).status).toBe(403);
+
+    expect((await post(app, "/admin/pessoas/dani%40empresa.com/senha", {}, { Cookie: admin })).status).toBe(200);
+    expect(removed).toContain("dani@empresa.com");
+    expect((await app.request("/me", { headers: { Cookie: dani } })).status).toBe(401);
+    expect((await senha(app, { email: "dani@empresa.com", password: "senha-da-dani" })).status).toBe(409);
+  });
+
+  it("limita tentativas de senha", async () => {
+    const { app } = setup();
+    await senha(app, { email: "admin@empresa.com", password: "segredo-123", confirm: "segredo-123" });
+    const codes: number[] = [];
+    for (let i = 0; i < 10; i++) codes.push((await senha(app, { email: "admin@empresa.com", password: `errada-${i}xx` })).status);
+    expect(codes.at(-1)).toBe(429);
+  });
+});

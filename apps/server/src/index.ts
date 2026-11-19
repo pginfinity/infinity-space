@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import { OfficeRoom } from "./room.ts";
-import { Accounts } from "./auth/accounts.ts";
+import { Accounts, cleanEmail } from "./auth/accounts.ts";
 import { AUTH_REQUIRED, PUBLIC_URL, authRoutes, sessionIdFromCookie } from "./auth/routes.ts";
 import { PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
 import { photoWallRoutes } from "./activities/escritorio/photowall-http.ts";
@@ -21,6 +21,12 @@ room.start();
 
 const app = new Hono();
 const accounts = new Accounts(room.store);
+// Superadmin da casa (SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD no .env): ganha a senha só enquanto não tiver uma.
+const seed = cleanEmail(process.env.SEED_ADMIN_EMAIL);
+if (seed && process.env.SEED_ADMIN_PASSWORD && !accounts.hasPassword(seed)) {
+  accounts.ensureUser(seed, undefined, "admin");
+  accounts.setPassword(seed, process.env.SEED_ADMIN_PASSWORD);
+}
 app.route("/api", authRoutes(accounts, { removed: (email) => room.disconnectEmail(email) }));
 // Mural de fotos da copa: envio da foto da cabine e as imagens (ver activities/escritorio/photowall-http.ts).
 app.route(
