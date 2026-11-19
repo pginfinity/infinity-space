@@ -19,10 +19,14 @@ const bubbleSize = (p: Page, id: string) =>
 test("bolha da câmera grande nas duas lentes e fundos com prévia", async ({ browser }) => {
   test.setTimeout(150_000);
   const a = await enter(browser, "Ana", "2d", { media: true });
-  const b = await enter(browser, "Bruno", "3d", { media: true });
+  const b = await enter(browser, "Bruno", "2d", { media: true });
   await waitOnline(a, 2);
   await expect.poll(() => mediaOn(a), { timeout: 20_000 }).toBe("on");
   await expect.poll(() => mediaOn(b), { timeout: 20_000 }).toBe("on");
+  // Bruno vai para o 3D só com a mídia já de pé: no navegador sem GPU do teste, compilar o 3D junto
+  // com a entrada pode estourar o prazo do LiveKit ("could not establish pc connection").
+  await b.keyboard.press("KeyL");
+  await expect(b.getByRole("application", { name: "Escritório em 3D" })).toBeVisible({ timeout: 20_000 });
   // Ana ao norte do Bruno: a câmera do 3D dele olha para ela.
   await walk(a, { x: -1, z: 2.4 });
   await walk(b, { x: -1, z: 4.6 });
@@ -62,7 +66,8 @@ test("bolha da câmera grande nas duas lentes e fundos com prévia", async ({ br
 
   // Imagem própria: recortada e guardada só neste navegador, já escolhida.
   await panel.locator('input[type="file"]').setInputFiles("apps/web/public/fundos/natureza.jpg");
-  await expect(fundos.getByRole("radio", { name: "Sua imagem" })).toHaveAttribute("aria-checked", "true");
+  // Com a prévia segmentando ao vivo, decodificar, recortar e gerar o JPEG leva mais que um clique.
+  await expect(fundos.getByRole("radio", { name: "Sua imagem" })).toHaveAttribute("aria-checked", "true", { timeout: 15_000 });
   expect(await a.evaluate(() => localStorage.getItem("infinity.media.fundo.v1")?.slice(0, 23))).toBe("data:image/jpeg;base64,");
   await a.waitForTimeout(2000);
   await a.screenshot({ path: `${SHOTS}/midia-fundos-propria.png` });

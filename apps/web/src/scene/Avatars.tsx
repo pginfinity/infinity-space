@@ -217,7 +217,8 @@ function VideoBubble({ id, el, speaking, mirror }: { id: string; el: HTMLVideoEl
     return () => window.clearInterval(t);
   }, [id, mirror]);
   // 152 px (falando) cabem nos 360 px de altura da câmera "Padrão" mesmo em tela 2x.
-  const size = speaking ? 152 : near ? 120 : 60;
+  // A própria bolha fica pequena: no 3D ela fica no meio da vista e cobriria quem está à frente.
+  const size = mirror ? 60 : speaking ? 152 : near ? 120 : 60;
   return (
     <div
       ref={box}
