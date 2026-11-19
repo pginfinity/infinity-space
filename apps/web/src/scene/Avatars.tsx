@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "./Html.tsx";
 import * as THREE from "three";
@@ -7,7 +7,7 @@ import { useApp } from "../state/store.ts";
 import { currentEmote, sampleRemote, self, type Pose } from "../world/registry.ts";
 import { world } from "../world/world.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
-import { buildAvatar } from "../avatar/build.ts";
+import { buildAvatar, useAvatarKit } from "../avatar/build.ts";
 import { animate, newAnimState } from "../avatar/animate.ts";
 import { HeldSlot } from "../avatar/held.ts";
 import { currentHandAction, registerRig } from "../avatar/hands.ts";
@@ -19,12 +19,13 @@ import { applyGhost, avatarEffect, avatarEffectsVersion } from "../avatar/effect
 export function Avatars() {
   const players = useApp((s) => s.players);
   const selfId = useApp((s) => s.selfId);
+  // as peças dos avatares chegam num arquivo só (public/avatar/kit.glb); até lá, ninguém aparece
   return (
-    <>
+    <Suspense fallback={null}>
       {Object.values(players).map((p) => (
         <AvatarView key={p.id} info={p} isSelf={p.id === selfId} />
       ))}
-    </>
+    </Suspense>
   );
 }
 
@@ -65,8 +66,10 @@ function floorY(x: number, z: number): number {
 
 function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const key = lookKey(info.look);
+  const kit = useAvatarKit();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const rig = useMemo(() => buildAvatar(info.look), [key]);
+  const rig = useMemo(() => buildAvatar(kit, info.look), [kit, key]);
+  useEffect(() => () => rig.dispose(), [rig]);
   // Nó fixo durante a vida do avatar: leva a posição e a etiqueta de nome. Quando o visual muda, só o
   // boneco dentro dele é trocado (trocar o objeto da etiqueta desmontava o Html no meio da renderização).
   const holder = useMemo(() => {

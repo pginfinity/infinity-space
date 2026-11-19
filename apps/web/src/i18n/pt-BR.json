@@ -11,6 +11,8 @@
     "outfit": "Roupa",
     "skin": "Pele",
     "hair": "Cabelo",
+    "rotateLeft": "Girar o avatar para a esquerda",
+    "rotateRight": "Girar o avatar para a direita",
     "lens": "Como você quer ver",
     "lens2d": "2D",
     "lens2dHint": "Planta vista de cima. Leve, roda em qualquer PC.",
