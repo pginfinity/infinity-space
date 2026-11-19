@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Bot, Camera, CircleHelp, Gauge, Headphones, Keyboard, Mic, Volume2, X } from "lucide-react";
+import { Ban, Bot, Camera, CircleHelp, Gauge, Headphones, ImagePlus, Keyboard, Mic, Volume2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
-import { audioContext } from "../media/rtc.ts";
+import { applyCamBackground, audioContext } from "../media/rtc.ts";
 import { createNoiseNode, type NoiseNode } from "../media/noise.ts";
 import { setMediaSettings, useMediaSettings, VIDEO_RES, type CamBackground, type NoiseMode, type VideoQuality } from "../media/settings.ts";
-import { applyBackground, backgroundSupported } from "../media/background.ts";
+import { applyBackground, backgroundSupported, clearCustomBackground, customBackground, saveCustomBackground } from "../media/background.ts";
 import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 import { PresenceSettings } from "../presence/PresenceSettings.tsx";
@@ -106,26 +106,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <Section icon={<Camera className="size-4" />} title="Câmera">
           <DeviceSelect label="Câmera" value={s.camId} options={devices.videoinput} onChange={(camId) => setMediaSettings({ camId })} />
-          <div>
-            <p className="mb-2 text-xs font-medium text-offwhite/85">Fundo</p>
-            <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label="Fundo da câmera">
-              {BG_OPTIONS.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={s.camBg === o.id}
-                  disabled={o.id !== "none" && !backgroundSupported()}
-                  onClick={() => setMediaSettings({ camBg: o.id })}
-                  className={clsx("flex-1 rounded-[10px] px-2 py-1.5 text-xs transition-colors disabled:opacity-40", s.camBg === o.id ? "bg-offwhite/12 text-offwhite" : "text-slate hover:text-offwhite")}
-                >
-                  {o.title}
-                </button>
-              ))}
-            </div>
-            {!backgroundSupported() && <p className="mt-1.5 text-[11px] text-slate">Este navegador não aplica fundo na câmera.</p>}
-          </div>
-          <CamTest camId={s.camId} quality={s.video} bg={s.camBg} />
+          <BackgroundPicker />
           <div>
             <p className="mb-2 text-xs font-medium text-offwhite/85">Qualidade</p>
             <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label="Qualidade da câmera">
@@ -162,9 +143,120 @@ const NOISE_OPTIONS: { id: NoiseMode; title: string; hint: string }[] = [
 
 const BG_OPTIONS: { id: CamBackground; title: string }[] = [
   { id: "none", title: "Nenhum" },
-  { id: "blur", title: "Desfocar" },
+  { id: "blur-light", title: "Desfoque leve" },
+  { id: "blur", title: "Desfoque forte" },
+  { id: "escritorio", title: "Escritório" },
+  { id: "estante", title: "Estante" },
+  { id: "sala", title: "Sala aconchegante" },
+  { id: "natureza", title: "Natureza" },
+  { id: "espaco", title: "Espaço" },
+  { id: "gradiente", title: "Gradiente da marca" },
+  { id: "azul", title: "Azul" },
   { id: "infinity", title: "Infinity" },
+  { id: "custom", title: "Sua imagem" },
 ];
+
+/** Miniatura de cada fundo (o desfoque é mostrado sobre a sala). */
+function bgThumb(id: CamBackground, custom: string | null): { src: string | null; blur?: number } {
+  if (id === "none") return { src: null };
+  if (id === "custom") return { src: custom };
+  if (id === "blur-light") return { src: "/fundos/mini/sala.jpg", blur: 1.5 };
+  if (id === "blur") return { src: "/fundos/mini/sala.jpg", blur: 4 };
+  return { src: `/fundos/mini/${id}.jpg` };
+}
+
+/** Escolha do fundo da câmera em miniaturas, com a prévia ao vivo logo abaixo. A imagem própria fica só neste navegador. */
+function BackgroundPicker() {
+  const s = useMediaSettings();
+  const [custom, setCustom] = useState(customBackground);
+  const [error, setError] = useState<string | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+  const supported = backgroundSupported();
+
+  const pick = (id: CamBackground) => {
+    if (id === "custom" && !custom) return file.current?.click();
+    setMediaSettings({ camBg: id });
+  };
+  const upload = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      setCustom(await saveCustomBackground(f));
+      setError(null);
+      if (useMediaSettings.getState().camBg === "custom") await applyCamBackground();
+      else setMediaSettings({ camBg: "custom" });
+    } catch {
+      setError("Não deu para usar essa imagem. Tente outra, em JPG ou PNG.");
+    }
+  };
+  const remove = () => {
+    clearCustomBackground();
+    setCustom(null);
+    if (s.camBg === "custom") setMediaSettings({ camBg: "none" });
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-offwhite/85">Fundo</p>
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Fundo da câmera">
+        {BG_OPTIONS.map((o) => {
+          const t = bgThumb(o.id, custom);
+          const on = s.camBg === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={o.title}
+              title={o.title}
+              disabled={o.id !== "none" && !supported}
+              onClick={() => pick(o.id)}
+              className={clsx(
+                "relative aspect-video overflow-hidden rounded-lg bg-deep transition disabled:opacity-40",
+                on ? "ring-2 ring-signal" : "ring-1 ring-offwhite/10 hover:ring-offwhite/30",
+              )}
+            >
+              {t.src && <img src={t.src} alt="" className="size-full scale-110 object-cover" style={t.blur ? { filter: `blur(${t.blur}px)` } : undefined} />}
+              {!t.src && (
+                <span className="absolute inset-0 grid place-items-center pb-3 text-slate">
+                  {o.id === "none" ? <Ban className="size-4" /> : <ImagePlus className="size-4" />}
+                </span>
+              )}
+              <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-deep/90 to-transparent px-1.5 pb-0.5 pt-3 text-left text-[10px] text-offwhite">{o.title}</span>
+            </button>
+          );
+        })}
+      </div>
+      <input
+        ref={file}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label="Enviar sua imagem de fundo"
+        onChange={(e) => {
+          const input = e.currentTarget;
+          void upload(input.files?.[0]).finally(() => (input.value = ""));
+        }}
+      />
+      {supported && (
+        <div className="flex items-center gap-3 text-[11px] text-slate">
+          <button type="button" onClick={() => file.current?.click()} className="underline-offset-2 hover:text-offwhite hover:underline">
+            {custom ? "Trocar sua imagem" : "Enviar sua imagem"}
+          </button>
+          {custom && (
+            <button type="button" onClick={remove} className="underline-offset-2 hover:text-offwhite hover:underline">
+              Remover
+            </button>
+          )}
+          <span className="ml-auto">Fica só neste navegador.</span>
+        </div>
+      )}
+      {error && <p className="text-[11px] text-danger">{error}</p>}
+      {!supported && <p className="text-[11px] text-slate">Este navegador não aplica fundo na câmera.</p>}
+      <CamTest camId={s.camId} quality={s.video} bg={s.camBg} custom={custom} />
+    </div>
+  );
+}
 
 const VIDEO_OPTIONS: { id: VideoQuality; title: string }[] = [
   { id: "low", title: `Econômica · ${VIDEO_RES.low.height}p` },
@@ -333,30 +425,37 @@ function MicTest() {
 }
 
 /** Prévia da câmera só quando a pessoa pede (a luz da câmera não acende de surpresa), já com o fundo escolhido. */
-function CamTest({ camId, quality, bg }: { camId: string | null; quality: VideoQuality; bg: CamBackground }) {
+function CamTest({ camId, quality, bg, custom }: { camId: string | null; quality: VideoQuality; bg: CamBackground; custom: string | null }) {
   const [on, setOn] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const [blocked, setBlocked] = useState(false);
+  const [track, setTrack] = useState<LocalVideoTrack | null>(null);
 
   useEffect(() => {
     if (!on) return;
-    let track: LocalVideoTrack | null = null;
+    let made: LocalVideoTrack | null = null;
     let stopped = false;
     const r = VIDEO_RES[quality];
     void createLocalVideoTrack({ deviceId: camId ?? undefined, resolution: { width: r.width, height: r.height, frameRate: r.frameRate } })
-      .then(async (t) => {
+      .then((t) => {
         if (stopped) return t.stop();
-        track = t;
+        made = t;
         setBlocked(false);
-        await applyBackground(t, bg);
-        if (video.current && !stopped) t.attach(video.current);
+        setTrack(t);
+        if (video.current) t.attach(video.current);
       })
       .catch(() => setBlocked(true));
     return () => {
       stopped = true;
-      track?.stop();
+      made?.stop();
+      setTrack(null);
     };
-  }, [on, camId, quality, bg]);
+  }, [on, camId, quality]);
+
+  // Trocar o fundo não reabre a câmera: a prévia muda na hora (custom entra para reaplicar a imagem nova).
+  useEffect(() => {
+    if (track) void applyBackground(track, bg);
+  }, [track, bg, custom]);
 
   if (!on) {
     return (

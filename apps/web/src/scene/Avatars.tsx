@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "./Html.tsx";
 import * as THREE from "three";
@@ -164,10 +164,11 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   const video = useMedia((s) => s.videos[info.id]);
   return (
     <primitive object={holder}>
-      <Html position={[0, 1.72, 0]} center zIndexRange={[8, 1]} style={{ pointerEvents: "none" }}>
+      {/* Preso pelo pé da pilha (o nome fica onde sempre esteve): a bolha de vídeo cresce para cima, sem cobrir o corpo. */}
+      <Html position={[0, 1.72, 0]} center zIndexRange={[8, 1]} style={{ pointerEvents: "none", transform: "translate3d(-50%,calc(-100% + 28px),0)" }}>
         <div ref={tag} className="flex flex-col items-center gap-1" style={{ opacity: away ? 0.6 : 1 }}>
           <div ref={bubble} className="text-2xl drop-shadow-[0_2px_6px_rgb(0_0_0/0.5)] transition-all duration-300" style={{ opacity: 0 }} />
-          {video && <VideoBubble el={video} speaking={speaking} mirror={isSelf} />}
+          {video && <VideoBubble id={info.id} el={video} speaking={speaking} mirror={isSelf} />}
           <div
             className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-md transition-shadow ${isSelf ? "bg-card text-offwhite ring-1 ring-signal/70" : "bg-space/85 text-offwhite"}`}
             style={speaking ? { boxShadow: "0 0 0 2px #2BC48A, 0 0 14px 2px rgb(43 196 138 / 0.55)" } : undefined}
@@ -182,9 +183,13 @@ function AvatarView({ info, isSelf }: { info: PlayerInfo; isSelf: boolean }) {
   );
 }
 
-/** Câmera da pessoa numa bolha redonda acima da cabeça. */
-function VideoBubble({ el, speaking, mirror }: { el: HTMLVideoElement; speaking: boolean; mirror: boolean }) {
+/** Bolhas grandes só para as pessoas com câmera mais perto de você (e para quem fala); as outras encolhem. */
+const BIG_BUBBLES = 4;
+
+/** Câmera da pessoa numa bolha redonda acima da cabeça: grande, maior ainda quando ela fala. */
+function VideoBubble({ id, el, speaking, mirror }: { id: string; el: HTMLVideoElement; speaking: boolean; mirror: boolean }) {
   const box = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(true);
   useEffect(() => {
     const host = box.current;
     if (!host) return;
@@ -196,11 +201,28 @@ function VideoBubble({ el, speaking, mirror }: { el: HTMLVideoElement; speaking:
       if (el.parentElement === host) host.removeChild(el);
     };
   }, [el, mirror]);
+  // Muita gente perto: só as mais próximas ficam grandes, para não virar parede de vídeos.
+  useEffect(() => {
+    const dist = (pid: string) => {
+      const p = sampleRemote(pid);
+      return p ? Math.hypot(p.x - self.x, p.z - self.z) : 0;
+    };
+    const check = () => {
+      const mine = mirror ? 0 : dist(id);
+      const closer = Object.keys(useMedia.getState().videos).filter((o) => o !== id && dist(o) < mine).length;
+      setNear(closer < BIG_BUBBLES);
+    };
+    check();
+    const t = window.setInterval(check, 500);
+    return () => window.clearInterval(t);
+  }, [id, mirror]);
+  // 152 px (falando) cabem nos 360 px de altura da câmera "Padrão" mesmo em tela 2x.
+  const size = speaking ? 152 : near ? 120 : 60;
   return (
     <div
       ref={box}
-      className="size-[76px] overflow-hidden rounded-full bg-space shadow-lg ring-2 transition-[box-shadow]"
-      style={{ boxShadow: speaking ? "0 0 0 3px #2BC48A, 0 0 18px 3px rgb(43 196 138 / 0.5)" : "0 0 0 2px rgb(242 240 239 / 0.6)" }}
+      className="overflow-hidden rounded-full bg-space shadow-lg transition-[width,height,box-shadow] duration-300"
+      style={{ width: size, height: size, boxShadow: speaking ? "0 0 0 3px #2BC48A, 0 0 22px 4px rgb(43 196 138 / 0.5)" : "0 0 0 2px rgb(242 240 239 / 0.6)" }}
     />
   );
 }

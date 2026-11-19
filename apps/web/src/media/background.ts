@@ -3,7 +3,7 @@ import { BackgroundProcessor, supportsBackgroundProcessors, type BackgroundProce
 import type { CamBackground } from "./settings.ts";
 
 /**
- * Fundo da câmera (desfoque ou fundo da Infinity), feito no próprio navegador com o MediaPipe.
+ * Fundo da câmera (desfoque, imagem pronta ou a sua), feito no próprio navegador com o MediaPipe.
  * Os arquivos vêm do nosso servidor (public/mediapipe), sem CDN de terceiros.
  */
 
@@ -17,10 +17,47 @@ export const backgroundSupported = (): boolean => {
   }
 };
 
+const CUSTOM_KEY = "infinity.media.fundo.v1";
+
+/** A imagem de fundo que a pessoa subiu: fica só neste navegador, nunca vai para o servidor. */
+export function customBackground(): string | null {
+  try {
+    return localStorage.getItem(CUSTOM_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearCustomBackground(): void {
+  try {
+    localStorage.removeItem(CUSTOM_KEY);
+  } catch {
+    /* navegador sem armazenamento: não havia nada guardado */
+  }
+}
+
+/** Recorta a imagem escolhida para 1280x720 e guarda neste navegador. Lança erro se não for imagem ou não couber. */
+export async function saveCustomBackground(file: File): Promise<string> {
+  if (!file.type.startsWith("image/") || file.size > 20_000_000) throw new Error("imagem inválida");
+  const bmp = await createImageBitmap(file);
+  const c = document.createElement("canvas");
+  c.width = 1280;
+  c.height = 720;
+  const k = Math.max(c.width / bmp.width, c.height / bmp.height);
+  c.getContext("2d")!.drawImage(bmp, (c.width - bmp.width * k) / 2, (c.height - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+  bmp.close();
+  const url = c.toDataURL("image/jpeg", 0.85);
+  localStorage.setItem(CUSTOM_KEY, url);
+  return url;
+}
+
 function options(mode: CamBackground): SwitchBackgroundProcessorOptions {
-  if (mode === "blur") return { mode: "background-blur", blurRadius: 14 };
-  if (mode === "infinity") return { mode: "virtual-background", imagePath: "/fundos/infinity.jpg" };
-  return { mode: "disabled" };
+  // O processador desfoca em 1/4 da resolução: raio 8 fica leve, 32 bem forte.
+  if (mode === "blur-light") return { mode: "background-blur", blurRadius: 8 };
+  if (mode === "blur") return { mode: "background-blur", blurRadius: 32 };
+  if (mode === "none") return { mode: "disabled" };
+  const imagePath = mode === "custom" ? customBackground() : `/fundos/${mode}.jpg`;
+  return imagePath ? { mode: "virtual-background", imagePath } : { mode: "disabled" };
 }
 
 const procs = new WeakMap<LocalVideoTrack, BackgroundProcessorWrapper>();

@@ -103,7 +103,8 @@ export async function joinRtc(url: string, token: string): Promise<void> {
   if (room) return;
   useMedia.setState({ status: "connecting", error: null });
   const r = new Room({
-    adaptiveStream: true,
+    // Mede o vídeo em pixels reais da tela (2x em retina): a bolha grande pede a camada nítida.
+    adaptiveStream: { pixelDensity: "screen" },
     dynacast: true,
     webAudioMix: { audioContext: audioContext() },
     audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -283,8 +284,8 @@ function micCapture(s: MediaSettings = useMediaSettings.getState()) {
   };
 }
 
-/** Desfoque ou fundo da Infinity na câmera publicada (troca na hora, sem desligar a câmera). */
-async function applyCamBackground(): Promise<void> {
+/** Fundo escolhido na câmera publicada (troca na hora, sem desligar a câmera). Também reaplica quando a imagem própria muda. */
+export async function applyCamBackground(): Promise<void> {
   const cam = room?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalVideoTrack | undefined;
   if (!cam) return;
   const ok = await applyBackground(cam, useMediaSettings.getState().camBg);
