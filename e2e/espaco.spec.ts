@@ -179,3 +179,107 @@ test("painel Agora no espaço pela busca (Ctrl+K)", async ({ browser }) => {
   await expect(panel).toBeHidden();
   await done(page);
 });
+
+type Target = { target: { kind: string; key?: string }; x: number; y: number };
+
+/** Alvos clicáveis do céu agora, em px da página (gancho de desenvolvimento `__infinityPick`). */
+async function targets(page: Page): Promise<Target[]> {
+  return page.evaluate(() => {
+    const c = [...document.querySelectorAll("canvas")].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0]!;
+    const r = c.getBoundingClientRect();
+    const pick = (window as unknown as { __infinityPick: (w: number, h: number) => Target[] }).__infinityPick;
+    return pick(r.width, r.height).map((t) => ({ ...t, x: t.x + r.left, y: t.y + r.top }));
+  });
+}
+
+const selfPos = (page: Page) => page.evaluate(() => ({ ...(window as unknown as W).__infinity.self }));
+
+test("clique no céu: cartão do astro, câmera vira, telescópio, constelações e pedido", async ({ browser }) => {
+  test.setTimeout(300_000);
+  // 3D: a Lua de quarto crescente se pondo a oeste; a câmera começa 24° ao lado e vira sozinha para ela.
+  const page = await open(browser, "3d", "2026-11-17T23:59:00-03:00");
+  await aim(page, 240, 0.18, 14);
+  const lua = (await targets(page)).find((t) => t.target.kind === "lua");
+  expect(lua).toBeTruthy();
+  const before = await selfPos(page);
+  await page.mouse.click(lua!.x, lua!.y);
+  const card = page.getByRole("dialog", { name: "Lua" });
+  await expect(card).toBeVisible({ timeout: 10_000 });
+  await expect(card).toContainText("Quarto crescente");
+  await expect(card).toContainText(/\d{3}\.\d{3} km · a luz leva 1,\d s/);
+  await expect(card).toContainText("a oeste");
+  await page.waitForTimeout(3000);
+  const focused = (await targets(page)).find((t) => t.target.kind === "lua");
+  expect(Math.abs(focused!.x - 720)).toBeLessThan(60);
+  // Clicar no céu não anda.
+  const after = await selfPos(page);
+  expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeLessThan(0.05);
+  await page.screenshot({ path: `${SHOTS}/universo-3d-lua-cartao.png` });
+
+  // "Ver no telescópio": abre o telescópio apontado para ela.
+  await card.getByRole("button", { name: "Ver no telescópio" }).click();
+  const tele = page.getByRole("dialog", { name: "Telescópio" });
+  await expect(tele).toBeVisible({ timeout: 10_000 });
+  await expect(tele).toContainText("Lua");
+  await page.waitForTimeout(7000);
+  await page.screenshot({ path: `${SHOTS}/universo-telescopio-lua.png` });
+  await page.keyboard.press("Escape");
+  await expect(tele).toBeHidden();
+  await done(page);
+
+  // Constelações pela busca, com o Cruzeiro do Sul nascendo; depois o cartão de uma estrela com nome.
+  const crux = await open(browser, "3d", "2026-11-18T00:30:00-03:00");
+  await aim(crux, 155, 0.18, 14);
+  const palette = crux.getByRole("dialog", { name: "Buscar e comandos" });
+  await crux.keyboard.press("Control+KeyK");
+  await palette.getByRole("combobox").fill("constelações");
+  await palette.getByRole("option", { name: /Constelações no céu/ }).click();
+  const layer = crux.locator('[data-ceu="constelacoes"]');
+  await expect.poll(() => layer.evaluate((e) => Number(getComputedStyle(e).opacity)), { timeout: 10_000 }).toBeGreaterThan(0.95);
+  await expect(layer.getByText("Cruzeiro do Sul")).toBeVisible();
+  await crux.screenshot({ path: `${SHOTS}/universo-3d-constelacoes.png` });
+  // A mais alta na tela: as de baixo podem estar atrás da estação (aí o clique é dela, não do céu).
+  const star = (await targets(crux)).filter((t) => t.target.kind === "estrela").sort((a, b) => a.y - b.y)[0];
+  expect(star).toBeTruthy();
+  await crux.mouse.click(star!.x, star!.y);
+  const starCard = crux.locator('[data-painel="astro"]');
+  await expect(starCard).toBeVisible({ timeout: 10_000 });
+  await expect(starCard).toHaveAttribute("data-astro", star!.target.key!);
+  await expect(starCard).toContainText(/magnitude -?\d/);
+  await crux.waitForTimeout(2500);
+  await crux.screenshot({ path: `${SHOTS}/universo-3d-estrela.png` });
+  await crux.keyboard.press("Escape");
+  await expect(starCard).toBeHidden();
+  await done(crux);
+
+  // Pedido: clicar na Leônida que está passando (céu parado no meio dela).
+  const wish = await open(browser, "3d", "2026-11-17T07:21:14.724Z");
+  await aim(wish, 16, 0.18, 14);
+  await expect.poll(async () => (await targets(wish)).some((t) => t.target.kind === "meteoro")).toBe(true);
+  const met = (await targets(wish)).find((t) => t.target.kind === "meteoro")!;
+  await wish.mouse.click(met.x, met.y);
+  const toast = wish.locator('[data-painel="pedido"]');
+  await expect(toast).toContainText("Pedido feito", { timeout: 5000 });
+  await wish.waitForTimeout(500);
+  await wish.screenshot({ path: `${SHOTS}/universo-pedido.png` });
+  await expect(toast).toBeHidden({ timeout: 6000 });
+  await done(wish);
+
+  // 2D: o mesmo céu, o mesmo cartão (a vista não gira). À 1h a Alfa do Centauro está a sudeste, em céu aberto
+  // longe do casco no giro que olha para sudeste (R duas vezes); depois a Terra, embaixo, no giro sudoeste.
+  const d2 = await open(browser, "2d", "2026-11-18T01:00:00-03:00");
+  await iso(d2, ["KeyR", "KeyR"]);
+  const astro = d2.locator('[data-painel="astro"]');
+  const alfa = (await targets(d2)).find((t) => t.target.kind === "estrela" && t.target.key === "alfaCentauro");
+  expect(alfa).toBeTruthy();
+  await d2.mouse.click(alfa!.x, alfa!.y);
+  await expect(astro).toHaveAttribute("data-astro", "alfaCentauro", { timeout: 10_000 });
+  await d2.screenshot({ path: `${SHOTS}/universo-2d-cartao.png` });
+  await d2.keyboard.press("Escape");
+  await expect(astro).toBeHidden();
+  await iso(d2, ["KeyQ"]);
+  await d2.mouse.click(300, 890);
+  await expect(d2.getByRole("dialog", { name: "Terra" })).toBeVisible({ timeout: 5000 });
+  await d2.screenshot({ path: `${SHOTS}/universo-2d-terra.png` });
+  await done(d2);
+});

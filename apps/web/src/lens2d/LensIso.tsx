@@ -10,6 +10,8 @@ import { wallUniforms } from "../scene/walls.ts";
 import { self } from "../world/registry.ts";
 import { useQuality } from "../scene/quality.ts";
 import { setHeading, walkTo } from "../engine/movement.ts";
+import { world } from "../world/world.ts";
+import { clickSky, skyFocus } from "../scene/sky/pick.ts";
 
 /**
  * Lente 2D: o mesmo mundo em isométrico com cara de pixel art (estilo Habbo/SoWork).
@@ -64,7 +66,7 @@ function initialZoom(): number {
 
 /** Câmera isométrica que segue você, gira de 90 em 90° (Q/E) e encaixa na grade de pixels. */
 function IsoRig() {
-  const { camera, gl, size } = useThree();
+  const { camera, gl, size, scene } = useThree();
   const st = useRef({ step: 0, yaw: Math.PI / 4, tx: self.x, tz: self.z, panX: 0, panZ: 0, follow: true });
   const wallStep = useRef(-1);
 
@@ -119,7 +121,11 @@ function IsoRig() {
         const r = el.getBoundingClientRect();
         ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
         ray.setFromCamera(ndc, cam);
-        if (ray.ray.intersectPlane(floor, hit) && walkTo({ x: hit.x, z: hit.z })) {
+        const onFloor = ray.ray.intersectPlane(floor, hit) !== null;
+        // Fora do chão andável e sem a estação na frente: é o céu (o mesmo cartão do 3D; aqui a câmera não gira).
+        const sky = !(onFloor && world().nav.nearestWalkable({ x: hit.x, z: hit.z }, 3)) && clickSky(ray, scene, e.clientX - r.left, e.clientY - r.top, r.width, r.height);
+        skyFocus.dir = null;
+        if (!sky && onFloor && walkTo({ x: hit.x, z: hit.z })) {
           s.follow = true;
           s.panX = 0;
           s.panZ = 0;
@@ -161,7 +167,7 @@ function IsoRig() {
       window.removeEventListener("keydown", key);
       window.removeEventListener("infinity:recenter", recenter);
     };
-  }, [camera, gl]);
+  }, [camera, gl, scene]);
 
   const tmp = useRef({ right: new THREE.Vector3(), up: new THREE.Vector3(), fwd: new THREE.Vector3(), target: new THREE.Vector3() });
 

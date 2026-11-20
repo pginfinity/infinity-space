@@ -268,6 +268,231 @@
       "hidden": "atrás da Terra",
       "glare": "perto do Sol"
     },
+    "astro": {
+      "close": "Fechar",
+      "distance": "Distância",
+      "brightness": "Brilho",
+      "where": "Onde",
+      "phase": "Fase",
+      "magnitude": "magnitude {{mag}}",
+      "light": "a luz leva {{time}}",
+      "telescope": "Ver no telescópio",
+      "constellationsOn": "Mostrar constelações",
+      "constellationsOff": "Esconder constelações",
+      "up": "{{alt}}° acima do horizonte de São Paulo, a {{dir}}",
+      "aboveLimb": "{{alt}}° acima da borda da Terra, a {{dir}}",
+      "low": "rente à borda da Terra, a {{dir}}",
+      "km": "{{n}} km",
+      "mkm": "{{n}} milhões de km",
+      "dirs": ["norte", "nordeste", "leste", "sudeste", "sul", "sudoeste", "oeste", "noroeste"],
+      "sol": {
+        "name": "Sol",
+        "sub": "Estrela · a nossa",
+        "fact": "Daqui de cima ele é branco: o amarelo e o laranja do pôr do sol são a atmosfera filtrando a luz."
+      },
+      "lua": {
+        "name": "Lua",
+        "sub": "Satélite natural",
+        "fact": "Mostra sempre a mesma face para a Terra e se afasta uns 3,8 cm por ano."
+      },
+      "terra": {
+        "name": "Terra",
+        "sub": "Nosso planeta",
+        "where": "São Paulo, 400 km abaixo",
+        "fact": "A linha azul fininha na borda é a atmosfera: quase toda ela cabe nos primeiros 16 km. À noite, as luzes das cidades desenham o mapa."
+      },
+      "satelite": {
+        "name": "Satélite",
+        "sub": "Satélite artificial",
+        "dist": "Algumas centenas de km",
+        "fact": "Há mais de 10 mil satélites ativos em órbita. Brilham porque refletem o Sol e somem quando entram na sombra da Terra."
+      },
+      "planetas": {
+        "sub": "Planeta",
+        "venus": "O planeta mais quente do Sistema Solar, uns 460 °C, por causa do efeito estufa. E gira ao contrário dos outros.",
+        "marte": "Tem o maior vulcão do Sistema Solar, o Monte Olimpo: quase três vezes a altura do Everest.",
+        "jupiter": "Caberiam mais de 1.300 Terras dentro dele. A Grande Mancha Vermelha é uma tempestade maior que a Terra.",
+        "saturno": "Os anéis passam de 250 mil km de largura, mas na maior parte têm só uns 10 metros de espessura."
+      },
+      "estrelas": {
+        "sirius": {
+          "name": "Sírius",
+          "sub": "Estrela · Cão Maior",
+          "dist": "8,6 anos-luz",
+          "fact": "A estrela mais brilhante do céu noturno. Tem uma companheira pequena, Sírius B: uma anã branca do tamanho da Terra."
+        },
+        "canopus": {
+          "name": "Canopus",
+          "sub": "Estrela · Carina",
+          "dist": "~310 anos-luz",
+          "fact": "A segunda mais brilhante do céu. Sondas espaciais usam Canopus como referência para saber para onde estão viradas."
+        },
+        "alfaCentauro": {
+          "name": "Alfa Centauro",
+          "sub": "Estrela · Centauro",
+          "dist": "4,4 anos-luz",
+          "fact": "O sistema de estrelas mais perto do Sol. Da mesma família é Próxima Centauri, a estrela mais próxima de nós."
+        },
+        "arcturo": {
+          "name": "Arcturo",
+          "sub": "Estrela · Boieiro",
+          "dist": "37 anos-luz",
+          "fact": "Gigante laranja, umas 25 vezes mais larga que o Sol. É a estrela mais brilhante da metade norte do céu."
+        },
+        "vega": {
+          "name": "Vega",
+          "sub": "Estrela · Lira",
+          "dist": "25 anos-luz",
+          "fact": "Foi a estrela polar do norte há uns 12 mil anos e volta a ser daqui a uns 13 mil, porque o eixo da Terra bamboleia devagar."
+        },
+        "capela": {
+          "name": "Capela",
+          "sub": "Estrela · Cocheiro",
+          "dist": "43 anos-luz",
+          "fact": "Parece uma estrela só, mas são duas gigantes amarelas girando uma em volta da outra, com mais duas anãs mais longe."
+        },
+        "rigel": {
+          "name": "Rigel",
+          "sub": "Estrela · Órion",
+          "dist": "~860 anos-luz",
+          "fact": "Supergigante azul, o pé de Órion: brilha mais de 100 mil vezes mais que o Sol."
+        },
+        "procion": {
+          "name": "Prócion",
+          "sub": "Estrela · Cão Menor",
+          "dist": "11,5 anos-luz",
+          "fact": "O nome em grego quer dizer “antes do cão”: nasce pouco antes de Sírius. Também tem uma anã branca de companhia."
+        },
+        "achernar": {
+          "name": "Achernar",
+          "sub": "Estrela · Erídano",
+          "dist": "~140 anos-luz",
+          "fact": "Gira tão rápido que ficou achatada: é bem mais larga no equador do que de polo a polo."
+        },
+        "betelgeuse": {
+          "name": "Betelgeuse",
+          "sub": "Estrela · Órion",
+          "dist": "~550 anos-luz",
+          "fact": "Supergigante vermelha: no lugar do Sol, engoliria até a órbita de Marte. Um dia vai explodir como supernova."
+        },
+        "hadar": {
+          "name": "Hadar",
+          "sub": "Estrela · Centauro",
+          "dist": "~390 anos-luz",
+          "fact": "Com Alfa Centauro, forma os “ponteiros” que apontam para o Cruzeiro do Sul."
+        },
+        "altair": {
+          "name": "Altair",
+          "sub": "Estrela · Águia",
+          "dist": "16,7 anos-luz",
+          "fact": "Dá uma volta em si mesma em menos de 9 horas (o Sol leva uns 25 dias). Por isso é achatada nos polos."
+        },
+        "acrux": {
+          "name": "Acrux",
+          "sub": "Estrela · Cruzeiro do Sul",
+          "dist": "~320 anos-luz",
+          "fact": "O pé do Cruzeiro do Sul. Na bandeira do Brasil, é a estrela que representa São Paulo, bem aqui embaixo."
+        },
+        "aldebara": {
+          "name": "Aldebarã",
+          "sub": "Estrela · Touro",
+          "dist": "65 anos-luz",
+          "fact": "O olho vermelho do Touro. A sonda Pioneer 10 viaja na direção dela e passa perto daqui a uns 2 milhões de anos."
+        },
+        "antares": {
+          "name": "Antares",
+          "sub": "Estrela · Escorpião",
+          "dist": "~550 anos-luz",
+          "fact": "O coração do Escorpião. O nome quer dizer “rival de Marte”, pela cor. Na bandeira do Brasil, representa o Piauí."
+        },
+        "espiga": {
+          "name": "Espiga",
+          "sub": "Estrela · Virgem",
+          "dist": "~250 anos-luz",
+          "fact": "Na bandeira do Brasil é a única estrela acima da faixa “Ordem e Progresso”: representa o Pará."
+        },
+        "polux": {
+          "name": "Pólux",
+          "sub": "Estrela · Gêmeos",
+          "dist": "34 anos-luz",
+          "fact": "Gigante laranja com um planeta gigante em órbita, batizado de Thestias."
+        },
+        "fomalhaut": {
+          "name": "Fomalhaut",
+          "sub": "Estrela · Peixe Austral",
+          "dist": "25 anos-luz",
+          "fact": "Tem em volta um disco enorme de poeira, fotografado pelos telescópios Hubble e James Webb."
+        },
+        "deneb": {
+          "name": "Deneb",
+          "sub": "Estrela · Cisne",
+          "dist": "~2.600 anos-luz",
+          "fact": "Muito longe e mesmo assim entre as mais brilhantes: é dezenas de milhares de vezes mais luminosa que o Sol."
+        },
+        "mimosa": {
+          "name": "Mimosa",
+          "sub": "Estrela · Cruzeiro do Sul",
+          "dist": "~280 anos-luz",
+          "fact": "O braço azulado do Cruzeiro. Na bandeira do Brasil, representa o Rio de Janeiro."
+        },
+        "regulo": {
+          "name": "Régulo",
+          "sub": "Estrela · Leão",
+          "dist": "79 anos-luz",
+          "fact": "Fica quase em cima do caminho do Sol no céu: de vez em quando a Lua passa na frente dela."
+        },
+        "gacrux": {
+          "name": "Gacrux",
+          "sub": "Estrela · Cruzeiro do Sul",
+          "dist": "88 anos-luz",
+          "fact": "O topo do Cruzeiro, uma gigante vermelha. Na bandeira do Brasil, representa a Bahia."
+        },
+        "sigmaOitante": {
+          "name": "Sigma do Oitante",
+          "sub": "Estrela · Oitante",
+          "dist": "~290 anos-luz",
+          "fact": "A estrela polar do sul, quase em cima do polo celeste: fraquinha, mas é o Distrito Federal na bandeira."
+        },
+        "pleiades": {
+          "name": "Plêiades",
+          "sub": "Aglomerado · Touro",
+          "dist": "~440 anos-luz",
+          "fact": "Centenas de estrelas jovens nascidas juntas. Os tupis as chamavam de Eixu; no Japão, Subaru."
+        }
+      },
+      "wish": {
+        "title": "Pedido feito",
+        "sub": "Fica entre você e o céu."
+      }
+    },
+    "constelacoes": {
+      "cru": "Cruzeiro do Sul",
+      "cen": "Centauro",
+      "ori": "Órion",
+      "cma": "Cão Maior",
+      "cmi": "Cão Menor",
+      "sco": "Escorpião",
+      "sgr": "Sagitário",
+      "uma": "Ursa Maior",
+      "cas": "Cassiopeia",
+      "leo": "Leão",
+      "cyg": "Cisne",
+      "lyr": "Lira",
+      "aql": "Águia",
+      "gem": "Gêmeos",
+      "tau": "Touro",
+      "boo": "Boieiro",
+      "vir": "Virgem",
+      "peg": "Pégaso",
+      "and": "Andrômeda",
+      "per": "Perseu",
+      "aur": "Cocheiro",
+      "tra": "Triângulo Austral",
+      "crv": "Corvo",
+      "ari": "Áries"
+    },
+    "commandConstelacoes": "Constelações no céu",
+    "commandConstelacoesHint": "Liga e desliga as linhas e os nomes",
     "compass": [
       "N",
       "NE",

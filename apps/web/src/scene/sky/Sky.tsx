@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { SAO_PAULO, STATION_DIST, SUN_ANGULAR_RADIUS, type Sky as SkyState } from "../astro/astro.ts";
 import { getSky, retainSky, skyVersion } from "../astro/live.ts";
@@ -8,10 +8,14 @@ import { SKY_PX, SKY_RES, SKY_VP, skyObject } from "./camera.ts";
 import { skyTexture, type SkyTier } from "./textures.ts";
 import { loadStars } from "./stars.ts";
 import { MeteorLayer } from "./meteorLayer.ts";
+import { SAT_SLOTS, satellitesAt } from "../astro/satellites.ts";
+import { ConstellationLabels, constellationGeometry, loadConstellations, useConstellations } from "./constellations.ts";
 import {
   billboardVert,
   earthFrag,
   earthVert,
+  lineFrag,
+  lineVert,
   meteorFrag,
   meteorVert,
   milkyWayFrag,
@@ -24,14 +28,16 @@ import {
 
 /**
  * O céu de verdade em volta da estação: Via Láctea, estrelas do catálogo de Yale, planetas, Sol, Lua com
- * a fase real, meteoros das chuvas do calendário e a Terra lá embaixo (São Paulo no nadir, dia e noite
- * no horário real, luzes das cidades, nuvens e atmosfera). Igual nas duas lentes e no telescópio.
+ * a fase real, meteoros das chuvas do calendário, satélites passando, constelações (liga/desliga) e a
+ * Terra lá embaixo (São Paulo no nadir, dia e noite no horário real, luzes das cidades, nuvens e
+ * atmosfera). Igual nas duas lentes e no telescópio.
  *
- * Desempenho: ~8 chamadas de desenho, nenhuma alocação por quadro. As contas astronômicas rodam a cada
- * 5 s (astro/live.ts); por quadro só os meteoros (poucos, reaproveitados) e o deslocamento das nuvens.
+ * Desempenho: ~10 chamadas de desenho, nenhuma alocação por quadro. As contas astronômicas rodam a cada
+ * 5 s (astro/live.ts); por quadro só meteoros e satélites (poucos, reaproveitados), o deslocamento das
+ * nuvens e o relógio da cintilação.
  */
 
-const ORDER = { milkyWay: -1000, stars: -999, planets: -998, sun: -997, moon: -996, meteors: -995, earth: -994 };
+const ORDER = { milkyWay: -1000, constellations: -999.5, stars: -999, planets: -998, satellites: -997.5, sun: -997, moon: -996, meteors: -995, earth: -994 };
 /** Tamanho aparente da Lua desenhada (raio, graus): ~4× o real para ser vista; direção e fase são as reais. */
 const MOON_RADIUS = 1.1;
 /** Meia largura do quadrado do Sol (graus): disco real + brilho em volta. */
@@ -81,7 +87,8 @@ function basis(dir: THREE.Vector3, ref: THREE.Vector3, right: THREE.Vector3, up:
   right.crossVectors(dir, up).normalize();
 }
 
-function buildSky(tier: SkyTier, exposure: number) {
+/** `host`: onde ficam os nomes das constelações (o elemento em volta do canvas). */
+function buildSky(tier: SkyTier, exposure: number, host: HTMLElement | null) {
   const root = new THREE.Group();
   root.name = "ceu";
   const leve = tier === "leve";
@@ -97,7 +104,8 @@ function buildSky(tier: SkyTier, exposure: number) {
   // Estrelas (catálogo em RA/Dec; giram com a matriz do céu).
   const eqj = new THREE.Matrix3();
   const starGain = { value: 1 };
-  const starMat = keep(shader(pointsVert, pointsFrag, { uRot: { value: eqj }, uPx: SKY_PX, uGain: starGain, uSizeK: { value: 1 } }));
+  const time = { value: 0 };
+  const starMat = keep(shader(pointsVert, pointsFrag, { uRot: { value: eqj }, uPx: SKY_PX, uGain: starGain, uSizeK: { value: 1 }, uTime: time }, leve ? {} : { defines: { TWINKLE: "" } }));
   const starGeo = keep(new THREE.BufferGeometry());
   const stars = skyObject(new THREE.Points(starGeo, starMat), ORDER.stars);
   root.add(stars);
@@ -119,6 +127,39 @@ function buildSky(tier: SkyTier, exposure: number) {
   planetGeo.setAttribute("aColor", new THREE.BufferAttribute(planetColor, 3));
   const planetMat = keep(shader(pointsVert, pointsFrag, { uRot: { value: new THREE.Matrix3() }, uPx: SKY_PX, uGain: starGain, uSizeK: { value: 1.25 } }));
   root.add(skyObject(new THREE.Points(planetGeo, planetMat), ORDER.planets));
+
+  // Satélites: pontos que cruzam devagar (mesmo material dos planetas, sem cintilar).
+  const satGeo = keep(new THREE.BufferGeometry());
+  const satPos = new Float32Array(SAT_SLOTS * 3);
+  const satMag = new Float32Array(SAT_SLOTS);
+  satGeo.setAttribute("position", new THREE.BufferAttribute(satPos, 3).setUsage(THREE.DynamicDrawUsage));
+  satGeo.setAttribute("aMag", new THREE.BufferAttribute(satMag, 1).setUsage(THREE.DynamicDrawUsage));
+  satGeo.setAttribute("aColor", new THREE.BufferAttribute(new Float32Array(SAT_SLOTS * 3).fill(0.95), 3));
+  satGeo.setDrawRange(0, 0);
+  root.add(skyObject(new THREE.Points(satGeo, planetMat), ORDER.satellites));
+  const sats: Array<{ dir: [number, number, number]; mag: number }> = [];
+  let satDrawn = 0;
+
+  // Constelações: linhas e nomes só quando ligadas (aparecem e somem devagar).
+  const conU = { uRot: { value: eqj }, uAlpha: { value: 0 } };
+  const conGeo = keep(new THREE.BufferGeometry());
+  const conLines = skyObject(new THREE.LineSegments(conGeo, keep(shader(lineVert, lineFrag, conU))), ORDER.constellations);
+  conLines.visible = false;
+  root.add(conLines);
+  // Os nomes (DOM) nascem no primeiro quadro com as linhas ligadas: um céu montado e descartado (StrictMode)
+  // não deixa nomes órfãos na tela.
+  let labels: ConstellationLabels | null = null;
+  let centers: ReturnType<typeof constellationGeometry>["centers"] | null = null;
+  // Também traz as estrelas com nome (clique no céu), por isso baixa mesmo com as linhas desligadas.
+  loadConstellations()
+    .then((d) => {
+      const g = constellationGeometry(d);
+      conGeo.setAttribute("position", new THREE.BufferAttribute(g.position, 3));
+      centers = g.centers;
+    })
+    .catch(() => {
+      // sem o arquivo, o céu segue sem constelações nem estrelas clicáveis
+    });
 
   // Sol.
   const quad = keep(new THREE.PlaneGeometry(2, 2));
@@ -230,6 +271,32 @@ function buildSky(tier: SkyTier, exposure: number) {
     // Nuvens: deriva contínua (o relógio é o mesmo para todos; fração da volta, sem perder precisão).
     earthU.uCloud.value = ((now / 3600_000) * (CLOUD_DEG_PER_HOUR / 360)) % 1;
     meteors.update(now, s, tmpA, tmpB);
+    time.value = (performance.now() / 1000) % 1000;
+
+    const n = satellitesAt(now, sats);
+    for (let i = 0; i < n; i++) {
+      satPos.set(sats[i]!.dir, i * 3);
+      satMag[i] = sats[i]!.mag;
+    }
+    if (n > 0 || satDrawn > 0) {
+      satDrawn = n;
+      satGeo.setDrawRange(0, n);
+      satGeo.attributes.position!.needsUpdate = true;
+      satGeo.attributes.aMag!.needsUpdate = true;
+    }
+
+    const goal = useConstellations.getState().on ? 1 : 0;
+    const a = conU.uAlpha.value;
+    if (a !== goal) {
+      conU.uAlpha.value = Math.abs(goal - a) < 0.02 ? goal : a + (goal - a) * 0.08;
+      conLines.visible = conU.uAlpha.value > 0;
+      if (!conLines.visible) labels?.hide();
+    }
+    if (conLines.visible && !labels && centers && host) {
+      const l = (labels = new ConstellationLabels(host, centers));
+      // Depois de desenhar: a matriz do céu já é a deste quadro (os nomes não ficam um quadro atrás).
+      conLines.onAfterRender = (gl, _scene, camera) => l.place(eqj, gl.domElement.clientWidth, gl.domElement.clientHeight, conU.uAlpha.value, camera);
+    }
   }
 
   return {
@@ -237,6 +304,8 @@ function buildSky(tier: SkyTier, exposure: number) {
     meteors,
     update,
     dispose() {
+      labels?.dispose();
+      labels = null;
       for (const d of disposables) d.dispose();
     },
   };
@@ -247,7 +316,8 @@ function buildSky(tier: SkyTier, exposure: number) {
  * competir com a estação nem com os textos do HUD).
  */
 export function Sky({ tier, exposure = 1 }: { tier: SkyTier; exposure?: number }) {
-  const sky = useMemo(() => buildSky(tier, exposure), [tier, exposure]);
+  const host = useThree((s) => s.gl.domElement.parentElement);
+  const sky = useMemo(() => buildSky(tier, exposure, host), [tier, exposure, host]);
   useEffect(() => {
     const release = retainSky();
     return () => {

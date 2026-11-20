@@ -27,6 +27,9 @@ const TINT: Record<ShowerKey | "esporadico", [number, number, number]> = {
   esporadico: [1, 0.95, 0.88],
 };
 
+/** Cabeça de cada meteoro visto há pouco (para o clique de "fazer um pedido"); qualquer céu montado escreve. */
+export const recentMeteors = new Map<number, { dir: THREE.Vector3; at: number }>();
+
 export class MeteorLayer {
   readonly geometry = new THREE.BufferGeometry();
   private readonly tail = new Float32Array(SLOTS * 12);
@@ -93,9 +96,14 @@ export class MeteorLayer {
         if (p < 0 || p >= 1) continue;
         this.place(x, p, sky, a, b);
         this.write(n, a, b, x, p);
+        let seen = recentMeteors.get(x.t0);
+        if (!seen) recentMeteors.set(x.t0, (seen = { dir: new THREE.Vector3(), at: 0 }));
+        seen.dir.copy(b);
+        seen.at = now;
         n++;
       }
     }
+    for (const [k, r] of recentMeteors) if (now - r.at > 3000) recentMeteors.delete(k);
     if (n === 0 && this.drawn === 0) return;
     this.drawn = n;
     this.geometry.setDrawRange(0, n * 6);
