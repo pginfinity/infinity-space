@@ -42,6 +42,8 @@ export interface MediaState {
   videos: Record<string, HTMLVideoElement>;
   /** Quantas pessoas te ouvem agora. */
   audience: number;
+  /** O gravador de uma reunião ouve você agora (a transcrição da gravação segue a mesma regra da voz). */
+  recorded: boolean;
   error: string | null;
   /** Você está compartilhando a tela. */
   screen: boolean;
@@ -49,7 +51,7 @@ export interface MediaState {
   screens: Record<string, HTMLVideoElement>;
 }
 
-export const useMedia = create<MediaState>(() => ({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, error: null, screen: false, screens: {} }));
+export const useMedia = create<MediaState>(() => ({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, recorded: false, error: null, screen: false, screens: {} }));
 
 let room: Room | null = null;
 let ctx: AudioContext | null = null;
@@ -156,7 +158,7 @@ export async function leaveRtc(): Promise<void> {
   whisperTarget = null;
   sightIds = null;
   rawSpeakers = [];
-  useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, screen: false, screens: {} });
+  useMedia.setState({ status: "off", mic: false, cam: false, speaking: {}, videos: {}, audience: 0, recorded: false, screen: false, screens: {} });
 }
 
 /** Lista do servidor: quem pode ouvir você agora. */
@@ -169,7 +171,7 @@ export function setAudience(ids: string[]): void {
 function updateAudienceCount(): void {
   // O gravador de reunião não conta como "pessoa que te ouve" (a sala já mostra o aviso de gravação).
   const voice = whisperTarget === null ? audienceIds : audienceIds.filter((id) => id === whisperTarget);
-  useMedia.setState({ audience: voice.filter((id) => !id.startsWith("gravador-")).length });
+  useMedia.setState({ audience: voice.filter((id) => !id.startsWith("gravador-")).length, recorded: voice.some((id) => id.startsWith("gravador-")) });
 }
 
 // ---- sussurro (pacote portas) -------------------------------------------------------------------
@@ -297,7 +299,7 @@ function camCapture(s: MediaSettings = useMediaSettings.getState()) {
   return { deviceId: s.camId ?? undefined, resolution: { width: r.width, height: r.height, frameRate: r.frameRate } };
 }
 
-function micTrack(): LocalAudioTrack | undefined {
+export function micTrack(): LocalAudioTrack | undefined {
   return room?.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalAudioTrack | undefined;
 }
 

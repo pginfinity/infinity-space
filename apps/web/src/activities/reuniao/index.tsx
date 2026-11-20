@@ -9,17 +9,20 @@ import { toast } from "../../ui/toasts.ts";
 import { InStack } from "../../ui/HudStack.tsx";
 import { world } from "../../world/world.ts";
 import { self } from "../../world/registry.ts";
+import { useTranscriber } from "./transcricao.ts";
 
 /**
  * Gravação de reuniões: quem está numa sala de reunião (ou no auditório) grava com um clique.
  * Todos na sala são avisados, quem entra depois também, e um selo "Gravando" aparece no mundo.
- * O áudio vai para o Drive do time (ver apps/server/src/recording).
+ * O áudio vai para o Drive do time (ver apps/server/src/recording), com a transcrição feita pelo
+ * navegador de cada um (ver transcricao.ts), que o Portal de Reuniões lê como lê as do Meet.
  */
 
 const T = {
   record: "Gravar reunião",
   confirmTitle: "Gravar esta reunião?",
-  confirmText: "Todos na sala serão avisados. Só o áudio de quem está aqui é gravado e vai para o Drive do time.",
+  confirmText: "Todos na sala serão avisados. Só o áudio de quem está aqui é gravado e vai para o Drive do time, com a transcrição das falas, que vira ata e tarefas na Gestão.",
+  transcribing: "transcrevendo sua fala",
   start: "Gravar",
   cancel: "Cancelar",
   recording: "Gravando",
@@ -55,6 +58,7 @@ function RecOverlay() {
   const group = recordable(zone) ? recGroup(zone) : null;
   const session = group ? state?.sessions[group] : undefined;
   const [confirm, setConfirm] = useState(false);
+  const transcribing = useTranscriber();
 
   // Avisa quem entra numa sala que já está sendo gravada.
   const lastGroup = useRef<string | null>(null);
@@ -114,6 +118,7 @@ function RecOverlay() {
                 <span className="font-semibold text-offwhite">{T.recording}</span>
                 <Elapsed since={session.startedAt} />
                 <span className="hidden text-slate sm:inline">· {T.startedBy(session.by)}</span>
+                {transcribing && <span className="hidden text-slate sm:inline">· {T.transcribing}</span>}
                 <button type="button" onClick={() => sendAct(REC_ID, "stop")} className="ml-1 flex items-center gap-1 rounded-full bg-offwhite/10 px-2.5 py-1 font-medium hover:bg-offwhite/20" aria-label="Parar a gravação">
                   <Square className="size-2.5 fill-current" />
                   {T.stop}

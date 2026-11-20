@@ -17,7 +17,7 @@ Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gra
 | 6. App, celular e som | Pronta | App instalável (PWA), celular, sons gerados; músicas da jukebox aguardando decisão |
 | 7. Produção | Preparada | Docker, LiveKit, HTTPS e deploy automático prontos; falta a VPS e as credenciais (docs/infra.md) |
 
-Gravação de reuniões (prevista para a V2) entrou na V1 a pedido do time: grava a sala e envia ao Google Drive.
+Gravação de reuniões (prevista para a V2) entrou na V1 a pedido do time: grava a sala e envia ao Google Drive. Desde 20/11 vai junto a transcrição das falas, que o Portal de Reuniões transforma em ata, aviso e tarefas na Gestão.
 
 ## Etapa 0: Fundação
 - Monorepo, tokens da marca (cores, NORD, Geist), CLAUDE.md.

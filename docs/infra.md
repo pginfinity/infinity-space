@@ -83,7 +83,9 @@ As reuniões gravadas dentro do Infinity Space (salas de reunião, diretoria e a
    - `TZ_DISPLAY=America/Sao_Paulo` (fuso usado no nome dos arquivos)
 5. O endereço do LiveKit visto de dentro do app (`LIVEKIT_INTERNAL_URL`) já vem definido no `deploy/docker-compose.yml`, e o `ffmpeg` já vem na imagem Docker. Fora do Docker: `apt install ffmpeg` e `FFMPEG_PATH=/usr/bin/ffmpeg`.
 
-Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração, os participantes e quem iniciou. A transcrição fica com o time de IA, lendo dessa pasta.
+Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração, os participantes e quem iniciou.
+
+**Transcrição → ata e tarefas na Gestão.** Durante a gravação, o navegador de cada pessoa que o gravador ouve (microfone ligado, sem sussurro) transcreve só a fala dela (Web Speech API: no Chrome o áudio passa pelo serviço de voz do Google, no Edge pelo da Microsoft; o Firefox não transcreve, e a fala de quem usa ele fica só no áudio). Ao parar, o servidor sobe para a mesma pasta um Google Doc no formato do Meet (`Infinity Space · <sala> - AAAA/MM/DD HH:MM GMT-03:00 - Transcrição`), que o Portal de Reuniões já sabe ler e entregar ao gestor de projetos (ata, aviso no grupo e tarefas na Gestão). Para isso, **compartilhar a pasta com a conta do Google que o Portal de Reuniões lê (meet@)**, como leitor. O aviso no grupo continua saindo só com o sim de quem cuida do gestor de projetos.
 
 ## 8. Google Agenda
 

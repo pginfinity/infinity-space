@@ -8,9 +8,12 @@ import { GoogleAuth } from "google-auth-library";
  * - GOOGLE_APPLICATION_CREDENTIALS: caminho do JSON da conta de serviço;
  * - DRIVE_FOLDER_ID: id da pasta de destino (a conta de serviço precisa ser membro do Drive compartilhado).
  * Sem isso, as gravações ficam salvas no servidor (DATA_DIR/gravacoes) até a configuração existir.
+ * Para a reunião virar ata e tarefas na Gestão, a pasta tem de estar visível para a conta que o
+ * Portal de Reuniões lê (meet@): ele acha a transcrição pelo nome, como as do Meet (docs/infra.md).
  */
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+const DOC = "application/vnd.google-apps.document";
 
 export function driveConfigured(): boolean {
   return !!process.env.DRIVE_FOLDER_ID && !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -21,8 +24,8 @@ export interface UploadResult {
   link: string;
 }
 
-/** Envia um arquivo (upload retomável) e devolve o link para abrir no Drive. */
-export async function uploadToDrive(file: string, opts: { name?: string; description?: string; mimeType?: string } = {}): Promise<UploadResult> {
+/** Envia um arquivo (upload retomável) e devolve o link para abrir no Drive. `doc`: texto que vira Google Doc. */
+export async function uploadToDrive(file: string, opts: { name?: string; description?: string; mimeType?: string; doc?: boolean } = {}): Promise<UploadResult> {
   const folder = process.env.DRIVE_FOLDER_ID;
   if (!folder) throw new Error("DRIVE_FOLDER_ID não configurado");
   const auth = new GoogleAuth({ scopes: SCOPES });
@@ -30,7 +33,7 @@ export async function uploadToDrive(file: string, opts: { name?: string; descrip
   const token = (await client.getAccessToken()).token;
   if (!token) throw new Error("sem token do Google");
   const body = await readFile(file);
-  const mimeType = opts.mimeType ?? "audio/ogg";
+  const mimeType = opts.doc ? "text/plain; charset=UTF-8" : (opts.mimeType ?? "audio/ogg");
 
   const init = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,webViewLink", {
     method: "POST",
@@ -40,7 +43,7 @@ export async function uploadToDrive(file: string, opts: { name?: string; descrip
       "X-Upload-Content-Type": mimeType,
       "X-Upload-Content-Length": String(body.length),
     },
-    body: JSON.stringify({ name: opts.name ?? basename(file), parents: [folder], mimeType, description: opts.description }),
+    body: JSON.stringify({ name: opts.name ?? basename(file), parents: [folder], mimeType: opts.doc ? DOC : mimeType, description: opts.description }),
   });
   if (!init.ok) throw new Error(`Drive recusou o envio (${init.status}): ${(await init.text()).slice(0, 200)}`);
   const location = init.headers.get("location");

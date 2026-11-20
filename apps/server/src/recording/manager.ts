@@ -1,5 +1,5 @@
 import { fork, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,7 @@ import type { Activity, ActivityHost } from "../activities/types.ts";
 import { DATA_DIR } from "../store.ts";
 import { RTC, recorderToken } from "../rtc.ts";
 import { driveConfigured, uploadToDrive } from "./drive.ts";
+import { cleanLine, MAX_LINES, meetStamp, transcriptText, type Line } from "./transcript.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WORKER = join(here, "worker.ts");
@@ -32,6 +33,8 @@ interface Pending {
   file: string;
   name: string;
   description: string;
+  /** Transcrição: vira Google Doc no Drive. */
+  doc?: boolean;
 }
 
 interface Live {
@@ -39,6 +42,8 @@ interface Live {
   worker: ChildProcess | null;
   file: string;
   participants: Set<string>;
+  /** Falas transcritas pelos navegadores de quem está na sala. */
+  lines: Line[];
   emptySince: number | null;
   endedAt: number;
 }
@@ -51,7 +56,8 @@ export interface RecordingRoom {
 
 /**
  * Gravação de reuniões (atividade "gravacao").
- * Operações: `start` (grava a sala onde a pessoa está), `stop` (encerra a gravação da sala onde a pessoa está).
+ * Operações: `start` (grava a sala onde a pessoa está), `stop` (encerra a gravação da sala onde a pessoa está),
+ * `fala` `{ text }` (frase da própria pessoa, transcrita pelo navegador dela, para a transcrição).
  * Eventos: `started` e `finished` `{ group, room, by?, link?, note? }` para quem está na sala.
  */
 export class RecordingActivity implements Activity {
@@ -82,12 +88,21 @@ export class RecordingActivity implements Activity {
     return { sessions };
   }
 
-  handle(from: string, op: string): void {
+  handle(from: string, op: string, data?: unknown): void {
     const zone = this.host.playerZone(from);
     if (!recordable(zone)) return;
     const group = recGroup(zone);
     if (op === "start") this.start(from, group, zone.name);
     if (op === "stop" && this.isRecording(group)) this.stop(group);
+    if (op === "fala") this.say(from, group, data);
+  }
+
+  /** Frase de quem está na sala gravada, enquanto grava. */
+  private say(from: string, group: string, data: unknown): void {
+    const l = this.live.get(group);
+    const text = cleanLine(data);
+    if (!l || l.session.status !== "recording" || !text || l.lines.length >= MAX_LINES) return;
+    l.lines.push({ at: Date.now() - l.session.startedAt, name: this.host.playerName(from) ?? "Alguém", text });
   }
 
   tick(): void {
@@ -120,7 +135,7 @@ export class RecordingActivity implements Activity {
     const startedAt = Date.now();
     const file = join(DIR, `${group}-${stamp(startedAt)}.ogg`);
     const session: RecSession = { group, room: roomName, status: "starting", startedAt, by };
-    const l: Live = { session, worker: null, file, participants: new Set([by]), emptySince: null, endedAt: 0 };
+    const l: Live = { session, worker: null, file, participants: new Set([by]), lines: [], emptySince: null, endedAt: 0 };
     this.live.set(group, l);
     this.host.changed(this);
 
@@ -179,6 +194,7 @@ export class RecordingActivity implements Activity {
     const minutes = Math.max(1, Math.round(ms / 60000));
     const description = `Gravação do Infinity Space. ${s.room}, ${human(s.startedAt, "long")} (${minutes} min). Participantes: ${[...l.participants].join(", ")}. Iniciada por ${s.by}.`;
     const to = this.room.membersIn(s.group);
+    const doc = l.lines.length ? this.saveTranscript(l, description) : null;
     if (driveConfigured()) {
       try {
         const up = await uploadToDrive(l.file, { name, description });
@@ -196,8 +212,23 @@ export class RecordingActivity implements Activity {
       s.status = "saved";
       s.note = "Salva no servidor. Vai para o Drive assim que a conta do Google for configurada.";
     }
+    if (doc && driveConfigured()) {
+      await uploadToDrive(doc.file, doc).catch((e) => {
+        console.error(`[gravação] ${s.room}: transcrição não foi ao Drive:`, e);
+        this.addPending(doc);
+      });
+    } else if (doc) this.addPending(doc);
     this.host.changed(this);
     this.host.event(this, "finished", { group: s.group, room: s.room, link: s.link, note: s.note }, { to });
+  }
+
+  /** Grava a transcrição ao lado do áudio, com o nome que o Portal de Reuniões reconhece. */
+  private saveTranscript(l: Live, description: string): Pending {
+    const s = l.session;
+    const name = `Infinity Space · ${s.room} - ${meetStamp(s.startedAt, TZ)} - Transcrição`;
+    const file = l.file.replace(/\.ogg$/, ".txt");
+    writeFileSync(file, transcriptText(name, [...l.participants], l.lines));
+    return { file, name, description, doc: true };
   }
 
   private addPending(p: Pending): void {
@@ -213,7 +244,7 @@ export class RecordingActivity implements Activity {
     for (const p of list) {
       if (!existsSync(p.file)) continue;
       try {
-        await uploadToDrive(p.file, { name: p.name, description: p.description });
+        await uploadToDrive(p.file, p);
         console.log(`[gravação] pendente enviada: ${p.name}`);
       } catch {
         left.push(p);
