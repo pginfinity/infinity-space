@@ -29,7 +29,7 @@ export interface AvatarLook {
   mouth: number;
   /** 0 nada, 1 bigode, 2 barba curta, 3 barba cheia, 4 cavanhaque. */
   facial: number;
-  /** 0 camiseta, 1 manga longa, 2 moletom, 3 blazer, 4 polo, 5 vestido, 6 regata, 7 jaqueta. */
+  /** 0 camiseta, 1 manga longa, 2 moletom, 3 blazer, 4 polo, 5 vestido, 6 regata, 7 jaqueta, 8 jaleco. */
   top: number;
   topColor: string;
   topColor2: string;

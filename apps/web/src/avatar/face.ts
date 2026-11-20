@@ -229,12 +229,12 @@ function drawFacial(g: CanvasRenderingContext2D, look: AvatarLook, cx: number): 
   const c = shade(look.hairColor, -0.1);
   g.fillStyle = c;
   if (look.facial === 1 || look.facial === 4) {
-    // Bigode.
+    // Bigode (encorpado: o rosto do avatar novo é pequeno na cabeça quadrada).
     g.beginPath();
-    g.moveTo(cx - 26, 170);
-    g.quadraticCurveTo(cx - 12, 156, cx, 164);
-    g.quadraticCurveTo(cx + 12, 156, cx + 26, 170);
-    g.quadraticCurveTo(cx, 166, cx - 26, 170);
+    g.moveTo(cx - 34, 174);
+    g.quadraticCurveTo(cx - 18, 146, cx, 158);
+    g.quadraticCurveTo(cx + 18, 146, cx + 34, 174);
+    g.quadraticCurveTo(cx, 164, cx - 34, 174);
     g.fill();
   }
   if (look.facial === 4) {

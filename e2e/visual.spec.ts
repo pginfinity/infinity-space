@@ -16,7 +16,7 @@ test("entrada com criador de avatar", async ({ page }) => {
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${SHOTS}/v2-entrada.png` });
   await page.getByRole("tab", { name: "Cabelo" }).click();
-  await page.getByRole("radio", { name: "Cacheado" }).click();
+  await page.getByRole("radio", { name: "Topete" }).click();
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `${SHOTS}/v2-entrada-cabelo.png` });
 });
