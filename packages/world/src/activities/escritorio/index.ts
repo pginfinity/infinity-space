@@ -14,3 +14,4 @@ export * from "./photowall.ts";
 export * from "./painel.ts";
 export * from "./megafone.ts";
 export * from "./quadro.ts";
+export * from "./convite.ts";

@@ -37,6 +37,7 @@ export const T = {
     noAnswer: "Ninguém atendeu.",
     redirected: "A porta está fechada. Bata para entrar.",
     knockFrom: (name: string) => `${name} bateu`,
+    guestFrom: (name: string) => `${name} (convidado de fora) quer entrar na reunião`,
     knockDesktop: (name: string) => `${name} está batendo na porta da sua sala`,
     letInBtn: "Deixar entrar",
     notNowBtn: "Agora não",

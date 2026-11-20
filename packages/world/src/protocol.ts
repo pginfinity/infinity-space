@@ -105,6 +105,8 @@ export type ServerMsg =
   | { t: "pong"; at: number; serverTime: number }
   /** O servidor recusou uma pose (lugar não andável ou velocidade impossível) e devolve a última válida. */
   | { t: "correct"; x: number; z: number }
+  /** Só para o convidado de uma reunião: em que pé está a entrada e quem está na sala (nome e id, nada mais). */
+  | { t: "convidado"; estado: "aguardando" | "dentro" | "recusado" | "cheio"; sala: string; pessoas?: { id: string; name: string }[] }
   | { t: "error"; code: string; message: string };
 
 /** Fotografia de uma mesa de jogo. `state` é definido por cada jogo (ver packages/world/src/games). */

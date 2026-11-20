@@ -10,6 +10,7 @@ import { photoWall } from "./photowall.tsx";
 import { lobbyPanel } from "./painel.tsx";
 import { megafone } from "./megafone.tsx";
 import { quadro } from "./quadro.tsx";
+import { convite } from "./convite.tsx";
 
 /** Pacote "escritorio": interações sociais do escritório. */
 registerActivity(gong);
@@ -23,3 +24,4 @@ registerActivity(photoWall);
 registerActivity(lobbyPanel);
 registerActivity(megafone);
 registerActivity(quadro);
+registerActivity(convite);

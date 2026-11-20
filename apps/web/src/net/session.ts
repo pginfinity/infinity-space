@@ -7,6 +7,7 @@ import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
 import { recheckSession } from "./auth.ts";
 import { toast } from "../ui/toasts.ts";
 import { cancelWalk, standUp } from "../engine/movement.ts";
+import { wsUrl } from "./wsUrl.ts";
 
 
 const packr = new Packr({ useRecords: false });
@@ -40,13 +41,6 @@ export function isReady(): boolean {
 }
 
 /** Endereço do WebSocket. Em desenvolvimento o Vite faz proxy de /ws para o servidor. */
-function wsUrl(): string {
-  const env = import.meta.env.VITE_WS_URL as string | undefined;
-  if (env) return env;
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${location.host}/ws`;
-}
-
 function roomUrl(): string {
   const url = wsUrl();
   return training ? `${url}${url.includes("?") ? "&" : "?"}sala=treino` : url;

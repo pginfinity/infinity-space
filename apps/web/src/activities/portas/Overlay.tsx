@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { DoorClosed, DoorOpen, Ear, Lock, StickyNote, Users, X } from "lucide-react";
-import { DOOR_STATES, PORTAS, PORTAS_ID, type DoorState, type PortasState } from "@infinity/world";
+import { DoorClosed, DoorOpen, Ear, Lock, StickyNote, UserPlus, Users, X } from "lucide-react";
+import { CONVITE_ID, DOOR_STATES, PORTAS, PORTAS_ID, recGroup, recordable, type ConviteState, type DoorState, type PortasState, type Zone } from "@infinity/world";
 import { sendAct, useAct } from "../registry.ts";
 import { useApp } from "../../state/store.ts";
 import { self } from "../../world/registry.ts";
@@ -307,12 +307,17 @@ interface Ask {
 
 function Requests() {
   const state = useAct<PortasState>(PORTAS_ID);
+  const guests = useAct<ConviteState>(CONVITE_ID)?.pedidos;
   const selfId = useApp((s) => s.selfId);
-  const [zone, setZone] = useState<string | undefined>(undefined);
+  const [here, setHere] = useState<Zone | undefined>(undefined);
   useEffect(() => {
-    const id = window.setInterval(() => setZone(zoneAt(self)?.id), 250);
+    const id = window.setInterval(() => {
+      const z = zoneAt(self);
+      setHere((prev) => (prev?.id === z?.id ? prev : z));
+    }, 250);
     return () => window.clearInterval(id);
   }, []);
+  const zone = here?.id;
 
   const asks: Ask[] = [];
   if (state && selfId) {
@@ -338,6 +343,18 @@ function Requests() {
         no: () => sendAct(PORTAS_ID, "roda-atender", { circle: c!.id, who: a.id, ok: false }),
       });
     }
+  }
+  // Cliente com link de convite esperando para entrar na reunião desta sala.
+  const group = recordable(here) ? recGroup(here!) : null;
+  for (const g of guests ?? []) {
+    if (g.group !== group) continue;
+    asks.push({
+      key: `convite-${g.pid}`,
+      icon: UserPlus,
+      title: T.door.guestFrom(g.name),
+      yes: () => sendAct(CONVITE_ID, "admitir", { pid: g.pid }),
+      no: () => sendAct(CONVITE_ID, "recusar", { pid: g.pid }),
+    });
   }
 
   return (

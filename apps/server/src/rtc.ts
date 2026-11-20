@@ -16,9 +16,12 @@ export const RTC = {
   room: process.env.LIVEKIT_ROOM ?? "infinity-space",
 };
 
-/** Token de quem já está dentro do escritório (a identidade é o id da pessoa na sala do mundo). */
-export async function rtcToken(identity: string, name: string, room = RTC.room): Promise<string> {
-  const at = new AccessToken(RTC.apiKey, RTC.apiSecret, { identity, name, ttl: "8h" });
+/**
+ * Token de quem já está dentro do escritório (a identidade é o id da pessoa na sala do mundo).
+ * Sem nome: o convidado de uma reunião também entra no LiveKit e veria o nome de todos os conectados.
+ */
+export async function rtcToken(identity: string, room = RTC.room): Promise<string> {
+  const at = new AccessToken(RTC.apiKey, RTC.apiSecret, { identity, ttl: "8h" });
   at.addGrant({
     room,
     roomJoin: true,

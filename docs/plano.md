@@ -25,6 +25,8 @@ Megafone do gestor (20/11): o admin abre pela lista de pessoas. Aviso escrito vi
 
 Quadro branco nas salas (20/11): quem está numa sala de reunião (ou no auditório) abre o quadro dela (Excalidraw) e desenha junto com os outros da sala. Fica guardado para a próxima reunião; sem imagem (o quadro não guarda arquivo).
 
+Cliente convidado por link (20/11): quem está numa sala de reunião gera o link; o cliente diz o nome, espera alguém da sala deixar entrar e participa só com voz, vídeo e a lista de quem está na sala. O link vale 24 h para pedir entrada; se a conexão cair, alguém da sala precisa deixar entrar de novo.
+
 ## Etapa 0: Fundação
 - Monorepo, tokens da marca (cores, NORD, Geist), CLAUDE.md.
 - `packages/world`: formato do mapa, planta do Círculo de Evolução, colisão, rotas, regra de audição, com testes.

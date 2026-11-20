@@ -7,7 +7,7 @@ import { WebSocketServer } from "ws";
 import { OfficeRoom } from "./room.ts";
 import { Accounts, cleanEmail } from "./auth/accounts.ts";
 import { AUTH_REQUIRED, PUBLIC_URL, authRoutes, sessionIdFromCookie } from "./auth/routes.ts";
-import { AGENDA_API, PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
+import { AGENDA_API, CONVITE_PARAM, PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
 import { Agenda, agendaRoutes } from "./agenda/agenda.ts";
 import { photoWallRoutes } from "./activities/escritorio/photowall-http.ts";
 import type { PhotoWallActivity } from "./activities/escritorio/photowall.ts";
@@ -85,15 +85,20 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
   // Com login ligado: só entra com sessão válida e vindo do próprio app (evita sequestro do WebSocket).
-  const email = accounts.sessionEmail(sessionIdFromCookie(req.headers.cookie));
-  if (AUTH_REQUIRED) {
-    const origin = req.headers.origin;
-    const sameApp = !origin || origin === PUBLIC_URL || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-    if (!email || !sameApp) {
-      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
-      socket.destroy();
-      return;
-    }
+  // Convidado de reunião (/ws?convite=…): entra sem conta, só com um link que ainda vale.
+  const convite = url.searchParams.get(CONVITE_PARAM);
+  const guest = convite ? room.guestGroup(convite) : null;
+  const email = convite ? null : accounts.sessionEmail(sessionIdFromCookie(req.headers.cookie));
+  const origin = req.headers.origin;
+  const sameApp = !origin || origin === PUBLIC_URL || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  if ((convite && !guest) || (AUTH_REQUIRED && ((!email && !guest) || !sameApp))) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  if (guest) {
+    wss.handleUpgrade(req, socket, head, (ws) => room.accept(ws, undefined, guest));
+    return;
   }
   const auth = email ? { email, name: accounts.user(email)?.name ?? email } : undefined;
   const target = url.searchParams.get("sala") === "treino" ? training : room;

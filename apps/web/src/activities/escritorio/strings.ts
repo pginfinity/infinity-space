@@ -85,6 +85,16 @@ export const T = {
     close: "Fechar quadro",
     left: "Você saiu da sala: o quadro fechou.",
   },
+  convite: {
+    action: "Convidar cliente",
+    title: (room: string) => `Convite · ${room}`,
+    hint: "Mande o link para quem é de fora. A pessoa diz o nome e espera alguém desta sala deixar entrar; dentro, só ouve e vê quem está aqui.",
+    linkLabel: "Link do convite",
+    copy: "Copiar",
+    copied: "Copiado",
+    until: (hhmm: string) => `Dá para pedir entrada com este link até amanhã, ${hhmm}.`,
+    close: "Fechar",
+  },
   painel: {
     action: "Ver painel",
     title: "Painel do time",

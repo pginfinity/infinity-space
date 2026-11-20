@@ -36,8 +36,9 @@ import { ActivitiesManager } from "./activities/manager.ts";
 import type { Activity } from "./activities/types.ts";
 import { DATA_DIR, Store } from "./store.ts";
 import { RecordingActivity } from "./recording/manager.ts";
-import { MEGAFONE_ID, PORTAS_ID, audienceOf, type AudiencePerson, type MegafoneState, type Zone } from "@infinity/world";
+import { CONVITE_MAX_WAITING, MEGAFONE_ID, PORTAS_ID, audienceOf, type AudiencePerson, type MegafoneState, type PrivacyRules, type Zone } from "@infinity/world";
 import type { PrivacySource } from "./activities/portas/index.ts";
+import { ConviteActivity } from "./convite.ts";
 
 interface Member {
   info: PlayerInfo;
@@ -56,7 +57,22 @@ interface Member {
   audience: string;
   /** Última lista "quem pode te ver" enviada durante um sussurro ("" = igual à de ouvir). */
   sight: string;
+  /** Convidado de fora (link de reunião): o grupo da sala onde ele fica. Só recebe o que `GUEST_MSGS` deixa. */
+  guest?: string;
+  /** Última lista de quem está na sala enviada ao convidado. */
+  roster?: string;
 }
+
+/** Convidado esperando alguém da sala deixar entrar. */
+interface Waiting {
+  socket: WebSocket;
+  hello: Extract<ClientMsg, { t: "hello" }>;
+  group: string;
+  enter: (m: Member) => void;
+}
+
+/** O que chega ao convidado. Tudo o mais (chat, painel, atividades, quem está no escritório) fica de fora. */
+const GUEST_MSGS: ReadonlySet<ServerMsg["t"]> = new Set(["convidado", "audience", "rtc", "pong", "error"]);
 
 const EMOTE_SET: ReadonlySet<string> = new Set(EMOTES);
 
@@ -98,7 +114,7 @@ export class OfficeRoom {
         const enc = encode(msg);
         for (const id of opts.to) {
           const m = this.members.get(id);
-          if (m && m.socket.readyState === m.socket.OPEN) m.socket.send(enc);
+          if (m && !m.guest && m.socket.readyState === m.socket.OPEN) m.socket.send(enc);
         }
       },
       players: () => [...this.members.keys()],
@@ -140,6 +156,9 @@ export class OfficeRoom {
   private recording: RecordingActivity | null = null;
   /** Privacidade de conversa (pacote portas): portas fechadas, rodas e sussurros. */
   private privacy: PrivacySource | null = null;
+  /** Convites de cliente para reuniões (só no escritório, não na sala de treino). */
+  private convites: ConviteActivity | null = null;
+  private readonly waiting = new Map<string, Waiting>();
   private readonly seatPoints: Vec2[] = this.map.objects.filter((o) => o.interact?.action === "sit").map((o) => o.interact!.point);
   private tickTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
@@ -155,6 +174,8 @@ export class OfficeRoom {
     if (!this.training) {
       const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
       this.recording = rec as RecordingActivity;
+      const [conv] = this.acts.add((host) => [new ConviteActivity(host, { admit: (pid) => this.admitGuest(pid), refuse: (pid) => this.refuseGuest(pid) })], "convite");
+      this.convites = conv as ConviteActivity;
     }
     // Portas, roda fechada e sussurro: entram na audição e na validação de pose.
     const portas = this.acts.get(PORTAS_ID) as Partial<PrivacySource> | undefined;
@@ -166,6 +187,11 @@ export class OfficeRoom {
 
   /** A pessoa pode estar aqui? (sala de porta fechada ou trancada só para quem foi admitido) */
   private mayStand(id: string, p: Vec2): boolean {
+    const guest = this.members.get(id)?.guest;
+    if (guest) {
+      const z = this.zones.zoneAt(p);
+      return !!z && recGroup(z) === guest;
+    }
     return !this.privacy || this.privacy.mayStand(id, this.zones.zoneAt(p));
   }
 
@@ -229,9 +255,18 @@ export class OfficeRoom {
     return this.members.size;
   }
 
-  /** Uma conexão nova. A pessoa só entra na sala depois do "hello". */
-  accept(socket: WebSocket, auth?: { email: string; name: string }): void {
+  /** Grupo da sala de um link de convite que ainda vale (null = não vale). */
+  guestGroup(token: string): string | null {
+    return this.convites?.groupOf(token) ?? null;
+  }
+
+  /**
+   * Uma conexão nova. A pessoa só entra na sala depois do "hello".
+   * `guest`: convidado de fora para a sala desse grupo; espera na porta até alguém de dentro deixar entrar.
+   */
+  accept(socket: WebSocket, auth?: { email: string; name: string }, guest?: string): void {
     let member: Member | undefined;
+    let pid: string | undefined;
     const send = (msg: ServerMsg) => socket.readyState === socket.OPEN && socket.send(encode(msg));
 
     socket.on("pong", () => {
@@ -249,7 +284,8 @@ export class OfficeRoom {
           socket.close(4000, "version");
           return;
         }
-        member = this.join(socket, msg, auth);
+        if (!guest) member = this.join(socket, msg, auth);
+        else pid ??= this.waitGuest(socket, msg, guest, (m) => (member = m));
         return;
       }
       this.handle(member, msg);
@@ -257,23 +293,77 @@ export class OfficeRoom {
 
     socket.on("close", () => {
       if (member) this.leave(member);
+      else if (pid && this.waiting.delete(pid)) this.convites?.drop(pid);
     });
     socket.on("error", () => socket.terminate());
   }
 
-  private join(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>, auth?: { email: string; name: string }): Member {
+  /** O convidado chega à porta: quem está na sala vê o pedido (o resto do escritório só vê o nome). */
+  private waitGuest(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>, group: string, enter: (m: Member) => void): string | undefined {
+    const sala = this.groupName(group);
+    if (!this.convites || this.waiting.size >= CONVITE_MAX_WAITING) {
+      if (socket.readyState === socket.OPEN) socket.send(encode({ t: "convidado", estado: "cheio", sala }));
+      socket.close(4003, "full");
+      return undefined;
+    }
+    const pid = randomUUID().slice(0, 8);
+    this.waiting.set(pid, { socket, hello, group, enter });
+    this.convites.ask({ pid, name: cleanName(hello.name), group });
+    if (socket.readyState === socket.OPEN) socket.send(encode({ t: "convidado", estado: "aguardando", sala }));
+    return pid;
+  }
+
+  private admitGuest(pid: string): void {
+    const w = this.waiting.get(pid);
+    if (!w) return;
+    this.waiting.delete(pid);
+    if (w.socket.readyState === w.socket.OPEN) w.enter(this.join(w.socket, w.hello, undefined, w.group));
+  }
+
+  private refuseGuest(pid: string): void {
+    const w = this.waiting.get(pid);
+    if (!w) return;
+    this.waiting.delete(pid);
+    if (w.socket.readyState === w.socket.OPEN) w.socket.send(encode({ t: "convidado", estado: "recusado", sala: this.groupName(w.group) }));
+    w.socket.close(4003, "refused");
+  }
+
+  /** Nome da sala de um grupo (auditório e palco: o primeiro da lista). */
+  private groupName(group: string): string {
+    return this.map.zones.find((z) => recGroup(z) === group)?.name ?? "Sala";
+  }
+
+  /** Lugar do convidado: perto de uma cadeira livre da sala (senão, o meio dela). */
+  private guestSpot(group: string): Vec2 {
+    const inGroup = (p: Vec2) => {
+      const z = this.zones.zoneAt(p);
+      return !!z && recGroup(z) === group;
+    };
+    const free = (p: Vec2) => [...this.members.values()].every((m) => dist(p, { x: m.x, z: m.z }) > 0.8);
+    for (const s of this.seatPoints) {
+      const p = inGroup(s) ? this.nav.nearestWalkable(s, 1.5) : null;
+      if (p && inGroup(p) && free(p)) return p;
+    }
+    const poly = this.map.zones.find((z) => recGroup(z) === group)?.polygon ?? [];
+    const n = Math.max(1, poly.length);
+    const mid = { x: poly.reduce((a, v) => a + v.x, 0) / n, z: poly.reduce((a, v) => a + v.z, 0) / n };
+    const p = this.nav.nearestWalkable(mid, 3);
+    return p && inGroup(p) ? p : mid;
+  }
+
+  private join(socket: WebSocket, hello: Extract<ClientMsg, { t: "hello" }>, auth?: { email: string; name: string }, guest?: string): Member {
     const id = randomUUID().slice(0, 8);
-    const back = hello.at && Number.isFinite(hello.at.x) && Number.isFinite(hello.at.z) ? { x: hello.at.x, z: hello.at.z } : null;
+    const back = guest ? null : hello.at && Number.isFinite(hello.at.x) && Number.isFinite(hello.at.z) ? { x: hello.at.x, z: hello.at.z } : null;
     // Voltando de uma reconexão: no mesmo lugar se for andável. Sala de porta fechada não: o id é novo,
     // então a pessoa volta do lado de fora da porta e bate de novo.
     const barred = back && !this.mayStand(id, back) ? this.zones.zoneAt(back) : undefined;
     const door = barred ? this.privacy?.exitOf(barred.id, back ?? undefined) : undefined;
-    const spawn = back && !barred && this.nav.isWalkable(back) ? back : ((door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn());
+    const spawn = guest ? this.guestSpot(guest) : back && !barred && this.nav.isWalkable(back) ? back : ((door && this.nav.nearestWalkable(door, 2)) ?? this.freeSpawn());
     const member: Member = {
       info: {
         id,
-        // Com login, o nome vem da conta.
-        name: auth ? cleanName(auth.name) : cleanName(hello.name),
+        // Com login, o nome vem da conta. O convidado aparece para todos como convidado.
+        name: auth ? cleanName(auth.name) : guest ? `${cleanName(hello.name)} (convidado)` : cleanName(hello.name),
         look: cleanLook(hello.look),
         status: "available",
         lens: hello.lens === "3d" ? "3d" : "2d",
@@ -293,11 +383,13 @@ export class OfficeRoom {
       alive: true,
       audience: "",
       sight: "",
+      guest,
     };
     this.members.set(id, member);
 
     const others = [...this.members.values()].filter((m) => m !== member);
-    this.sendTo(member, {
+    if (guest) this.sendRoster(member);
+    else this.sendTo(member, {
       t: "welcome",
       you: id,
       map: { id: this.map.id, version: this.map.version },
@@ -309,7 +401,9 @@ export class OfficeRoom {
       acts: this.acts.snapshots(),
     });
     this.broadcast({ t: "join", player: member.info, pose: pose(member) }, member);
-    this.acts.join(id);
+    // O convidado não participa das atividades (jogos, rituais, presença): só da reunião.
+    if (!guest) this.acts.join(id);
+    else this.updateAudiences();
     console.log(`[sala] entrou ${member.info.name} (${id}) · ${this.members.size} online · ${others.length} já estavam`);
     return member;
   }
@@ -317,12 +411,14 @@ export class OfficeRoom {
   private leave(member: Member): void {
     if (!this.members.delete(member.info.id)) return;
     this.games.leave(member.info.id);
-    this.acts.leave(member.info.id);
+    if (!member.guest) this.acts.leave(member.info.id);
     this.broadcast({ t: "leave", id: member.info.id });
     console.log(`[sala] saiu ${member.info.name} (${member.info.id}) · ${this.members.size} online`);
   }
 
   private handle(m: Member, msg: ClientMsg): void {
+    // O convidado só liga e desliga microfone e câmera: não anda, não fala no chat, não mexe em atividade.
+    if (m.guest && msg.t !== "info" && msg.t !== "rtc" && msg.t !== "ping") return;
     switch (msg.t) {
       case "pose":
         this.onPose(m, msg);
@@ -334,7 +430,7 @@ export class OfficeRoom {
         this.onEmote(m, msg.e);
         break;
       case "rtc":
-        void rtcToken(m.info.id, m.info.name, this.training ? `${RTC.room}-treino` : RTC.room).then((token) => this.sendTo(m, { t: "rtc", url: RTC.publicUrl, token }));
+        void rtcToken(m.info.id, this.training ? `${RTC.room}-treino` : RTC.room).then((token) => this.sendTo(m, { t: "rtc", url: RTC.publicUrl, token }));
         break;
       case "game":
         if (typeof msg.table === "string" && typeof msg.op === "string") this.games.handle(m.info.id, msg.table, msg.op, msg.data);
@@ -385,7 +481,8 @@ export class OfficeRoom {
     m.dirty = true;
   }
 
-  private onInfo(m: Member, patch: InfoPatch): void {
+  private onInfo(m: Member, raw: InfoPatch): void {
+    const patch: InfoPatch = m.guest ? { mic: raw.mic, cam: raw.cam } : raw;
     const clean: InfoPatch = {};
     if (typeof patch.name === "string" && !m.email) clean.name = cleanName(patch.name);
     if (patch.look) clean.look = cleanLook(patch.look);
@@ -417,13 +514,20 @@ export class OfficeRoom {
     }
     const people: AudiencePerson[] = list.map((m) => ({ id: m.info.id, pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
     const opts = {
-      privacy: this.privacy?.privacy(),
+      privacy: this.rules(),
       recorderFor: (z: Zone) => (this.recording?.isRecording(recGroup(z)) ? recIdentity(recGroup(z)) : null),
     };
     const mega = this.megaphoneId();
     const megaOpts = { ...opts, megaphone: true };
+    const outsider = (id: string) => !this.members.get(id)?.guest;
     list.forEach((speaker, i) => {
-      const { voice, sight } = audienceOf(this.map.walls, people, people[i]!, speaker.info.id === mega ? megaOpts : opts);
+      let { voice, sight } = audienceOf(this.map.walls, people, people[i]!, speaker.info.id === mega ? megaOpts : opts);
+      // O megafone é aviso interno: não chega ao convidado.
+      if (speaker.info.id === mega) {
+        const same = sight === voice;
+        voice = voice.filter(outsider);
+        sight = same ? voice : sight.filter(outsider);
+      }
       // Sussurro: a voz vai só para uma pessoa, mas o vídeo e a tela continuam para quem já via.
       // Vai antes da lista de voz, para o vídeo dos outros não piscar na troca.
       const sightKey = sight === voice ? "" : sight.join(",");
@@ -436,7 +540,32 @@ export class OfficeRoom {
         speaker.audience = key;
         this.sendTo(speaker, { t: "audience", ids: voice });
       }
+      if (speaker.guest) this.sendRoster(speaker);
     });
+  }
+
+  /** Para o convidado: quem está na sala dele agora (só nome e id), quando muda. */
+  private sendRoster(g: Member): void {
+    const pessoas = this.membersIn(g.guest!)
+      .filter((id) => id !== g.info.id)
+      .map((id) => ({ id, name: this.members.get(id)!.info.name }));
+    const key = JSON.stringify(pessoas);
+    if (key === g.roster) return;
+    g.roster = key;
+    this.sendTo(g, { t: "convidado", estado: "dentro", sala: this.groupName(g.guest!), pessoas });
+  }
+
+  /** Regras de privacidade, com o convidado admitido na sala dele mesmo de porta fechada. */
+  private rules(): PrivacyRules | undefined {
+    const p = this.privacy?.privacy();
+    if (!p?.doors?.size) return p;
+    const doors = new Map(p.doors);
+    for (const m of this.members.values()) {
+      const z = m.guest ? this.zones.zoneAt({ x: m.x, z: m.z }) : undefined;
+      const set = z && doors.get(z.id);
+      if (set) doors.set(z.id, new Set([...set, m.info.id]));
+    }
+    return { ...p, doors };
   }
 
   /** Quem ouve a voz desta pessoa agora (mesma regra das listas de áudio, sem o gravador). */
@@ -445,7 +574,7 @@ export class OfficeRoom {
     const people: AudiencePerson[] = list.map((m) => ({ id: m.info.id, pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
     const speaker = people.find((p) => p.id === id);
     if (!speaker) return [];
-    return audienceOf(this.map.walls, people, speaker, { privacy: this.privacy?.privacy(), megaphone: id === this.megaphoneId() }).voice;
+    return audienceOf(this.map.walls, people, speaker, { privacy: this.rules(), megaphone: id === this.megaphoneId() }).voice;
   }
 
   /** Quem está com o megafone do gestor ligado (a voz chega a todas as áreas). */
@@ -513,13 +642,14 @@ export class OfficeRoom {
   }
 
   private sendTo(m: Member, msg: ServerMsg): void {
+    if (m.guest && !GUEST_MSGS.has(msg.t)) return;
     if (m.socket.readyState === m.socket.OPEN) m.socket.send(encode(msg));
   }
 
   private broadcast(msg: ServerMsg, except?: Member): void {
     const data = encode(msg);
     for (const m of this.members.values()) {
-      if (m !== except && m.socket.readyState === m.socket.OPEN) m.socket.send(data);
+      if (m !== except && !m.guest && m.socket.readyState === m.socket.OPEN) m.socket.send(data);
     }
   }
 
@@ -527,7 +657,7 @@ export class OfficeRoom {
   private broadcastEach(msgFor: (id: string) => ServerMsg): void {
     const cache = new Map<ServerMsg, ReturnType<typeof encode>>();
     for (const m of this.members.values()) {
-      if (m.socket.readyState !== m.socket.OPEN) continue;
+      if (m.guest || m.socket.readyState !== m.socket.OPEN) continue;
       const msg = msgFor(m.info.id);
       let data = cache.get(msg);
       if (!data) {
