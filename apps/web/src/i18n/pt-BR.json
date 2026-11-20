@@ -511,5 +511,12 @@
     "where": "Dá para mudar quando quiser em Ajustes › Gráficos.",
     "accept": "Usar o modo leve",
     "keep": "Manter assim"
+  },
+  "notify": {
+    "title": "Avisar fora do navegador?",
+    "body": "Com o Space minimizado ou atrás de outra janela, o computador avisa quando alguém te chamar, te mencionar, mandar mensagem ou bater na porta da sua sala.",
+    "where": "Em Foco ou numa sala com Não perturbe não avisa. Dá para mudar em Ajustes › Avisos.",
+    "yes": "Ativar avisos",
+    "no": "Agora não"
   }
 }

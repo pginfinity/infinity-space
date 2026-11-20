@@ -29,6 +29,8 @@ export interface MediaSettings {
   people: Record<string, number>;
   /** Presença: minutos sem mexer até ficar "Ausente" sozinho (0 = desligado). Detectado só aqui. */
   awayAfter: number;
+  /** Aviso do computador com o Space em segundo plano (null = ainda não respondeu à oferta). */
+  notify: boolean | null;
 }
 
 const KEY = "infinity.media.v1";
@@ -46,6 +48,7 @@ const DEFAULTS: MediaSettings = {
   master: 1,
   people: {},
   awayAfter: 0,
+  notify: null,
 };
 
 function load(): MediaSettings {

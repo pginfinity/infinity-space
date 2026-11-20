@@ -9,6 +9,7 @@ import { PortasOverlay } from "./Overlay.tsx";
 import { PortasScene } from "./Scene.tsx";
 import { doorOf, doors, enterWhenAdmitted, installPortas, myCircle, myId, nameOf, portas, startWhisper, stopWhisper, usePortasUi, zoneAt } from "./state.ts";
 import { T } from "./strings.ts";
+import { notifyDesktop } from "../../ui/DesktopNotify.tsx";
 
 /**
  * Pacote "portas": portas das salas (aberta, fechada, não perturbe; bater e bilhete), roda fechada
@@ -85,6 +86,7 @@ registerActivity({
       }
       case "bateu":
         sfx("porta-batida", { volume: 0.75 });
+        notifyDesktop(`porta:${zone}`, T.door.knockDesktop(text(d, "name")));
         break;
       case "batida":
         sfx("porta-batida", { volume: 0.6, ...(door ? { at: door.pos } : {}) });

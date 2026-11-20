@@ -31,6 +31,7 @@ import { setFace, startApproach, startDash, startFollow, stopControl, type Contr
 import { myStatus } from "../../presence/status.ts";
 import { usePresence } from "../../presence/store.ts";
 import { T } from "../../presence/strings.ts";
+import { notifyDesktop } from "../../ui/DesktopNotify.tsx";
 
 /** Acontecimentos do servidor: chamados e seguir. Atualizam a interface e o andar automático. */
 
@@ -45,12 +46,6 @@ export function callsQuiet(): boolean {
   return !!zone && actState<PortasState>(PORTAS_ID)?.doors[zone]?.state === "locked";
 }
 
-let callNotifier: ((inv: ChamadoInvite) => void) | null = null;
-/** Gancho para a notificação do sistema (próxima etapa): roda a cada chamado que toma a tela. */
-export function setCallNotifier(fn: ((inv: ChamadoInvite) => void) | null): void {
-  callNotifier = fn;
-}
-
 export function onCallEvent(e: ActEvent): void {
   const now = performance.now();
   switch (e.ev) {
@@ -62,7 +57,7 @@ export function onCallEvent(e: ActEvent): void {
       }
       usePresence.setState((s) => ({ callsIn: [...s.callsIn.filter((c) => c.from !== d.from).slice(-2), { ...d, start: now }] }));
       sfx("presenca-chamado", { volume: 0.45 });
-      callNotifier?.(d);
+      notifyDesktop("chamado", T.call.incoming(d.name));
       break;
     }
     case "calling":

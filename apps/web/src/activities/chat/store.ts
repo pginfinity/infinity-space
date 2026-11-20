@@ -21,6 +21,7 @@ import { isReady, serverNow } from "../../net/session.ts";
 import { useApp } from "../../state/store.ts";
 import { sfx } from "../../audio/sfx.ts";
 import { toast } from "../../ui/toasts.ts";
+import { notifyDesktop } from "../../ui/DesktopNotify.tsx";
 import { showBalloon } from "./balloonStore.ts";
 import { T } from "./strings.ts";
 
@@ -361,6 +362,7 @@ function notice(slot: string, text: string): void {
   if (now - (lastToast.get(slot) ?? -Infinity) < 8000) return;
   lastToast.set(slot, now);
   toast(text, 4000);
+  notifyDesktop(slot, text);
 }
 
 // ---- acontecimentos --------------------------------------------------------------------------
@@ -438,7 +440,8 @@ function onDirect(d: ChatDmEvent): void {
     return;
   }
   ping(chatMentionsName(m.text, myName()) ? "chat-mention" : "chat-dm");
-  if (!useChat.getState().open) notice(`dm:${d.with}`, T.toast.dm(m.name, chatPreview(m.text, 70)));
+  // Com o chat aberto e a janela em segundo plano, o aviso do computador ainda vale.
+  if (!useChat.getState().open || !document.hasFocus()) notice(`dm:${d.with}`, T.toast.dm(m.name, chatPreview(m.text, 70)));
 }
 
 /** Sua própria mensagem: o que veio antes dela conta como lido. */

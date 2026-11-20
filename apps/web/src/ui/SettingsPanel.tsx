@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Ban, Bot, Camera, CircleHelp, Gauge, Headphones, ImagePlus, Keyboard, Mic, Shirt, UserRound, Volume2, X } from "lucide-react";
+import { Ban, BellRing, Bot, Camera, CircleHelp, Gauge, Headphones, ImagePlus, Keyboard, Mic, Shirt, UserRound, Volume2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { applyCamBackground, audioContext } from "../media/rtc.ts";
@@ -11,6 +11,7 @@ import { applyBackground, backgroundSupported, clearCustomBackground, customBack
 import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 import { PresenceSettings } from "../presence/PresenceSettings.tsx";
+import { desktopPermission, setDesktopNotify } from "./DesktopNotify.tsx";
 import { openShortcuts, startTour } from "../onboarding/index.ts";
 import { useApp } from "../state/store.ts";
 
@@ -130,6 +131,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </Section>
 
         <PresenceSettings />
+        <NotifySection />
         <HelpSection onClose={onClose} />
       </div>
     </motion.aside>
@@ -486,6 +488,28 @@ const QUALITY_OPTIONS: { id: Quality; title: string; hint: string }[] = [
 ];
 
 /** Ajuda: rever os primeiros passos com o Orbi e a lista de atalhos. */
+/** Aviso do computador com o Space em segundo plano (ver DesktopNotify.tsx). */
+function NotifySection() {
+  const on = useMediaSettings((s) => s.notify === true);
+  const perm = desktopPermission();
+  if (perm === "unsupported") return null;
+  const denied = perm === "denied";
+  return (
+    <Section icon={<BellRing className="size-4" />} title="Avisos">
+      <Toggle
+        label="Avisar fora do navegador"
+        hint={
+          denied
+            ? "O navegador bloqueou os avisos deste site. Libere em Permissões do site (cadeado ao lado do endereço) e volte aqui."
+            : "Chamado, menção, mensagem e batida na porta com o Space minimizado ou atrás de outra janela. Em Foco ou Não perturbe não avisa."
+        }
+        checked={on && !denied}
+        onChange={(v) => void setDesktopNotify(v)}
+      />
+    </Section>
+  );
+}
+
 function HelpSection({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const go = (fn: () => void) => () => {

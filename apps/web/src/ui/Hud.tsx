@@ -19,6 +19,7 @@ import { ChatDockButton, setChatOpen, useChatOpen } from "../activities/chat/doc
 import { PresenceDock } from "../presence/Dock.tsx";
 import { openShortcuts, ShortcutsSheet, startTour, Tutorial } from "../onboarding/index.ts";
 import { PerfSuggestion } from "./PerfSuggestion.tsx";
+import { NotifyOffer } from "./DesktopNotify.tsx";
 import { HudStacks } from "./HudStack.tsx";
 import { AvatarEdit } from "./AvatarEdit.tsx";
 
@@ -94,6 +95,7 @@ export function Hud() {
       <InteractPrompt />
       <Tutorial />
       <PerfSuggestion />
+      <NotifyOffer />
       <ShortcutsSheet />
       <AvatarEdit />
 
