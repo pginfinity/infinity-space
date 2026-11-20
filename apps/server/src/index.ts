@@ -7,7 +7,8 @@ import { WebSocketServer } from "ws";
 import { OfficeRoom } from "./room.ts";
 import { Accounts, cleanEmail } from "./auth/accounts.ts";
 import { AUTH_REQUIRED, PUBLIC_URL, authRoutes, sessionIdFromCookie } from "./auth/routes.ts";
-import { PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
+import { AGENDA_API, PHOTOWALL_API, PHOTOWALL_ID } from "@infinity/world";
+import { Agenda, agendaRoutes } from "./agenda/agenda.ts";
 import { photoWallRoutes } from "./activities/escritorio/photowall-http.ts";
 import type { PhotoWallActivity } from "./activities/escritorio/photowall.ts";
 
@@ -31,21 +32,28 @@ if (seed && process.env.SEED_ADMIN_PASSWORD && !accounts.hasPassword(seed)) {
   accounts.ensureUser(seed, undefined, "admin");
   accounts.setPassword(seed, process.env.SEED_ADMIN_PASSWORD);
 }
+const sessionEmail = (cookie: string | undefined) => accounts.sessionEmail(sessionIdFromCookie(cookie)) ?? undefined;
+// Google Agenda (opcional, ver agenda/agenda.ts): só liga com GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.
+const agenda = new Agenda(room.store, room.map.zones, (email) => accounts.user(email)?.name ?? email.split("@")[0]!);
+agenda.start();
 app.route(
   "/api",
   authRoutes(accounts, {
     removed: (email) => {
       room.disconnectEmail(email);
       training.disconnectEmail(email);
+      // Conta apagada (não só senha redefinida): a agenda dela sai junto.
+      if (!accounts.user(email)) void agenda.disconnect(email);
     },
   }),
 );
+app.route(AGENDA_API, agendaRoutes(agenda, (c) => sessionEmail(c.req.header("cookie"))));
 // Mural de fotos da copa: envio da foto da cabine e as imagens (ver activities/escritorio/photowall-http.ts).
 app.route(
   PHOTOWALL_API,
   photoWallRoutes({
     wall: () => room.acts.get(PHOTOWALL_ID) as PhotoWallActivity | undefined,
-    sessionEmail: (c) => accounts.sessionEmail(sessionIdFromCookie(c.req.header("cookie"))) ?? undefined,
+    sessionEmail: (c) => sessionEmail(c.req.header("cookie")),
     authRequired: AUTH_REQUIRED,
   }),
 );

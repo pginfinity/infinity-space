@@ -6,6 +6,8 @@ import { useMedia } from "../media/rtc.ts";
 import { sampleRemote, self } from "../world/registry.ts";
 import { screenClaim, screenMesh, tvFor } from "./tvs.ts";
 import { world } from "../world/world.ts";
+import { agendaBooking } from "@infinity/world";
+import { useAgenda } from "../agenda/index.tsx";
 // pacote easter: às 22:04 a TV do Átrio mostra o relâmpago e "1,21 gigawatts!" no lugar da data
 import { clockParts, isGigawattMinute, lightningFlash } from "../activities/easter/rules.ts";
 import { tvNow } from "../activities/easter/state.ts";
@@ -43,6 +45,9 @@ export function ScreenTVs() {
     [],
   );
 
+  // Reserva de sala nova ou desmarcada (Google Agenda): redesenha na hora.
+  useEffect(() => useAgenda.subscribe(() => void (lastMinute.current = -1)), []);
+
   useFrame(() => {
     // Telas de espera: criadas quando as TVs já existem; hora redesenhada na virada de cada minuto.
     if (!idle.current.size) {
@@ -51,8 +56,8 @@ export function ScreenTVs() {
         if (o.type !== "tv" || !o.screenId) continue;
         const mesh = screenMesh(o.screenId);
         if (!mesh) continue;
-        const room = (o.zoneId ? map.zones.find((z) => z.id === o.zoneId) : zones.zoneAt(o.pos))?.name ?? "Infinity Space";
-        const scr = new IdleScreen(room, o.screenId);
+        const zone = o.zoneId ? map.zones.find((z) => z.id === o.zoneId) : zones.zoneAt(o.pos);
+        const scr = new IdleScreen(zone?.name ?? "Infinity Space", o.screenId, zone?.id);
         idle.current.set(o.screenId, scr);
         mesh.material = scr.material;
       }
@@ -162,6 +167,7 @@ class IdleScreen {
   constructor(
     private readonly room: string,
     readonly screenId: string,
+    private readonly zoneId?: string,
   ) {
     this.canvas.width = 640;
     this.canvas.height = 360;
@@ -211,6 +217,14 @@ class IdleScreen {
       g.fillStyle = "#8A93A3";
       g.font = '400 26px Geist, system-ui, sans-serif';
       g.fillText(DAY.format(now), w / 2, 280);
+      // Sala reservada na Google Agenda de alguém: em andamento ou a próxima de hoje (sem o título).
+      const b = this.zoneId ? agendaBooking(useAgenda.getState().rooms, this.zoneId, at) : undefined;
+      if (b && (b.start <= at || DAY.format(b.start) === DAY.format(now))) {
+        g.fillStyle = "#EE5C29";
+        g.font = '600 22px Geist, system-ui, sans-serif';
+        const when = b.start <= at ? `Em reunião até ${CLOCK.format(b.end)}` : `Reservada ${CLOCK.format(b.start)}–${CLOCK.format(b.end)}`;
+        g.fillText(`${when} · ${b.by}`, w / 2, 326);
+      }
     }
     this.tex.needsUpdate = true;
   }

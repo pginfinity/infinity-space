@@ -20,6 +20,7 @@ import { PresenceDock } from "../presence/Dock.tsx";
 import { openShortcuts, ShortcutsSheet, startTour, Tutorial } from "../onboarding/index.ts";
 import { PerfSuggestion } from "./PerfSuggestion.tsx";
 import { NotifyOffer } from "./DesktopNotify.tsx";
+import { AgendaCard } from "../agenda/index.tsx";
 import { HudStacks } from "./HudStack.tsx";
 import { AvatarEdit } from "./AvatarEdit.tsx";
 
@@ -96,6 +97,7 @@ export function Hud() {
       <Tutorial />
       <PerfSuggestion />
       <NotifyOffer />
+      <AgendaCard />
       <ShortcutsSheet />
       <AvatarEdit />
 

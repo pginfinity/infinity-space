@@ -10,7 +10,7 @@ Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gra
 |---|---|---|
 | 0. Fundação | Pronta | — |
 | 1. Áudio e vídeo | Pronta | — (aperte-para-falar, fundo da câmera e anel "quem te ouve" entraram em 16/11) |
-| 2. Tela compartilhada | Pronta | Próxima reserva na TV parada, quando houver agenda de salas (caneta e TV com sala e hora entraram em 16/11) |
+| 2. Tela compartilhada | Pronta | — (caneta e TV com sala e hora entraram em 16/11; a reserva da sala pela Google Agenda aparece na TV parada desde 20/11) |
 | 3. Presença e convivência | Pronta | Login, status, emotes, sentar, chat (Geral, Perto, conversas), chamar/seguir/Ctrl+K, ausente automático, janela flutuante, portas (fechada, não perturbe, bater), roda fechada, sussurro e mesas (check-in, fixas, objetos, recados) prontos em 16/11. Falta: readmitir na porta depois de reconectar (precisa do login ligado) |
 | 4. Lente, avatar e arte | Parcial | Terra no horário real, visual Cinema com sombras que acompanham, luz do dia e da noite, escada de qualidade e sugestão do modo leve prontas; avatares melhores (adiado a pedido) e transição contínua 2D↔3D |
 | 5. Jogos e rituais | Pronta | 16 jogos (incluindo damas, dominó, truco e palavra secreta), a daily e a mesa de foco com Pomodoro (ver interatividade.md) |

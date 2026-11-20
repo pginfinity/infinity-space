@@ -85,6 +85,17 @@ As reuniões gravadas dentro do Infinity Space (salas de reunião, diretoria e a
 
 Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração, os participantes e quem iniciou. A transcrição fica com o time de IA, lendo dessa pasta.
 
+## 8. Google Agenda
+
+Cada pessoa conecta a própria Google Agenda em *Áudio e vídeo → Agenda* (só leitura de eventos). Com ela conectada: durante uma reunião o balão dela mostra "Em reunião até HH:MM", na hora do evento aparece o botão **Entrar** (vai até a sala citada no local ou no título do evento, ou abre o Meet) e a TV da sala mostra a reserva. Os outros nunca veem o título do evento, só "Em reunião" e a sala reservada. Sem esta configuração, a opção não aparece no app.
+
+1. No mesmo projeto do Google Cloud (seção 7), **ativar a Google Calendar API**.
+2. Em *APIs e serviços → Tela de consentimento OAuth*, tipo **Interno** (só contas do Workspace da empresa, sem revisão do Google), com o escopo `.../auth/calendar.events.readonly`.
+3. Em *Credenciais → Criar credenciais → ID do cliente OAuth*, tipo **Aplicativo da Web**, com o URI de redirecionamento autorizado `https://space.ai-infinity.io/api/agenda/volta` (é o `PUBLIC_URL` + `/api/agenda/volta`).
+4. No `.env` de produção: `GOOGLE_CLIENT_ID=<id do cliente>` e `GOOGLE_CLIENT_SECRET=<secret>`. Reiniciar o app.
+
+O acesso de cada pessoa fica cifrado em `DATA_DIR/agenda/tokens.json` (chave tirada do secret). Trocar o secret desconecta todo mundo, que precisa conectar de novo. O servidor relê as agendas conectadas a cada 3 minutos; os eventos ficam só na memória. A sala é reconhecida pelo nome (ex.: local "Sala Eclipse", "Suíte 2", "Auditório").
+
 ## O que eu preciso receber
 
 1. IP e especificações da VPS.
@@ -94,3 +105,4 @@ Cada arquivo leva no nome a sala, a data e a hora, e na descrição a duração,
 5. Acesso ao repositório GitHub privado.
 6. Os e-mails de quem vai administrar o escritório (`ADMIN_EMAILS`).
 7. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).
+8. Para a Google Agenda: o Client ID e o secret do app OAuth (seção 8).

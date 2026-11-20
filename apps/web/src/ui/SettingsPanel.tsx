@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Ban, BellRing, Bot, Camera, CircleHelp, Gauge, Headphones, ImagePlus, Keyboard, Mic, Shirt, UserRound, Volume2, X } from "lucide-react";
+import { Ban, BellRing, Bot, CalendarClock, Camera, CircleHelp, Gauge, Headphones, ImagePlus, Keyboard, Mic, Shirt, UserRound, Volume2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { applyCamBackground, audioContext } from "../media/rtc.ts";
@@ -12,6 +12,7 @@ import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 import { PresenceSettings } from "../presence/PresenceSettings.tsx";
 import { desktopPermission, setDesktopNotify } from "./DesktopNotify.tsx";
+import { connectAgenda, disconnectAgenda, useAgenda } from "../agenda/index.tsx";
 import { openShortcuts, startTour } from "../onboarding/index.ts";
 import { useApp } from "../state/store.ts";
 
@@ -132,6 +133,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <PresenceSettings />
         <NotifySection />
+        <AgendaSection />
         <HelpSection onClose={onClose} />
       </div>
     </motion.aside>
@@ -487,7 +489,6 @@ const QUALITY_OPTIONS: { id: Quality; title: string; hint: string }[] = [
   { id: "alta", title: "Alta", hint: "Sombras mais nítidas e resolução cheia" },
 ];
 
-/** Ajuda: rever os primeiros passos com o Orbi e a lista de atalhos. */
 /** Aviso do computador com o Space em segundo plano (ver DesktopNotify.tsx). */
 function NotifySection() {
   const on = useMediaSettings((s) => s.notify === true);
@@ -510,6 +511,38 @@ function NotifySection() {
   );
 }
 
+/** Google Agenda (só quando o servidor tem o app do Google; ver agenda/index.tsx). */
+function AgendaSection() {
+  const configured = useAgenda((s) => s.configured);
+  const connected = useAgenda((s) => s.connected);
+  const [busy, setBusy] = useState(false);
+  if (!configured) return null;
+  const off = async () => {
+    setBusy(true);
+    await disconnectAgenda();
+    setBusy(false);
+  };
+  return (
+    <Section icon={<CalendarClock className="size-4" />} title="Agenda">
+      <p className="mb-2 text-xs text-slate">
+        {connected
+          ? "Google Agenda conectada. Na hora da reunião aparece o Entrar; os outros veem só \"Em reunião\" e a sala reservada, nunca o título."
+          : "Conecte a sua Google Agenda: na hora da reunião aparece o Entrar e o seu balão mostra \"Em reunião\". Os outros nunca veem o título."}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={connected ? () => void off() : connectAgenda}
+        className="flex items-center gap-2 rounded-xl border border-offwhite/10 px-3 py-2.5 text-left text-sm transition-colors hover:border-offwhite/25 disabled:opacity-50"
+      >
+        <CalendarClock className="size-4 shrink-0 text-slate" />
+        {connected ? "Desconectar a Google Agenda" : "Conectar a Google Agenda"}
+      </button>
+    </Section>
+  );
+}
+
+/** Ajuda: rever os primeiros passos com o Orbi e a lista de atalhos. */
 function HelpSection({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const go = (fn: () => void) => () => {
