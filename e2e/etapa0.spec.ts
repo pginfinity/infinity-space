@@ -29,6 +29,52 @@ test("tela de entrada", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/entrada.png` });
 });
 
+test("avatar só na primeira entrada; depois entra direto, com edição e lente nos ajustes", async ({ page }) => {
+  const state = () => page.evaluate(() => {
+    const s = window.__infinity!.store.getState() as unknown as { selfId: string | null; lens: string; players: Record<string, { name: string; look: unknown }> };
+    const me = s.selfId ? s.players[s.selfId] : undefined;
+    return { selfId: s.selfId, lens: s.lens, name: me?.name, look: JSON.stringify(me?.look) };
+  });
+  const inWorld = () => page.waitForFunction(() => !!window.__infinity?.store.getState().selfId, null, { timeout: 30_000 });
+
+  // Primeira entrada: cria o avatar, escolhe nome e lente.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Entre no escritório" })).toBeVisible();
+  await page.getByLabel("Seu nome").fill("Marina");
+  await page.getByRole("radio", { name: /^2D/ }).click();
+  await page.screenshot({ path: `${SHOTS}/entrada-primeira.png` });
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await inWorld();
+
+  // Segunda entrada: direto no escritório, com o mesmo nome e a última lente, sem confirmar nada.
+  await page.reload();
+  await inWorld();
+  await expect(page.getByRole("heading", { name: "Entre no escritório" })).toHaveCount(0);
+  expect(await state()).toMatchObject({ name: "Marina", lens: "2d" });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${SHOTS}/entrada-segunda.png` });
+
+  // Editar avatar pelos ajustes, sem sair do escritório (a mesma conexão continua).
+  const before = await state();
+  await page.getByRole("button", { name: "Áudio e vídeo" }).click();
+  await page.getByRole("button", { name: "Editar avatar" }).click();
+  const editor = page.getByRole("dialog", { name: "Editar avatar" });
+  await expect(editor.getByRole("heading", { name: "Editar avatar" })).toBeVisible();
+  await expect(editor.getByLabel("Seu nome")).toBeHidden();
+  await editor.getByRole("button", { name: "Sortear visual" }).click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `${SHOTS}/editar-avatar.png` });
+  await editor.getByRole("button", { name: "Salvar" }).click();
+  await expect(editor).toHaveCount(0);
+  await expect.poll(async () => (await state()).look).not.toBe(before.look);
+  expect((await state()).selfId).toBe(before.selfId);
+
+  // Lente pelos ajustes.
+  await page.getByRole("button", { name: "Áudio e vídeo" }).click();
+  await page.getByRole("radiogroup", { name: "Lente", exact: true }).getByRole("radio", { name: "3D" }).click();
+  await expect.poll(async () => (await state()).lens).toBe("3d");
+});
+
 test("2D e 3D no mesmo mundo, em tempo real", async ({ browser }) => {
   const ctxA = await browser.newContext();
   const ctxB = await browser.newContext();

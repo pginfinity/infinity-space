@@ -48,8 +48,13 @@ function randomLook(): AvatarLook {
   };
 }
 
-export function EntryScreen() {
+/**
+ * Criação do avatar. Aparece só na primeira entrada (conta sem visual salvo); depois a pessoa entra direto.
+ * Com `onClose`, é o "Editar avatar" aberto por cima do escritório: só o visual, sem nome nem lente.
+ */
+export function EntryScreen({ onClose }: { onClose?: (saved: boolean) => void } = {}) {
   const { t } = useTranslation();
+  const editing = !!onClose;
   const profile = useApp((s) => s.profile);
   const lens = useApp((s) => s.lens);
   const setProfile = useApp((s) => s.setProfile);
@@ -76,6 +81,7 @@ export function EntryScreen() {
     setProfile({ name: profile.name.trim() });
     // Com login, nome e visual ficam na conta (valem em qualquer computador); o servidor usa o nome dela.
     void saveProfile(profile.name.trim(), look).finally(enter);
+    onClose?.(true);
   };
 
   return (
@@ -86,7 +92,7 @@ export function EntryScreen() {
           <Logo size="lg" />
           <p className="mt-5 max-w-md text-balance text-lg leading-relaxed text-offwhite/80">{t("app.tagline")}</p>
           <InstallApp className="mt-4 self-start" />
-          {me && (
+          {me && !editing && (
             <p className="mt-4 text-sm text-slate">
               Entrando como <span className="text-offwhite/90">{me.email}</span> ·{" "}
               <button type="button" onClick={() => void logout()} className="underline-offset-4 hover:text-offwhite hover:underline">
@@ -111,19 +117,19 @@ export function EntryScreen() {
           noValidate
         >
           <div className="flex items-center justify-between gap-3">
-            <h1 className="font-display text-lg font-medium uppercase tracking-[0.06em]">{t("entry.title")}</h1>
+            <h1 className="font-display text-lg font-medium uppercase tracking-[0.06em]">{t(editing ? "entry.editTitle" : "entry.title")}</h1>
             <button type="button" onClick={() => setProfile({ look: randomLook() })} className="flex items-center gap-1.5 rounded-full border border-offwhite/12 px-3 py-1.5 text-xs text-slate transition-colors hover:border-signal hover:text-offwhite">
               <Dices className="size-3.5" /> Sortear visual
             </button>
           </div>
 
-          <div className="mt-5">
+          <div className={clsx("mt-5", editing && "hidden")}>
             <label htmlFor="name" className="label-caps">
               {t("entry.name")}
             </label>
             <input
               id="name"
-              autoFocus
+              autoFocus={!editing}
               autoComplete="name"
               maxLength={32}
               value={profile.name}
@@ -206,7 +212,7 @@ export function EntryScreen() {
             )}
           </div>
 
-          <fieldset className="mt-6">
+          <fieldset className={clsx("mt-6", editing && "hidden")}>
             <legend className="label-caps">{t("entry.lens")}</legend>
             <div className="mt-2 grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={t("entry.lens")}>
               <LensCard value="2d" current={lens} onPick={setLens} icon={<MapIcon className="size-4" />} title={t("entry.lens2d")} hint={t("entry.lens2dHint")} />
@@ -218,10 +224,16 @@ export function EntryScreen() {
             type="submit"
             className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange px-5 py-3.5 font-semibold text-white shadow-[0_8px_30px_-8px_rgb(238_92_41/0.6)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99]"
           >
-            {t("entry.enter")}
+            {t(editing ? "entry.save" : "entry.enter")}
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </button>
-          <p className="mt-3 text-center text-xs text-slate">{t("entry.remember")}</p>
+          {editing ? (
+            <button type="button" onClick={() => onClose(false)} className="mt-2 w-full rounded-xl px-5 py-2.5 text-sm text-slate transition-colors hover:text-offwhite">
+              {t("entry.cancel")}
+            </button>
+          ) : (
+            <p className="mt-3 text-center text-xs text-slate">{t("entry.remember")}</p>
+          )}
         </motion.form>
       </div>
     </div>

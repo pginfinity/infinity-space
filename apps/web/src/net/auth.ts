@@ -42,6 +42,9 @@ export async function loadAuth(): Promise<void> {
   const expired = EXPIRED;
   const cfg = await api<{ auth: boolean }>("/config");
   if (!cfg.data?.auth) {
+    // Sem login (desenvolvimento): quem já entrou neste navegador volta direto, com o nome e a lente guardados.
+    const app = useApp.getState();
+    if (app.phase === "entry" && app.profile.name.trim()) app.enter();
     useAuth.setState({ status: "off", me: null, expired: false });
     return;
   }
@@ -54,9 +57,14 @@ export async function loadAuth(): Promise<void> {
   }
 }
 
-/** Nome e visual salvos na conta passam a valer no app. */
+/**
+ * Nome e visual salvos na conta passam a valer no app. Conta com visual já criou o avatar:
+ * entra direto, com o nome da conta e a última lente deste dispositivo. Sem visual, é a primeira entrada.
+ */
 function applyMe(me: Me): void {
-  useApp.getState().setProfile(me.look ? { name: me.name, look: me.look } : { name: me.name });
+  const app = useApp.getState();
+  app.setProfile(me.look ? { name: me.name, look: me.look } : { name: me.name });
+  if (me.look) app.enter();
 }
 
 export type LinkResult = "sent" | "invalid" | "limit" | "offline";

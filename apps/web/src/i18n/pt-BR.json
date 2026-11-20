@@ -18,7 +18,11 @@
     "lens3dHint": "Imersivo. Melhor em PC com placa de vídeo.",
     "enter": "Entrar",
     "remember": "Suas escolhas ficam salvas neste dispositivo.",
-    "nameRequired": "Digite seu nome para entrar."
+    "nameRequired": "Digite seu nome para entrar.",
+    "editTitle": "Editar avatar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "you": "Você no escritório"
   },
   "hud": {
     "online_one": "{{count}} pessoa online",

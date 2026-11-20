@@ -20,6 +20,7 @@ import { PresenceDock } from "../presence/Dock.tsx";
 import { openShortcuts, ShortcutsSheet, startTour, Tutorial } from "../onboarding/index.ts";
 import { PerfSuggestion } from "./PerfSuggestion.tsx";
 import { HudStacks } from "./HudStack.tsx";
+import { AvatarEdit } from "./AvatarEdit.tsx";
 
 /** Camada de interface sobre o mundo. */
 export function Hud() {
@@ -94,6 +95,7 @@ export function Hud() {
       <Tutorial />
       <PerfSuggestion />
       <ShortcutsSheet />
+      <AvatarEdit />
 
       {/* Barra de emotes, aberta pela doca. */}
       <AnimatePresence>

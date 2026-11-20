@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
-import { Bot, Camera, CircleHelp, Gauge, Headphones, Keyboard, Mic, Volume2, X } from "lucide-react";
+import { Bot, Camera, CircleHelp, Gauge, Headphones, Keyboard, Mic, Shirt, UserRound, Volume2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { setQuality, useQuality, type Quality } from "../scene/quality.ts";
 import { audioContext } from "../media/rtc.ts";
@@ -12,6 +12,7 @@ import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 import { sfx } from "../audio/sfx.ts";
 import { PresenceSettings } from "../presence/PresenceSettings.tsx";
 import { openShortcuts, startTour } from "../onboarding/index.ts";
+import { useApp } from "../state/store.ts";
 
 /**
  * Áudio e vídeo de cada pessoa: dispositivos, supressão de ruído, teste do microfone com o filtro
@@ -48,6 +49,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       </header>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+        <YouSection onClose={onClose} />
         <Section icon={<Mic className="size-4" />} title="Microfone">
           <DeviceSelect label="Microfone" value={s.micId} options={devices.audioinput} onChange={(micId) => setMediaSettings({ micId })} />
           <MicTest />
@@ -402,6 +404,44 @@ function HelpSection({ onClose }: { onClose: () => void }) {
           <Keyboard className="size-4 shrink-0 text-slate" />
           {t("shortcuts.title")}
         </button>
+      </div>
+    </Section>
+  );
+}
+
+/** Você no escritório: editar o avatar (o estúdio abre por cima, sem sair) e a lente 2D/3D. */
+function YouSection({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const lens = useApp((s) => s.lens);
+  return (
+    <Section icon={<UserRound className="size-4" />} title={t("entry.you")}>
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          useApp.getState().editAvatar(true);
+        }}
+        className="flex w-full items-center gap-2 rounded-xl border border-offwhite/10 px-3 py-2.5 text-left text-sm transition-colors hover:border-offwhite/25"
+      >
+        <Shirt className="size-4 shrink-0 text-slate" />
+        {t("entry.editTitle")}
+      </button>
+      <div>
+        <p className="mb-2 text-xs font-medium text-offwhite/85">{t("hud.lens")}</p>
+        <div className="flex rounded-xl bg-deep/60 p-0.5" role="radiogroup" aria-label={t("hud.lens")}>
+          {(["2d", "3d"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={lens === l}
+              onClick={() => useApp.getState().setLens(l)}
+              className={clsx("flex-1 rounded-[10px] px-2 py-1.5 text-xs transition-colors", lens === l ? "bg-offwhite/12 text-offwhite" : "text-slate hover:text-offwhite")}
+            >
+              {t(l === "2d" ? "entry.lens2d" : "entry.lens3d")}
+            </button>
+          ))}
+        </div>
       </div>
     </Section>
   );
