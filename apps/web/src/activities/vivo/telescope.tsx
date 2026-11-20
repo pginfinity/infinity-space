@@ -10,7 +10,7 @@ import { sfx } from "../../audio/sfx.ts";
 import { self } from "../../world/registry.ts";
 import { Space } from "../../scene/Space.tsx";
 import { getSky } from "../../scene/astro/live.ts";
-import { EARTH_ANGULAR_RADIUS } from "../../scene/astro/astro.ts";
+import { EARTH_ANGULAR_RADIUS, type Vec3 } from "../../scene/astro/astro.ts";
 import { SPACE } from "../../world/theme.ts";
 import { T } from "./strings.ts";
 
@@ -25,8 +25,16 @@ interface TeleUi {
   open: boolean;
   /** De onde abriu (para fechar se a pessoa sair andando). */
   at: { x: number; z: number } | null;
+  /** Aberto pelo cartão de um astro: olha para ele (senão, a mira padrão). */
+  target: (Aim & { label: string }) | null;
 }
-const useTele = create<TeleUi>(() => ({ open: false, at: null }));
+const useTele = create<TeleUi>(() => ({ open: false, at: null, target: null }));
+
+/** Abre o telescópio já apontado para um astro (cartão do céu). `fov` em graus. */
+export function openTelescopeOn(dir: Vec3, fov: number, label: string): void {
+  sfx("vivo-telescope", { volume: 0.5 });
+  useTele.setState({ open: true, at: null, target: { dir: new THREE.Vector3(...dir), fov, moon: false, label } });
+}
 
 export const telescopeClient: ActivityClient = {
   name: "vivo/telescopio",
@@ -34,7 +42,7 @@ export const telescopeClient: ActivityClient = {
   label: () => T.telescope.action,
   use: (o: MapObject) => {
     sfx("vivo-telescope", { volume: 0.5 });
-    useTele.setState({ open: true, at: { x: o.pos.x, z: o.pos.z } });
+    useTele.setState({ open: true, at: { x: o.pos.x, z: o.pos.z }, target: null });
   },
   Overlay: TelescopeOverlay,
 };
@@ -45,9 +53,9 @@ function TelescopeOverlay() {
 }
 
 function TelescopeView() {
-  const aim = useMemo(telescopeAim, []);
+  const aim: Aim & { label?: string } = useMemo(() => useTele.getState().target ?? telescopeAim(), []);
   const closeBtn = useRef<HTMLButtonElement>(null);
-  const close = () => useTele.setState({ open: false, at: null });
+  const close = () => useTele.setState({ open: false, at: null, target: null });
   useEffect(() => {
     closeBtn.current?.focus();
     // Esc fecha mesmo se o foco sair da janela do telescópio.
@@ -102,7 +110,7 @@ function TelescopeView() {
           <TelescopeIcon className="size-4 text-sky" aria-hidden />
           {T.telescope.title}
         </p>
-        <p className="text-sm text-slate">{aim.moon ? T.telescope.captionMoon : T.telescope.caption}</p>
+        <p className="text-sm text-slate">{aim.label ?? (aim.moon ? T.telescope.captionMoon : T.telescope.caption)}</p>
       </div>
       <button
         ref={closeBtn}

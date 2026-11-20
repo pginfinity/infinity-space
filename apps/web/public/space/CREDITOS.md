@@ -11,6 +11,7 @@ uma vez, reduzidos com ffmpeg e convertidos para formatos leves. Total: ~1,8 MB.
 | `lua-1k.jpg` (1024×512) | Mapa de cor da Lua | NASA SVS **CGI Moon Kit** (ID 4720), `lroc_color_poles_1k.jpg`: <https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_1k.jpg> | Domínio público. Crédito: NASA's Scientific Visualization Studio; dados LRO/LROC WAC (NASA/GSFC/Arizona State University). |
 | `via-lactea-2k.jpg` (2048×1024), `via-lactea-1k.jpg` (1024×512) | Via Láctea sem as estrelas, em RA/Dec (J2000) | NASA SVS **Deep Star Maps 2020** (ID 4851), `milkyway_2020_4k.exr`: <https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004851/milkyway_2020_4k.exr> | Crédito pedido pela NASA: "NASA/Goddard Space Flight Center Scientific Visualization Studio. Gaia DR2: ESA/Gaia/DPAC". Imagem da NASA (domínio público) feita com dados do Gaia DR2 da ESA, que a ESA licencia como CC BY-SA 3.0 IGO: manter este crédito. |
 | `estrelas.bin` (17 KB, 2.887 estrelas até a magnitude 5,5) | Posição J2000, magnitude e cor (B-V) das estrelas | **Yale Bright Star Catalog**, 5ª edição (Hoffleit & Warren 1991), arquivo `bsc5.dat` do Harvard-Smithsonian CfA: <http://tdc-www.harvard.edu/catalogs/bsc5.html>, convertido por `scripts/ceu/estrelas.mjs` | Catálogo de dados científicos distribuído livremente (NASA ADC / CDS V/50); sem restrição de uso. |
+| `constelacoes.json` (~5 KB: 24 constelações e 24 estrelas com nome) | Traços das constelações e estrelas que abrem cartão ao clicar | Posições do mesmo **Yale Bright Star Catalog** (`bsc5.dat`); as figuras (quem liga com quem) foram escritas à mão em `scripts/ceu/constelacoes.mjs`, pela designação de Bayer | Posições: catálogo livre (como acima). Figuras: nossas, sem fonte de terceiros. |
 
 ## Como foram gerados
 
@@ -36,4 +37,5 @@ ffmpeg -i via-lactea-2k.jpg -vf scale=1024:512:flags=area -q:v 4 via-lactea-1k.j
 
 # Estrelas
 node scripts/ceu/estrelas.mjs bsc5.dat.gz
+node scripts/ceu/constelacoes.mjs bsc5.dat.gz
 ```

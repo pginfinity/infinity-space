@@ -20,7 +20,7 @@ const fullFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-dig
 const timeFmt = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 const keyFmt = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: TZ });
 
-function useTick(ms: number): number {
+export function useTick(ms: number): number {
   const [now, setNow] = useState(() => skyNow());
   useEffect(() => {
     const id = window.setInterval(() => setNow(skyNow()), ms);
@@ -132,7 +132,7 @@ function MoonRow({ sky, up, date }: { sky: Sky; up: Upcoming | null; date: (d: D
  * Lua desenhada como se vê de São Paulo (hemisfério sul): crescendo, o lado aceso fica à esquerda.
  * A borda da sombra é uma elipse: curva para o lado aceso no crescente/minguante e para fora na gibosa.
  */
-function MoonIcon({ phase }: { phase: number }) {
+export function MoonIcon({ phase }: { phase: number }) {
   const p = ((phase % 360) + 360) % 360;
   const r = 8;
   const rx = Math.abs(Math.cos((p * Math.PI) / 180)) * r;

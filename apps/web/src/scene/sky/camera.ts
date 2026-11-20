@@ -52,10 +52,14 @@ export function updateSkyCamera(gl: THREE.WebGLRenderer, camera: THREE.Camera): 
   SKY_PX.value = gl.getPixelRatio();
 }
 
-/** Prepara um objeto do céu: sem recorte por frustum, ordem fixa e a matriz do céu antes de desenhar. */
+/**
+ * Prepara um objeto do céu: sem recorte por frustum, ordem fixa e a matriz do céu antes de desenhar.
+ * Fora dos raios de clique: a geometria fica na origem (o céu está no infinito) e "acertaria" a estação.
+ */
 export function skyObject<T extends THREE.Object3D>(o: T, order: number): T {
   o.frustumCulled = false;
   o.renderOrder = order;
+  o.raycast = () => {};
   o.onBeforeRender = (gl, _scene, camera) => updateSkyCamera(gl, camera);
   return o;
 }

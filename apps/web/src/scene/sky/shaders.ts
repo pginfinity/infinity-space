@@ -44,13 +44,25 @@ uniform float uSizeK;
 attribute float aMag;
 attribute vec3 aColor;
 varying vec3 vColor;
+#ifdef TWINKLE
+uniform float uTime;
+#endif
 void main() {
-  gl_Position = skyClip(uRot * position);
+  vec3 d = uRot * position;
+  gl_Position = skyClip(d);
   // Fluxo relativo à magnitude 2; o tamanho cresce devagar e o brilho carrega o resto.
   float flux = pow(10.0, -0.4 * (aMag - 2.0));
   float size = clamp(1.2 + (3.5 - aMag) * 0.7, 1.0, 5.0) * uSizeK;
   gl_PointSize = max(1.0, size * uPx);
   vColor = aColor * clamp(0.16 + 0.9 * sqrt(flux), 0.0, 3.0) * uGain;
+#ifdef TWINKLE
+  // No vácuo estrela não pisca; perto da borda da Terra a luz atravessa a atmosfera e cintila
+  // (e avermelha um pouco). Borda da Terra em y ≈ -0,34; acima de ~-7° de altura, parada.
+  float h = fract(sin(dot(position, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+  float limb = 1.0 - smoothstep(-0.34, -0.12, d.y);
+  float tw = sin(uTime * (6.0 + 9.0 * h) + h * 60.0) * sin(uTime * (1.7 + 2.3 * h) + h * 17.0);
+  vColor *= (1.0 + limb * 0.55 * tw) * mix(vec3(1.0), vec3(1.0, 0.78, 0.6), limb * 0.6);
+#endif
 }
 `;
 
@@ -60,6 +72,22 @@ void main() {
   vec2 q = gl_PointCoord * 2.0 - 1.0;
   float a = exp(-dot(q, q) * 2.0);
   gl_FragColor = vec4(vColor * a, 0.0);
+  ${OUT}
+}
+`;
+
+// ---- constelações (linhas finas) ----------------------------------------------------------------
+
+export const lineVert = /* glsl */ `
+${SKY_GLSL}
+uniform mat3 uRot;
+void main() { gl_Position = skyClip(uRot * position); }
+`;
+export const lineFrag = /* glsl */ `
+uniform float uAlpha;
+void main() {
+  // Azul da marca bem apagado: guia o olho sem competir com as estrelas.
+  gl_FragColor = vec4(vec3(0.07, 0.28, 0.42) * uAlpha, 0.0);
   ${OUT}
 }
 `;
