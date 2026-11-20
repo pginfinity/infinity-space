@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Eye, Flag, LoaderCircle, LogOut, X } from "lucide-react";
+import { Eye, Flag, LoaderCircle, LogOut } from "lucide-react";
 import type { DuelState, MapObject } from "@infinity/world";
 import { useApp } from "../../../state/store.ts";
 import { STATUS_COLOR } from "../../../world/theme.ts";
@@ -11,6 +11,7 @@ import { sfx } from "../../../audio/sfx.ts";
 import { duelNet, type DuelGameClient } from "./net.ts";
 import { cancelDuelSeat, leaveDuel, openDuel, requestDuelSeat, useDuelUi } from "./ui.ts";
 import { T } from "../strings.ts";
+import { GAME_WINDOW, GameLayout, WindowButtons, gameWindowMotion } from "../../../games/GameWindow.tsx";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -87,15 +88,8 @@ export function DuelPanel<S>({ id, view }: { id: string; view: DuelView<S> }) {
     <motion.aside
       role="dialog"
       aria-label={view.title}
-      initial={{ opacity: 0, x: -18 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -18 }}
-      transition={{ duration: 0.28, ease: EASE }}
-      className={clsx(
-        "glass pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-[var(--radius-panel)] text-offwhite",
-        "inset-x-2 bottom-2 max-h-[calc(100dvh-72px)]",
-        "sm:inset-x-auto sm:bottom-auto sm:left-3 sm:top-16 sm:h-[calc(100dvh-64px-84px)] sm:max-h-[860px] sm:w-[400px]",
-      )}
+      {...gameWindowMotion}
+      className={clsx(GAME_WINDOW, "sm:w-[min(480px,calc(100vw-32px))] lg:w-[min(calc(100vw-32px),calc(56dvh+250px))]")}
       data-duel-panel={id}
     >
       <header className="flex items-start gap-3 px-4 pb-2 pt-3.5">
@@ -107,19 +101,24 @@ export function DuelPanel<S>({ id, view }: { id: string; view: DuelView<S> }) {
           <h2 className="font-display text-[15px] font-bold uppercase leading-tight tracking-[0.1em]">{view.title}</h2>
           {st && <StatusLine st={st} seat={seat} view={view} net={net} />}
         </div>
-        <button type="button" onClick={() => openDuel(null)} className="-mr-1.5 rounded-lg p-2 text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite" aria-label={T.close} title={T.close}>
-          <X className="size-4" />
-        </button>
+        <WindowButtons title={view.title} close={() => openDuel(null)} restore={() => openDuel(id)} />
       </header>
       {st ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-3.5">
-          <SeatStrip id={id} st={st} view={view} seat={seat === 1 ? 0 : 1} me={seat} />
-          <Arena id={id} st={st} view={view} seat={seat} net={net} />
-          <SeatStrip id={id} st={st} view={view} seat={seat === 1 ? 1 : 0} me={seat} />
-          <Notice />
-          <AnimatePresence mode="wait" initial={false}>
-            {st.phase === "finished" ? <EndBanner key={`end-${st.round}`} id={id} st={st} view={view} seat={seat} /> : <Footer key="footer" id={id} st={st} seat={seat} view={view} />}
-          </AnimatePresence>
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-3.5">
+          <GameLayout
+            fill
+            top={<SeatStrip id={id} st={st} view={view} seat={seat === 1 ? 0 : 1} me={seat} />}
+            board={<Arena id={id} st={st} view={view} seat={seat} net={net} />}
+            bottom={<SeatStrip id={id} st={st} view={view} seat={seat === 1 ? 1 : 0} me={seat} />}
+            side={
+              <>
+                <Notice />
+                <AnimatePresence mode="wait" initial={false}>
+                  {st.phase === "finished" ? <EndBanner key={`end-${st.round}`} id={id} st={st} view={view} seat={seat} /> : <Footer key="footer" id={id} st={st} seat={seat} view={view} />}
+                </AnimatePresence>
+              </>
+            }
+          />
         </div>
       ) : (
         <p className="py-10 text-center text-sm text-slate">…</p>
@@ -170,12 +169,12 @@ function SeatStrip<S>({ id, st, view, seat, me }: { id: string; st: DuelState; v
             {pid && <span className="size-2 shrink-0 rounded-full" style={{ background: player ? STATUS_COLOR[player.status] : "#8A93A3" }} aria-hidden />}
             <span className="truncate">{shownName}</span>
             {isMe && <span className="shrink-0 text-xs font-normal text-slate">({T.you})</span>}
-            {winner && <span className="shrink-0 rounded-full bg-offwhite/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]">Venceu</span>}
+            {winner && <span className="shrink-0 rounded-full bg-offwhite/10 px-2 py-0.5 text-xs font-medium uppercase tracking-[0.1em]">Venceu</span>}
           </p>
         ) : (
           <p className="text-sm text-slate">{T.duel.emptySeat}</p>
         )}
-        <p className="text-[11px] uppercase tracking-[0.12em] text-slate">{view.seatNames[seat]}</p>
+        <p className="text-xs uppercase tracking-[0.12em] text-slate">{view.seatNames[seat]}</p>
       </div>
       {canSit &&
         (walking ? (

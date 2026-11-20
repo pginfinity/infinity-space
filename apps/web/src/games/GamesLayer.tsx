@@ -4,6 +4,7 @@ import { canAct, type BaseState } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { closeGame, openGame } from "./api.ts";
 import { GamePanel } from "./GamePanel.tsx";
+import { MinimizedGame } from "./GameWindow.tsx";
 import { SeatToken } from "./tokens.tsx";
 import { GAME_TITLE, S } from "./strings.ts";
 
@@ -31,6 +32,7 @@ export function GamesLayer() {
     <div className="pointer-events-none absolute inset-0 z-30">
       <AnimatePresence>{active && <GamePanel key={active} table={active} />}</AnimatePresence>
       <AnimatePresence>{!active && <TurnChip />}</AnimatePresence>
+      <MinimizedGame />
     </div>
   );
 }

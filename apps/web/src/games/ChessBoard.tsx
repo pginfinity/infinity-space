@@ -208,7 +208,7 @@ export function Captured({ s, color }: { s: ChessState; color: "w" | "b" }) {
           <PieceSvg key={i} type={p} color={color === "w" ? "b" : "w"} className="size-4 shrink-0" />
         ))}
       </span>
-      {adv > 0 && <span className="ml-1 text-[11px] font-medium tabular-nums text-slate">+{adv}</span>}
+      {adv > 0 && <span className="ml-1 text-xs font-medium tabular-nums text-slate">+{adv}</span>}
     </span>
   );
 }

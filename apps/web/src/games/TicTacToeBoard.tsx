@@ -20,7 +20,7 @@ export function TicTacToeBoard({ t, seat, canMove }: Props) {
   const line = new Set(s.line ?? []);
 
   return (
-    <div className="mx-auto grid aspect-square w-full max-w-[360px] touch-manipulation select-none grid-cols-3 gap-2 rounded-2xl bg-offwhite/6 p-2 ring-1 ring-offwhite/10" role="grid" aria-label={S.tttBoard}>
+    <div className="mx-auto grid aspect-square w-full touch-manipulation select-none grid-cols-3 gap-2 rounded-2xl bg-offwhite/6 p-2 ring-1 ring-offwhite/10" role="grid" aria-label={S.tttBoard}>
       {s.grid.map((who, i) => {
         const empty = who === TTT_EMPTY;
         const playable = canMove && empty;

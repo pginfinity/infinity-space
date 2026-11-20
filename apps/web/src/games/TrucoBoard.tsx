@@ -80,7 +80,7 @@ export function TrucoBoard({ t, seat, canMove }: Props) {
           <>
             <div className="absolute left-[4%] top-[6%] flex flex-col items-center gap-1">
               <CardArt card={s.vira} w={46} h={68} className="rotate-[-8deg] drop-shadow-[0_3px_4px_rgb(0_0_0/0.35)]" />
-              <span className="rounded-full bg-space/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-offwhite/90">{S.manilha(TRUCO_RANKS[s.manilha]!)}</span>
+              <span className="rounded-full bg-space/60 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-offwhite/90">{S.manilha(TRUCO_RANKS[s.manilha]!)}</span>
             </div>
             {s.active.map((x) => (
               <SeatTag key={x} where={spot(x)} name={nameOf(t, x)} count={s.counts[x] ?? 0} turn={!s.raise && !s.deciding && s.turn === x} me={x === me} />
@@ -203,7 +203,7 @@ const TAG_SPOT: Record<"bottom" | "right" | "top" | "left", string> = {
 /** Etiqueta de cada lugar na beira da mesa: nome e quantas cartas tem. */
 function SeatTag({ where, name, count, turn, me }: { where: "bottom" | "right" | "top" | "left"; name: string; count: number; turn: boolean; me: boolean }) {
   return (
-    <div className={clsx("absolute flex max-w-[44%] items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px]", TAG_SPOT[where], turn ? "bg-signal/90 text-space" : "bg-space/55 text-offwhite/90")}>
+    <div className={clsx("absolute flex max-w-[44%] items-center gap-1.5 rounded-full px-2 py-0.5 text-xs", TAG_SPOT[where], turn ? "bg-signal/90 text-space" : "bg-space/55 text-offwhite/90")}>
       <span className="truncate font-medium">{me ? S.you : name}</span>
       <span className={clsx("flex shrink-0 gap-px", turn ? "opacity-80" : "opacity-70")} aria-label={S.cards(count)}>
         {Array.from({ length: count }, (_, i) => (
@@ -226,7 +226,7 @@ function ScoreBar({ s, teamName, myTeam }: { s: TrucoState; teamName: (team: num
         </div>
       ))}
       <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-offwhite/[0.04] px-2.5 ring-1 ring-offwhite/10">
-        <span className={clsx("text-[11px] font-semibold uppercase tracking-[0.1em]", s.stake > 1 ? "text-signal" : "text-offwhite/80")}>{S.stake(s.stake)}</span>
+        <span className={clsx("text-xs font-semibold uppercase tracking-[0.1em]", s.stake > 1 ? "text-signal" : "text-offwhite/80")}>{S.stake(s.stake)}</span>
         <span className="mt-1 flex gap-1" aria-label={S.tricks}>
           {[0, 1, 2].map((k) => {
             const r = s.tricks[k];

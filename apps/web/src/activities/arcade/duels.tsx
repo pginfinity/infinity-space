@@ -11,6 +11,7 @@ import { duelStand, openDuel, useDuelUi } from "./rt/ui.ts";
 import { HockeyTables, hockeyView } from "./hockey.tsx";
 import { PongTables, pongView } from "./pong.tsx";
 import { T } from "./strings.ts";
+import { useMinimizedGame } from "../../games/GameWindow.tsx";
 
 /**
  * Hockey de mesa e pingue-pongue: E na mesa abre o painel; a física vem do servidor (quadros a 30 Hz)
@@ -136,7 +137,9 @@ function BackChip() {
     return null;
   });
   const kind = useActs((s) => (id ? s.acts[id]?.kind : undefined));
-  if (!id || !kind) return null;
+  // Minimizado: o botão de voltar do canto já aparece; dois seria repetição.
+  const minimized = useMinimizedGame();
+  if (!id || !kind || minimized) return null;
   const view = VIEWS[kind]!;
   return (
     <motion.button

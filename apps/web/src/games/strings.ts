@@ -33,6 +33,8 @@ export const PLAYERS_HINT: Record<string, string> = {
 export const S = {
   close: "Fechar",
   closeHint: "Fechar (Esc)",
+  minimize: "Minimizar",
+  restore: (game: string) => `Voltar ao jogo · ${game}`,
   you: "você",
   waiting: "Aguardando jogadores",
   waitingOne: "Falta um jogador",
