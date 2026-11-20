@@ -27,7 +27,7 @@ if (import.meta.env.DEV) {
           walkTo: movement.walkTo,
           interact: interact.useInteract,
           world: w.world,
-          media: { state: media.useMedia, audio: media.subscribedAudio, debug: media.rtcDebug, processor: media.micProcessorName },
+          media: { state: media.useMedia, audio: media.subscribedAudio, debug: media.rtcDebug, processor: media.micProcessorName, screenStats: media.screenStats },
           tvs: { tvFor: tvs.tvFor, mesh: tvs.screenMesh },
           acts: { state: acts.useActs, send: acts.sendAct },
           // A mesma cópia do módulo que o app usa (importar /src/net/session.ts no teste pode criar outra).

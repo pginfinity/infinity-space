@@ -103,7 +103,7 @@ export function Hud() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+64px)] left-1/2 flex -translate-x-1/2 gap-1 rounded-2xl p-1.5"
+            className="glass pointer-events-auto absolute bottom-[calc(max(12px,env(safe-area-inset-bottom))+64px)] left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-2xl p-1.5"
             role="toolbar"
             aria-label="Emotes"
           >
@@ -125,7 +125,7 @@ export function Hud() {
 
       {/* Doca inferior. */}
       <div
-        className="glass pointer-events-auto absolute bottom-[max(12px,env(safe-area-inset-bottom))] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-2xl p-1.5"
+        className="glass pointer-events-auto absolute bottom-[max(12px,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-2xl p-1.5"
         role="toolbar"
         aria-label="Controles"
       >

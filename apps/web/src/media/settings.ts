@@ -7,7 +7,8 @@ import { create } from "zustand";
 
 export type NoiseMode = "off" | "browser" | "strong" | "max";
 export type VideoQuality = "low" | "standard" | "high";
-export type CamBackground = "none" | "blur" | "infinity";
+/** Sem fundo, desfoque, imagem pronta em public/fundos (créditos em docs/creditos.md) ou a da pessoa. */
+export type CamBackground = "none" | "blur-light" | "blur" | "escritorio" | "estante" | "sala" | "natureza" | "espaco" | "gradiente" | "azul" | "infinity" | "custom";
 export type MicMode = "open" | "ptt";
 
 export interface MediaSettings {
@@ -20,7 +21,7 @@ export interface MediaSettings {
   video: VideoQuality;
   /** Microfone aberto (M liga e desliga) ou aperte-para-falar (segure M). */
   micMode: MicMode;
-  /** Fundo da câmera: nenhum, desfocado ou o fundo da Infinity (processado no próprio navegador). */
+  /** Fundo da câmera: nenhum, desfoque, uma imagem pronta ou a sua (processado no próprio navegador). */
   camBg: CamBackground;
   /** Volume geral de quem você ouve (0 a 1.5). */
   master: number;
