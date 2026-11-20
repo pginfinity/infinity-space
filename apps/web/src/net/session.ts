@@ -21,6 +21,8 @@ let welcomed = false;
 let training = false;
 /** Onde a pessoa estava no escritório antes de ir treinar: volta para o mesmo lugar. */
 let backAt: { x: number; z: number } | null = null;
+/** Saída do áudio e vídeo da sala anterior: a entrada na nova espera por ela (senão a saída atrasada desliga a nova). */
+let rtcLeft: Promise<void> = Promise.resolve();
 
 /** Diferença entre o relógio do servidor e o daqui (ms). Refinada a cada ping. */
 let clockOffset = 0;
@@ -96,7 +98,7 @@ export function switchRoom(toTraining: boolean): void {
   everConnected = false;
   attempt = 0;
   old?.close(1000, "switch");
-  void leaveRtc();
+  rtcLeft = leaveRtc().catch(() => undefined);
   clearRemote();
   // A mesa aberta é da outra sala.
   useApp.getState().openGame(null);
@@ -175,7 +177,7 @@ function handle(msg: ServerMsg): void {
       app.setConn("open");
       welcomed = true;
       // Depois de entrar no mundo, entra na sala de áudio e vídeo (nova sessão a cada reconexão).
-      void leaveRtc().then(() => send({ t: "rtc" }));
+      void rtcLeft.then(leaveRtc).then(() => send({ t: "rtc" }));
       break;
     }
     case "emote":

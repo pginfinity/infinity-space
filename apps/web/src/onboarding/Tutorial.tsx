@@ -87,8 +87,12 @@ export function Tutorial() {
 
   return (
     <>
-      <AnimatePresence>{training && <TrainingBanner key="treino" finished={phase !== "steps"} />}</AnimatePresence>
+      {/* Em tela larga a faixa fica no meio; abaixo disso, na pilha da esquerda, para não cobrir o Status. */}
+      <AnimatePresence>
+        {training && <TrainingBanner key="treino" finished={phase !== "steps"} className="pointer-events-none absolute inset-x-0 top-[68px] z-20 hidden justify-center px-3 lg:flex" />}
+      </AnimatePresence>
       <InStack side="top-left" order={3} className="w-[min(340px,calc(100vw-24px))]">
+        <AnimatePresence>{training && <TrainingBanner key="treino" finished={phase !== "steps"} className="flex max-w-full lg:hidden" />}</AnimatePresence>
         <AnimatePresence mode="wait">
           {phase === "intro" && <Intro key="intro" />}
           {phase === "steps" && !minimized && <Steps key="steps" shown={shown} current={current} done={done} />}
@@ -101,20 +105,14 @@ export function Tutorial() {
 }
 
 /** Faixa no alto enquanto a pessoa treina: onde ela está e o caminho de volta. */
-function TrainingBanner({ finished }: { finished: boolean }) {
+function TrainingBanner({ finished, className }: { finished: boolean; className: string }) {
   const { t } = useTranslation();
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.2 }}
-      className="pointer-events-none absolute inset-x-0 top-[68px] z-20 flex justify-center px-3"
-    >
+    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className={className}>
       <div role="status" className="glass pointer-events-auto flex max-w-full items-center gap-3 rounded-full py-1.5 pl-4 pr-1.5 text-sm text-offwhite">
         <span className="min-w-0 truncate">
           <span className="font-semibold text-signal">{t("tour.training")}</span>
-          <span className="hidden text-offwhite/75 md:inline"> · {t("tour.trainingHint")}</span>
+          <span className="hidden text-offwhite/75 lg:inline"> · {t("tour.trainingHint")}</span>
         </span>
         <button
           type="button"

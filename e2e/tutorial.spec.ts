@@ -15,7 +15,7 @@ interface Hook {
   walkTo(p: { x: number; z: number }): boolean;
   interact: { getState(): { target: { label: string } | null } };
   acts: { state: { getState(): { acts: Record<string, { state: unknown }> } } };
-  media: { state: { getState(): { status: string; mic: boolean } } };
+  media: { state: { getState(): { status: string; error: string | null; mic: boolean } } };
   world(): { map: { desks: Array<{ seat: { x: number; z: number } }> } };
 }
 type W = { __infinity: Hook };
@@ -95,7 +95,8 @@ test("sala de treino: pratica de verdade, sem atrapalhar o escritório, e volta 
 
   // Microfone: o botão fica destacado; M liga.
   await expect(tourTarget(a)).toHaveAttribute("data-tour", "mic");
-  await expect.poll(() => a.evaluate(() => (window as unknown as W).__infinity.media.state.getState().status), { timeout: 30_000 }).toBe("on");
+  // Na falha, mostra o erro do LiveKit (sob carga a conexão pode cair por prazo).
+  await expect.poll(() => a.evaluate(() => { const m = (window as unknown as W).__infinity.media.state.getState(); return m.status === "error" ? `error: ${m.error}` : m.status; }), { timeout: 30_000 }).toBe("on");
   await a.screenshot({ path: `${SHOTS}/tutorial-sala-treino-2d.png` });
   await a.keyboard.press("KeyM");
   await expect(progress(a)).toHaveText("2 de 10", { timeout: 20_000 });
@@ -104,7 +105,11 @@ test("sala de treino: pratica de verdade, sem atrapalhar o escritório, e volta 
   await expect(tourTarget(a)).toHaveAttribute("data-tour", "chat");
   await a.keyboard.press("KeyC");
   await expect(progress(a)).toHaveText("3 de 10");
+  // Fecha só com o campo já focado (senão o Esc chega antes e o "1" do emote vai parar no campo).
+  const chat = a.getByRole("dialog", { name: "Chat" });
+  await expect(chat.getByRole("textbox", { name: "Escrever mensagem" })).toBeFocused();
   await a.keyboard.press("Escape");
+  await expect(chat).toBeHidden();
 
   // Emote (1).
   await expect(tourTarget(a)).toHaveAttribute("data-tour", "emote");
@@ -128,6 +133,7 @@ test("sala de treino: pratica de verdade, sem atrapalhar o escritório, e volta 
   await expect(tourTarget(a)).toHaveAttribute("data-tour", "status");
   await a.getByRole("button", { name: "Áudio e vídeo" }).click();
   await a.getByRole("radio", { name: "Foco" }).click();
+  await expect(a.getByRole("radio", { name: "Foco" })).toHaveAttribute("aria-checked", "true");
   await expect(progress(a)).toHaveText("6 de 10", { timeout: 10_000 });
   await a.getByRole("button", { name: "Áudio e vídeo" }).click();
 
@@ -236,6 +242,9 @@ test("no celular: sem lente e sem tela, sem teclas, e o cartão cabe acima da do
   const strip = (await banner(a).boundingBox())!;
   expect(strip.x).toBeGreaterThanOrEqual(0);
   expect(strip.x + strip.width).toBeLessThanOrEqual(vw.width);
+  // A faixa fica abaixo do Status (não cobre o botão).
+  const chip = (await a.getByText("Status", { exact: true }).boundingBox())!;
+  expect(strip.y).toBeGreaterThanOrEqual(chip.y + chip.height);
   await a.waitForTimeout(400);
   await a.screenshot({ path: `${SHOTS}/tutorial-celular.png` });
   // Minimiza e volta.
