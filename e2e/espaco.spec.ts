@@ -238,7 +238,8 @@ test("clique no céu: cartão do astro, câmera vira, telescópio, constelaçõe
   await expect.poll(() => layer.evaluate((e) => Number(getComputedStyle(e).opacity)), { timeout: 10_000 }).toBeGreaterThan(0.95);
   await expect(layer.getByText("Cruzeiro do Sul")).toBeVisible();
   await crux.screenshot({ path: `${SHOTS}/universo-3d-constelacoes.png` });
-  const star = (await targets(crux)).find((t) => t.target.kind === "estrela" && t.y < 800);
+  // A mais alta na tela: as de baixo podem estar atrás da estação (aí o clique é dela, não do céu).
+  const star = (await targets(crux)).filter((t) => t.target.kind === "estrela").sort((a, b) => a.y - b.y)[0];
   expect(star).toBeTruthy();
   await crux.mouse.click(star!.x, star!.y);
   const starCard = crux.locator('[data-painel="astro"]');
@@ -264,23 +265,20 @@ test("clique no céu: cartão do astro, câmera vira, telescópio, constelaçõe
   await expect(toast).toBeHidden({ timeout: 6000 });
   await done(wish);
 
-  // 2D: o mesmo céu, o mesmo cartão (a vista não gira); e a Terra, clicando fora da estação.
-  const d2 = await open(browser, "2d", "2026-11-17T23:30:00-03:00");
-  await iso(d2, ["KeyR"]);
+  // 2D: o mesmo céu, o mesmo cartão (a vista não gira). À 1h a Alfa do Centauro está a sudeste, em céu aberto
+  // longe do casco no giro que olha para sudeste (R duas vezes); depois a Terra, embaixo, no giro sudoeste.
+  const d2 = await open(browser, "2d", "2026-11-18T01:00:00-03:00");
+  await iso(d2, ["KeyR", "KeyR"]);
   const astro = d2.locator('[data-painel="astro"]');
-  const list = (await targets(d2)).filter((t) => t.target.kind !== "satelite" && t.target.kind !== "meteoro");
-  expect(list.length).toBeGreaterThan(0);
-  for (const t of list.slice(0, 8)) {
-    await d2.mouse.click(t.x, t.y);
-    if (await astro.isVisible().catch(() => false)) break;
-    await d2.waitForTimeout(800);
-    if (await astro.isVisible()) break;
-  }
-  await expect(astro).toBeVisible();
+  const alfa = (await targets(d2)).find((t) => t.target.kind === "estrela" && t.target.key === "alfaCentauro");
+  expect(alfa).toBeTruthy();
+  await d2.mouse.click(alfa!.x, alfa!.y);
+  await expect(astro).toHaveAttribute("data-astro", "alfaCentauro", { timeout: 10_000 });
   await d2.screenshot({ path: `${SHOTS}/universo-2d-cartao.png` });
   await d2.keyboard.press("Escape");
   await expect(astro).toBeHidden();
-  await d2.mouse.click(24, 880);
+  await iso(d2, ["KeyQ"]);
+  await d2.mouse.click(300, 890);
   await expect(d2.getByRole("dialog", { name: "Terra" })).toBeVisible({ timeout: 5000 });
   await d2.screenshot({ path: `${SHOTS}/universo-2d-terra.png` });
   await done(d2);

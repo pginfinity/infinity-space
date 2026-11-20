@@ -21,7 +21,8 @@ const KM_PER_AU = 149_597_870.7;
 const C_KM_S = 299_792.458;
 const BODY = { sol: Body.Sun, venus: Body.Venus, marte: Body.Mars, jupiter: Body.Jupiter, saturno: Body.Saturn } as const;
 const int = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
-const one = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+// "negative": magnitude -0,01 (Alfa Centauri) arredonda para "0", não "-0".
+const one = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1, signDisplay: "negative" });
 
 /** Do centro da Terra até o corpo, agora (km). */
 function distanceKm(b: Body): number {
@@ -103,9 +104,11 @@ function Card({ pick, onClose }: { pick: SkyPick; onClose: () => void }) {
   if (target.kind === "lua") {
     rows.push([
       t("espaco.astro.phase"),
-      <span className="inline-flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5">
         <MoonIcon phase={sky.moon.phase} />
-        {t(`espaco.moon.phases.${sky.moon.phaseKey}`)} <span className="text-slate">· {t("espaco.moon.lit", { pct: Math.round(sky.moon.fraction * 100) })}</span>
+        <span>
+          {t(`espaco.moon.phases.${sky.moon.phaseKey}`)} <span className="text-slate">· {t("espaco.moon.lit", { pct: Math.round(sky.moon.fraction * 100) })}</span>
+        </span>
       </span>,
     ]);
     const km = sky.moon.distanceKm;
@@ -133,7 +136,7 @@ function Card({ pick, onClose }: { pick: SkyPick; onClose: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: reduce ? 0 : 6 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className="glass pointer-events-auto absolute bottom-24 left-2 z-20 w-[min(320px,calc(100vw-16px))] overflow-hidden rounded-[var(--radius-panel)] text-offwhite sm:left-3"
+      className="glass pointer-events-auto absolute bottom-32 left-2 z-20 w-[min(320px,calc(100vw-16px))] overflow-hidden rounded-[var(--radius-panel)] text-offwhite sm:left-3"
       role="dialog"
       aria-labelledby="astro-nome"
       data-painel="astro"

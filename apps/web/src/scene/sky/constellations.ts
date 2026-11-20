@@ -3,6 +3,7 @@ import { create } from "zustand";
 import i18n from "../../i18n/index.ts";
 import { raDecToEqj, type Vec3 } from "../astro/astro.ts";
 import { SKY_VP } from "./camera.ts";
+import { world } from "../../world/world.ts";
 
 /**
  * Constelações (linhas e nomes) e as estrelas com nome que abrem cartão ao clicar. Dados em
@@ -84,6 +85,28 @@ export function constellationGeometry(d: ConstellationData): { position: Float32
   return { position: new Float32Array(pts), centers };
 }
 
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const exit = new THREE.Vector3();
+let deck: THREE.Box3 | null = null;
+
+/**
+ * O ponto da tela (x/y de 0 a 1, y para baixo) está tapado pela estação? Os nomes são DOM, sem profundidade:
+ * sem isto "Corvo" aparece no piso do Átrio. O deck é uma caixa (piso até o topo do casco) sem teto:
+ * de dentro dela, só o que sai pelo topo é céu.
+ */
+export function behindDeck(camera: THREE.Camera, x: number, y: number): boolean {
+  if (!deck) {
+    deck = new THREE.Box3().setFromPoints(world().map.floors.flatMap((f) => f.polygon.map((p) => new THREE.Vector3(p.x, 0, p.z))));
+    deck.min.y = -0.3;
+    deck.max.y = 3; // casco (HULL_H do mapa)
+  }
+  ray.setFromCamera(ndc.set(x * 2 - 1, 1 - y * 2), camera);
+  const r = ray.ray;
+  if (!deck.containsPoint(r.origin)) return r.intersectsBox(deck);
+  return r.intersectBox(deck, exit) !== null && exit.y < deck.max.y - 1e-3;
+}
+
 /**
  * Nomes das constelações por cima do canvas (texto de verdade, legível em qualquer tamanho). Posicionados
  * no `onAfterRender` das linhas, com a matriz do céu deste quadro; somem atrás da Terra e fora da tela.
@@ -109,8 +132,8 @@ export class ConstellationLabels {
     parent.appendChild(this.box);
   }
 
-  /** `rot`: J2000 → cena (a mesma matriz das estrelas); `w`/`h`: tamanho do canvas em px CSS. */
-  place(rot: THREE.Matrix3, w: number, h: number, opacity: number): void {
+  /** `rot`: J2000 → cena (a mesma matriz das estrelas); `w`/`h`: tamanho do canvas em px CSS; `camera`: a da lente. */
+  place(rot: THREE.Matrix3, w: number, h: number, opacity: number, camera: THREE.Camera): void {
     this.box.style.opacity = String(opacity);
     const vp = SKY_VP.value;
     for (const it of this.items) {
@@ -119,7 +142,7 @@ export class ConstellationLabels {
       const p = this.v.set(d.x, d.y, d.z, 1).applyMatrix4(vp);
       const x = (p.x / p.w) * 0.5 + 0.5;
       const y = 0.5 - (p.y / p.w) * 0.5;
-      const show = !below && p.w > 0 && x > -0.05 && x < 1.05 && y > -0.05 && y < 1.05;
+      const show = !below && p.w > 0 && x > -0.05 && x < 1.05 && y > -0.05 && y < 1.05 && !behindDeck(camera, x, y);
       it.el.style.display = show ? "" : "none";
       if (show) it.el.style.transform = `translate(${(x * w).toFixed(1)}px, ${(y * h).toFixed(1)}px) translate(-50%, -50%)`;
     }

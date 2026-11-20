@@ -146,19 +146,16 @@ function buildSky(tier: SkyTier, exposure: number, host: HTMLElement | null) {
   const conLines = skyObject(new THREE.LineSegments(conGeo, keep(shader(lineVert, lineFrag, conU))), ORDER.constellations);
   conLines.visible = false;
   root.add(conLines);
+  // Os nomes (DOM) nascem no primeiro quadro com as linhas ligadas: um céu montado e descartado (StrictMode)
+  // não deixa nomes órfãos na tela.
   let labels: ConstellationLabels | null = null;
-  let disposed = false;
+  let centers: ReturnType<typeof constellationGeometry>["centers"] | null = null;
   // Também traz as estrelas com nome (clique no céu), por isso baixa mesmo com as linhas desligadas.
   loadConstellations()
     .then((d) => {
-      if (disposed) return;
       const g = constellationGeometry(d);
       conGeo.setAttribute("position", new THREE.BufferAttribute(g.position, 3));
-      if (!host) return;
-      const l = new ConstellationLabels(host, g.centers);
-      labels = l;
-      // Depois de desenhar: a matriz do céu já é a deste quadro (os nomes não ficam um quadro atrás).
-      conLines.onAfterRender = (gl) => l.place(eqj, gl.domElement.clientWidth, gl.domElement.clientHeight, conU.uAlpha.value);
+      centers = g.centers;
     })
     .catch(() => {
       // sem o arquivo, o céu segue sem constelações nem estrelas clicáveis
@@ -295,6 +292,11 @@ function buildSky(tier: SkyTier, exposure: number, host: HTMLElement | null) {
       conLines.visible = conU.uAlpha.value > 0;
       if (!conLines.visible) labels?.hide();
     }
+    if (conLines.visible && !labels && centers && host) {
+      const l = (labels = new ConstellationLabels(host, centers));
+      // Depois de desenhar: a matriz do céu já é a deste quadro (os nomes não ficam um quadro atrás).
+      conLines.onAfterRender = (gl, _scene, camera) => l.place(eqj, gl.domElement.clientWidth, gl.domElement.clientHeight, conU.uAlpha.value, camera);
+    }
   }
 
   return {
@@ -302,8 +304,8 @@ function buildSky(tier: SkyTier, exposure: number, host: HTMLElement | null) {
     meteors,
     update,
     dispose() {
-      disposed = true;
       labels?.dispose();
+      labels = null;
       for (const d of disposables) d.dispose();
     },
   };

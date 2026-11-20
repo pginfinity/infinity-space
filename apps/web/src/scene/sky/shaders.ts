@@ -28,7 +28,13 @@ void main() {
   // Mapa da NASA SVS em RA/Dec: RA 0h no centro, crescendo para a esquerda.
   float ra = atan(e.y, e.x);
   vec2 uv = vec2(fract(0.5 - ra / 6.28318531), asin(clamp(e.z, -1.0, 1.0)) / 3.14159265 + 0.5);
-  gl_FragColor = vec4(texture2D(uMap, uv).rgb * uGain, 1.0);
+  // Na emenda (RA 12h) o u salta de 1 para 0: sem tirar o salto da derivada, a GPU escolhe o menor
+  // mipmap e aparece um risco escuro atravessando o céu.
+  vec2 dx = dFdx(uv);
+  vec2 dy = dFdy(uv);
+  dx.x -= floor(dx.x + 0.5);
+  dy.x -= floor(dy.x + 0.5);
+  gl_FragColor = vec4(textureGrad(uMap, uv, dx, dy).rgb * uGain, 1.0);
   ${OUT}
 }
 `;
