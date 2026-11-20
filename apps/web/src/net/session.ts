@@ -6,6 +6,7 @@ import { joinRtc, leaveRtc, onMediaInfo, setAudience } from "../media/rtc.ts";
 import { dispatchActEvent, setAct, setActs } from "../activities/registry.ts";
 import { recheckSession } from "./auth.ts";
 import { toast } from "../ui/toasts.ts";
+import { cancelWalk, standUp } from "../engine/movement.ts";
 
 
 const packr = new Packr({ useRecords: false });
@@ -88,6 +89,9 @@ export function disconnect(): void {
 /** Vai para a sala de treino (ou volta ao escritório) sem sair do app: troca a conexão e a sala de voz. */
 export function switchRoom(toTraining: boolean): void {
   if (toTraining === training || !wanted) return;
+  // A rota e o assento são da sala que fica: sem isso, a pessoa chega e continua andando até o destino antigo.
+  cancelWalk();
+  standUp();
   if (toTraining) backAt = { x: self.x, z: self.z };
   training = toTraining;
   window.clearTimeout(retryTimer);
