@@ -76,6 +76,15 @@ export const T = {
     from: (name: string) => `Aviso de ${name}`,
     dismiss: "Fechar aviso",
   },
+  quadro: {
+    action: "Quadro branco",
+    title: (room: string) => `Quadro branco · ${room}`,
+    hint: "Quem está na sala vê e desenha junto. Fica guardado para a próxima reunião.",
+    others: (n: number) => (n === 1 ? "mais 1 pessoa com o quadro aberto" : `mais ${n} pessoas com o quadro aberto`),
+    loading: "Abrindo o quadro…",
+    close: "Fechar quadro",
+    left: "Você saiu da sala: o quadro fechou.",
+  },
   painel: {
     action: "Ver painel",
     title: "Painel do time",

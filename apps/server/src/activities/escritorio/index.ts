@@ -8,6 +8,7 @@ import { PhotoActivity } from "./photo.ts";
 import { PhotoWallActivity } from "./photowall.ts";
 import { PainelActivity, supremacyFromEnv } from "./painel.ts";
 import { MegafoneActivity } from "./megafone.ts";
+import { QuadroActivity } from "./quadro.ts";
 import { mesasAdmin } from "../mesas/admin.ts";
 
 /** Pacote "escritorio": interações sociais do escritório. */
@@ -25,6 +26,7 @@ const create: ActivityFactory = (host) => {
     wall,
     new PainelActivity(host, { ...admin, supremacy: supremacyFromEnv(process.env) }),
     new MegafoneActivity(host, admin),
+    new QuadroActivity(host),
   ];
 };
 export default create;

@@ -9,10 +9,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "prebuild": "node ../../scripts/mediapipe.mjs",
-    "predev": "node ../../scripts/mediapipe.mjs"
+    "prebuild": "node ../../scripts/mediapipe.mjs && node ../../scripts/excalidraw.mjs",
+    "predev": "node ../../scripts/mediapipe.mjs && node ../../scripts/excalidraw.mjs"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@infinity/world": "*",
     "@livekit/track-processors": "0.8.2",
     "@react-three/drei": "^10.7.9",

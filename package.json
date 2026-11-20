@@ -19,7 +19,10 @@
     "test:watch": "vitest",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:livekit": "node scripts/livekit.mjs",
-    "predev": "node scripts/mediapipe.mjs"
+    "predev": "node scripts/mediapipe.mjs && node scripts/excalidraw.mjs"
+  },
+  "overrides": {
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

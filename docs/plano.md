@@ -21,6 +21,10 @@ Gravação de reuniões (prevista para a V2) entrou na V1 a pedido do time: grav
 
 Painel do time no Átrio (20/11): metas da semana, avisos do gestor, aniversariantes e o que subiu para produção (puxado do Supremacy), com confete quando um cliente sobe.
 
+Megafone do gestor (20/11): o admin abre pela lista de pessoas. Aviso escrito vira cartão na tela de todos (e aviso do computador); aviso falado leva a voz dele a todas as áreas por até 5 minutos, um de cada vez, sem interromper sala de porta fechada, roda fechada nem quem está em Foco.
+
+Quadro branco nas salas (20/11): quem está numa sala de reunião (ou no auditório) abre o quadro dela (Excalidraw) e desenha junto com os outros da sala. Fica guardado para a próxima reunião; sem imagem (o quadro não guarda arquivo).
+
 ## Etapa 0: Fundação
 - Monorepo, tokens da marca (cores, NORD, Geist), CLAUDE.md.
 - `packages/world`: formato do mapa, planta do Círculo de Evolução, colisão, rotas, regra de audição, com testes.
