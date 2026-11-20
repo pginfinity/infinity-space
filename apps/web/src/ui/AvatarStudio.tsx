@@ -43,7 +43,7 @@ export default function AvatarStudio({ look, emote }: { look: AvatarLook; emote?
         onPointerUp={() => (spin.current.drag = null)}
         onPointerCancel={() => (spin.current.drag = null)}
       >
-        <Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 0.85, 3.7] }} gl={{ antialias: true, alpha: true }} onCreated={({ camera }) => camera.lookAt(0, 0.62, 0)}>
+        <Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 0.9, 3.9] }} gl={{ antialias: true, alpha: true }} onCreated={({ camera }) => camera.lookAt(0, 0.66, 0)}>
           <hemisphereLight args={["#E6F0FF", "#2A3550", 1.25]} />
           <directionalLight position={[2, 4, 3]} intensity={1.6} color="#FFF1DE" />
           <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#7FC8FF" />

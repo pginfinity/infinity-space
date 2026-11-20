@@ -1,6 +1,6 @@
 /** Opções do criador de avatar. O índice é o que vai no AvatarLook (protocolo). */
 
-export const HAIR_STYLES = ["Espetado", "Curto", "Topete", "Repartido", "Bagunçado", "Longo", "Rabo de cavalo", "Coque", "Com faixa", "Moicano", "Dois coques", "Careca"] as const;
+export const HAIR_STYLES = ["Espetado", "Curto", "Topete", "Repartido", "Black power", "Longo", "Rabo de cavalo", "Coque", "Com faixa", "Moicano", "Tranças", "Careca"] as const;
 export const EYE_STYLES = ["Pontinho", "Brilhante", "Sorridente", "Sereno", "Cílios", "Amêndoa"] as const;
 export const BROW_STYLES = ["Normal", "Grossa", "Arqueada", "Nenhuma"] as const;
 export const MOUTH_STYLES = ["Sorriso", "Sorrisão", "Neutro", "Gatinho"] as const;

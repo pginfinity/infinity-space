@@ -20,9 +20,20 @@ export function AvatarFace({ look, size = 40, className }: { look: AvatarLook; s
       </defs>
       <g clipPath={`url(#${clip})`}>
         <rect width="100" height="100" fill="#0A2547" />
-        {/* Cabelo atrás da cabeça (longo, rabo de cavalo). */}
+        {/* Cabelo atrás da cabeça (black power, longo, rabo de cavalo, tranças). */}
+        {hat === null && hair === 4 && <rect x="11" y="6" width="78" height="58" rx="12" fill={h} />}
         {hat === null && hair === 5 && <rect x="17" y="30" width="66" height="70" rx="8" fill={h} />}
         {hat === null && hair === 6 && <rect x="74" y="36" width="14" height="38" rx="5" fill={h} />}
+        {hat === null &&
+          hair === 10 &&
+          [12, 79].map((x) => (
+            <g key={x}>
+              <rect x={x} y="44" width="9" height="13" rx="2" fill={h} />
+              <rect x={x + 0.5} y="57" width="8" height="13" rx="2" fill={h} />
+              <rect x={x + 1} y="70" width="7" height="12" rx="2" fill={h} />
+              <rect x={x + 1.5} y="82" width="6" height="5" rx="1" fill={look.accColor} />
+            </g>
+          ))}
         {/* Corpo. */}
         <rect x="16" y="82" width="68" height="30" rx="10" fill={inner ? look.topColor2 : look.topColor} />
         {inner && <path d="M16 112 L16 92 Q16 82 26 82 L44 82 L50 100 L56 82 L74 82 Q84 82 84 92 L84 112 Z" fill={look.topColor} />}
@@ -111,16 +122,10 @@ function Hair({ style, color }: { style: number; color: string }) {
       <rect x="74" y="28" width="7" height={style === 5 ? 44 : 18} />
       {style === 0 && <path d="M24 22 L28 8 L35 20 L42 5 L49 20 L56 6 L63 20 L70 8 L76 22 Z" />}
       {style === 2 && <rect x="30" y="9" width="40" height="18" rx="6" />}
+      {style === 4 && <rect x="13" y="6" width="74" height="31" rx="10" />}
       {style === 3 && <path d="M19 30 L19 46 Q30 38 54 34 L81 34 L81 30 Z" />}
-      {style === 4 && <path d="M19 32 L26 42 L32 34 L39 42 L46 34 L53 42 L60 34 L67 42 L74 34 L81 42 L81 30 L19 30 Z" />}
       {style === 7 && <rect x="39" y="4" width="22" height="18" rx="6" />}
       {style === 8 && <rect x="19" y="30" width="62" height="6" rx="1" fill="#E25B4B" />}
-      {style === 10 && (
-        <>
-          <rect x="17" y="8" width="18" height="17" rx="6" />
-          <rect x="65" y="8" width="18" height="17" rx="6" />
-        </>
-      )}
     </g>
   );
 }

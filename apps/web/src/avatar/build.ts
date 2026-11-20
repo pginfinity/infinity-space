@@ -86,7 +86,7 @@ interface Part {
 }
 
 /** Cabelo de cada opção do criador (null = careca). */
-const HAIR: Array<string | null> = ["hair-crop", "hair-short", "hair-quiff", "hair-flat", "hair-tall", "hair-long", "hair-knot", "hair-bun", "hair-band", "hair-mohawk", "hair-buns", null];
+const HAIR: Array<string | null> = ["hair-crop", "hair-short", "hair-quiff", "hair-flat", "hair-afro", "hair-long", "hair-knot", "hair-bun", "hair-band", "hair-mohawk", "hair-braids", null];
 /** Tronco e braços de cada parte de cima, e a frente do peito (para o crachá encostar). */
 const TOP: Array<[torso: string, arms: string, front: number]> = [
   ["torso-tee", "arms-short", 0.08], // Camiseta

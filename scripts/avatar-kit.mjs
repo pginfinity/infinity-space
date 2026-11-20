@@ -172,7 +172,6 @@ const PIECES = {
   /** Moicano: só a faixa do meio do espetado. */
   "hair-mohawk": [{ src: "male-d", mesh: "head", sw: [33], role: "hair", where: (c) => Math.abs(c[0]) < 0.07 }],
   "hair-flat": [{ src: "male-g", mesh: "head", sw: [51], role: "hair", where: (c) => !(c[1] < 0.39 || (c[1] < 0.456 && c[2] > 0.1)) }],
-  "hair-tall": [{ src: "male-a", mesh: "head", sw: [55], role: "hair", where: (c) => !isFace(c) }],
   "hair-knot": [{ src: "female-e", mesh: "head", sw: [55], role: "hair", where: (c) => !isFace(c) }],
   "hair-long": [{ src: "female-f", mesh: "head", sw: [35, 33], role: "hair" }],
   "hair-bun": [{ src: "female-d", mesh: "head", sw: [33], role: "hair" }],
@@ -180,9 +179,25 @@ const PIECES = {
     { src: "female-c", mesh: "head", sw: [51], role: "hair" },
     { src: "female-c", mesh: "head", sw: [47], role: "fixed" },
   ],
-  "hair-buns": [
-    { src: "female-b", mesh: "head", sw: [33], role: "hair" },
-    { src: "female-b", mesh: "head", sw: [49], role: "fixed" },
+  // O pacote não tem black power nem tranças: blocos no mesmo traço, sobre o cabelo curto.
+  // Black power: volume acima da testa e atrás das orelhas (orelha, brinco, óculos e conchas do fone ficam à mostra).
+  "hair-afro": [
+    { src: "male-f", mesh: "head", sw: [55], role: "hair", where: (c) => !isFace(c) },
+    { box: [[0, 0.675, -0.025, 0.45, 0.19, 0.39], [0, 0.785, -0.025, 0.36, 0.03, 0.31], [0, 0.5, -0.15, 0.43, 0.2, 0.16]], bone: "head", role: "hair" },
+  ],
+  // Tranças: uma de cada lado, atrás da orelha, até o ombro (por trás das mangas).
+  "hair-braids": [
+    { src: "male-f", mesh: "head", sw: [55], role: "hair", where: (c) => !isFace(c) },
+    {
+      box: [-1, 1].flatMap((s) => [
+        [s * 0.185, 0.5, -0.15, 0.075, 0.11, 0.07],
+        [s * 0.19, 0.39, -0.15, 0.068, 0.11, 0.064],
+        [s * 0.195, 0.28, -0.15, 0.06, 0.11, 0.058],
+      ]),
+      bone: "head",
+      role: "hair",
+    },
+    { box: [[-0.195, 0.205, -0.15, 0.05, 0.04, 0.05], [0.195, 0.205, -0.15, 0.05, 0.04, 0.05]], bone: "head", role: "acc" },
   ],
   /** Cabelo que aparece por baixo do boné e do gorro. */
   // sem o bigode que o male-c traz na mesma cor do cabelo (barba é escolha à parte)
