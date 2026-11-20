@@ -13,6 +13,8 @@ export const CHAMADO_KIND = "chamado";
 export const CHAMADO_TTL_MS = 30_000;
 /** Um chamado a cada 20 s por pessoa. */
 export const CHAMADO_COOLDOWN_MS = 20_000;
+/** A mesma pessoa, no máximo uma vez por minuto (quem chamou → quem foi chamado). */
+export const CHAMADO_PAIR_COOLDOWN_MS = 60_000;
 /** Depois de topar, quanto tempo a pessoa tem para pedir o teleporte. */
 export const CHAMADO_TELEPORT_MS = 90_000;
 /** Caminho mais longo que isso (metros): além de andar, oferece o teleporte. */
@@ -36,26 +38,34 @@ export interface ChamadoCalling {
   ms: number;
 }
 
-/** Evento "go" (para quem topou): onde quem chamou está agora. */
+/** Evento "go" (para quem vai andar): onde a outra pessoa está agora. */
 export interface ChamadoGo {
   from: string;
   name: string;
   at: Vec2;
+  /** "Chama aqui": quem foi chamado pediu para quem chamou ir até ela. */
+  here?: boolean;
 }
 
-/** Evento "accepted" (para quem chamou). */
+/** Evento "accepted" (para quem vai receber a visita: quem chamou, ou quem pediu "chama aqui"). */
 export interface ChamadoAccepted {
   by: string;
   name: string;
 }
 
-export type ChamadoEndReason = "declined" | "expired" | "cancel" | "left";
+/**
+ * `chat`: vai responder no chat. `quiet`: quem foi chamado está em Foco ou Não perturbe e só vai
+ * ver o chamado (um aviso discreto) quando sair do modo.
+ */
+export type ChamadoEndReason = "declined" | "expired" | "cancel" | "left" | "chat" | "quiet";
 
 /** Evento "end" (para os dois): o chamado acabou sem ninguém ir. */
 export interface ChamadoEnd {
   from: string;
   to: string;
   reason: ChamadoEndReason;
+  /** Resposta rápida do "Agora não" (limpa como o bilhete da porta). */
+  note?: string;
 }
 
 /**

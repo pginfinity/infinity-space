@@ -32,7 +32,7 @@ test("teleporte: só depois de topar o chamado, para perto de quem chamou, uma v
   const card = b.getByRole("alertdialog", { name: "Ana está te chamando" });
   await expect(card).toBeVisible({ timeout: 5000 });
   await expect(card).toContainText("em Arcade");
-  await card.getByRole("button", { name: /Ir até lá/ }).click();
+  await card.getByRole("button", { name: /Vou aí/ }).click();
   const chip = b.getByRole("status").filter({ hasText: "Indo até Ana" });
   await expect(chip).toBeVisible({ timeout: 5000 });
   await expect(chip.getByRole("button", { name: "Teleportar" })).toBeVisible();

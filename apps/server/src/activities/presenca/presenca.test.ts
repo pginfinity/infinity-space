@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   CHAMADO_COOLDOWN_MS,
+  CHAMADO_PAIR_COOLDOWN_MS,
   CHAMADO_TELEPORT_MS,
   CHAMADO_TTL_MS,
   NavGrid,
+  PORTAS,
   SEGUIR_COOLDOWN_MS,
   SEGUIR_TTL_MS,
   ZoneIndex,
@@ -152,6 +154,56 @@ describe("chamado", () => {
     expect(host.of<ChamadoEnd>("end").at(-1)!.data).toMatchObject({ from: "c", to: "b", reason: "expired" });
     act.handle("b", "accept", { from: "c" });
     expect(host.of("go")).toHaveLength(0);
+  });
+
+  it("a mesma pessoa no máximo uma vez por minuto, e o par some depois", () => {
+    act.handle("a", "call", { to: "b" });
+    act.handle("b", "decline", { from: "a" });
+    now += CHAMADO_COOLDOWN_MS + 1;
+    act.handle("a", "call", { to: "b" });
+    expect(host.of("call")).toHaveLength(1);
+    expect(host.of<{ ms: number }>("wait")[0]!.data.ms).toBe(CHAMADO_PAIR_COOLDOWN_MS - CHAMADO_COOLDOWN_MS - 1);
+    // Outra pessoa pode.
+    act.handle("a", "call", { to: "c" });
+    expect(host.of("call")).toHaveLength(2);
+    now += CHAMADO_PAIR_COOLDOWN_MS;
+    act.tick();
+    act.handle("a", "call", { to: "b" });
+    expect(host.of("call")).toHaveLength(3);
+  });
+
+  it("chama aqui: quem chamou é que anda, e o teleporte vale para ele", () => {
+    act.handle("a", "call", { to: "b" });
+    act.handle("c", "here", { from: "a" });
+    expect(host.of("go")).toHaveLength(0);
+    act.handle("b", "here", { from: "a" });
+    expect(host.of("accepted")[0]).toMatchObject({ to: ["b"], data: { by: "a", name: "Ana" } });
+    expect(host.of("go")[0]).toMatchObject({ to: ["a"], data: { from: "b", name: "Bruno", at: BRUNO, here: true } });
+    act.handle("b", "teleport", { from: "a" });
+    expect(host.of("travel")).toHaveLength(0);
+    act.handle("a", "teleport", { from: "b" });
+    const [t] = host.of<ChamadoTravel>("travel");
+    expect(t!.to).toEqual(["a"]);
+    expect(dist(t!.data.to, BRUNO)).toBeLessThan(3.1);
+  });
+
+  it("agora não com resposta rápida (limpa e curta), respondo no chat e em foco", () => {
+    act.handle("a", "call", { to: "b" });
+    act.handle("b", "decline", { from: "a", note: "  em reunião\n\tfalo já " + "x".repeat(200) });
+    const note = host.of<ChamadoEnd>("end")[0]!.data.note!;
+    expect(note.startsWith("em reunião falo já x")).toBe(true);
+    expect(note).toHaveLength(PORTAS.noteMax);
+    act.handle("c", "call", { to: "b" });
+    act.handle("b", "chat", { from: "c", note: "ignorada" });
+    expect(host.of<ChamadoEnd>("end")[1]).toMatchObject({ to: ["c", "b"], data: { reason: "chat" } });
+    expect(host.of<ChamadoEnd>("end")[1]!.data.note).toBeUndefined();
+    now += CHAMADO_COOLDOWN_MS;
+    act.handle("c", "call", { to: "a" });
+    act.handle("a", "quiet", { from: "c" });
+    expect(host.of<ChamadoEnd>("end")[2]!.data).toEqual({ from: "c", to: "a", reason: "quiet" });
+    // Sem chamado aberto, nada.
+    act.handle("a", "quiet", { from: "c" });
+    expect(host.of("end")).toHaveLength(3);
   });
 
   it("quem sai encerra o chamado", () => {

@@ -2,7 +2,7 @@ import { expect, test } from "./setup.ts";
 import { SHOTS, distance, enter, openPeople, waitOnline, walk } from "./presenca-util.ts";
 
 /**
- * Chamar alguém pelo painel Pessoas: o pedido chega com o nome de quem chamou, "Ir até lá" faz a
+ * Chamar alguém pelo painel Pessoas: o pedido chega com o nome de quem chamou, "Vou aí" faz a
  * pessoa andar até perto de quem chamou; o limite de um chamado a cada 20 s; e uma recusa.
  */
 test("chamar: pedido, ir até lá, limite de 20 s e recusa", async ({ browser }) => {
@@ -28,7 +28,7 @@ test("chamar: pedido, ir até lá, limite de 20 s e recusa", async ({ browser })
   // Um chamado a cada 20 s: o botão fica travado com a contagem, inclusive para outra pessoa.
   await expect(a.getByRole("button", { name: /Dá para chamar de novo em \d+ s/ }).first()).toBeDisabled();
 
-  // Tecla I = "Ir até lá".
+  // Tecla I = "Vou aí".
   await b.keyboard.press("KeyI");
   await expect(card).toBeHidden();
   await expect(a.getByText("Bruno está vindo.")).toBeVisible({ timeout: 5000 });

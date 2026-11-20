@@ -16,7 +16,7 @@ import { nearestSpot, type GuideItem } from "../ui/guide.ts";
 import { self } from "../world/registry.ts";
 import { world } from "../world/world.ts";
 import { startApproach, stopControl } from "./controller.ts";
-import { usePresence } from "./store.ts";
+import { personCommandList, usePresence } from "./store.ts";
 import { T } from "./strings.ts";
 
 /** Ações de presença usadas pelo painel Pessoas, pela busca (Ctrl+K) e pelos cartões. */
@@ -50,9 +50,37 @@ export function acceptCall(inv: ChamadoInvite): void {
   dropCallIn(inv.from);
 }
 
-export function declineCall(inv: ChamadoInvite): void {
-  sendAct(CHAMADO_ID, "decline", { from: inv.from });
+/** "Chama aqui": quem chamou é que vem até você. */
+export function callHere(inv: ChamadoInvite): void {
+  sendAct(CHAMADO_ID, "here", { from: inv.from });
   dropCallIn(inv.from);
+}
+
+/** "Agora não", com um recado rápido opcional. */
+export function declineCall(inv: ChamadoInvite, note?: string): void {
+  sendAct(CHAMADO_ID, "decline", note ? { from: inv.from, note } : { from: inv.from });
+  dropCallIn(inv.from);
+}
+
+/** "Responder no chat": avisa quem chamou e abre a conversa com ela. */
+export function answerInChat(inv: ChamadoInvite): void {
+  sendAct(CHAMADO_ID, "chat", { from: inv.from });
+  dropCallIn(inv.from);
+  personCommandList().find((c) => c.key === "mensagem")?.run(inv.from);
+}
+
+/** Em Foco ou Não perturbe: quem chamou fica sabendo, e aqui sobra só um lembrete para depois. */
+export function quietCall(inv: ChamadoInvite): void {
+  sendAct(CHAMADO_ID, "quiet", { from: inv.from });
+  rememberCall(inv);
+}
+
+export function rememberCall(inv: { from: string; name: string }): void {
+  usePresence.setState((s) => ({ missedCalls: [...s.missedCalls.filter((m) => m.from !== inv.from).slice(-2), { from: inv.from, name: inv.name }] }));
+}
+
+export function forgetCall(from: string): void {
+  usePresence.setState((s) => ({ missedCalls: s.missedCalls.filter((m) => m.from !== from) }));
 }
 
 export function dropCallIn(from: string): void {
