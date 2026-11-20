@@ -1,4 +1,4 @@
-import { Tv } from "lucide-react";
+import { Bot, Tv } from "lucide-react";
 import { registerActivity } from "../registry.ts";
 import { registerCommand } from "../../presence/store.ts";
 import { sendInfo } from "../../net/session.ts";
@@ -9,6 +9,7 @@ import { heldClient } from "./held.tsx";
 import { copaClient } from "./copa.tsx";
 import { plantsClient, wiltOverride } from "./plants.tsx";
 import { orbiClient } from "./orbi.tsx";
+import { openOrbiAsk, orbiAskClient } from "./orbiAsk.tsx";
 import { jukeboxClient } from "./jukebox.tsx";
 import { telescopeClient } from "./telescope.tsx";
 import { goToTv, tvClient } from "./tv.tsx";
@@ -20,9 +21,11 @@ registerActivity(heldClient);
 registerActivity(copaClient);
 registerActivity(plantsClient);
 registerActivity(orbiClient);
+registerActivity(orbiAskClient);
 registerActivity(jukeboxClient);
 registerActivity(telescopeClient);
 registerActivity(tvClient);
+registerCommand({ key: "orbi-perguntar", label: T.orbi.ask, hint: T.orbi.askCommandHint, keywords: "orbi ia assistente pergunta onde esta quem decidido decisao daily reuniao", icon: Bot, run: openOrbiAsk });
 registerCommand({ key: "tv-lounge", label: T.tv.command, hint: T.tv.commandHint, keywords: "tv video youtube assistir junto lounge filme happy hour", icon: Tv, run: goToTv });
 
 // Gancho de testes, só em desenvolvimento: põe qualquer item da lista na mão e inspeciona avatares.

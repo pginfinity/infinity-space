@@ -106,6 +106,17 @@ O painel do Átrio mostra metas da semana, avisos do gestor e aniversariantes (e
 
 O servidor pergunta a cada 2 minutos. A lista inteira de aniversários fica só com quem administra; o time vê só os próximos 7 dias.
 
+## 10. Perguntas ao Orbi (IA)
+
+Com esta configuração, qualquer pessoa do escritório pergunta ao Orbi (Ctrl+K → *Perguntar ao Orbi*, ou pelo balão quando ele a segue) coisas como "onde está a Ana?" e "o que foi decidido na daily?". Sem ela, a opção não aparece no app.
+
+1. No console da Anthropic, criar uma chave de API para o Space (de preferência num workspace só dele, com limite de gasto).
+2. No `.env` de produção: `ANTHROPIC_API_KEY=<chave>` (vai pelo `.env`, nunca por chat). Reiniciar o app.
+
+O que vai para a Anthropic a cada pergunta: a pergunta, o nome de quem perguntou, quem está online e em que sala ou área (o mesmo que o mapa mostra para todos) e as transcrições das reuniões gravadas nos últimos 7 dias (até 60 mil caracteres, as mais recentes primeiro). **As gravações das suítes da diretoria nunca vão.** Status, bilhete e agenda das pessoas também não. Qualquer pessoa do time pode perguntar sobre qualquer reunião gravada fora da diretoria, como já acontece com as atas do Portal de Reuniões. A resposta aparece só para quem perguntou, e o servidor não guarda perguntas nem respostas.
+
+Modelo `claude-opus-5-5` com esforço baixo; as transcrições ficam em cache entre uma pergunta e outra. Limite de 8 perguntas a cada 10 minutos por pessoa e 4 ao mesmo tempo no escritório todo.
+
 ## O que eu preciso receber
 
 1. IP e especificações da VPS.
@@ -117,3 +128,4 @@ O servidor pergunta a cada 2 minutos. A lista inteira de aniversários fica só 
 7. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).
 8. Para a Google Agenda: o Client ID e o secret do app OAuth (seção 8).
 9. Para o painel do time: o endereço do Supremacy e o token de serviço no `.env` (seção 9).
+10. Para as perguntas ao Orbi: a chave da Anthropic no `.env` (seção 10).

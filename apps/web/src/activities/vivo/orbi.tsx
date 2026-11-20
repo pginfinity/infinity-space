@@ -27,6 +27,7 @@ import { Builder, C, T as Tones, lit, mix } from "../../scene/furniture/core.ts"
 import { serverNow } from "./clock.ts";
 import { Particles, flatMaterial, heartGeometry } from "./particles.ts";
 import { T } from "./strings.ts";
+import { openOrbiAsk, orbiAskOn } from "./orbiAsk.tsx";
 
 /**
  * Orbi, o robô mascote da estação: passeia pelas áreas comuns, segue quem chama e curte carinho.
@@ -109,6 +110,15 @@ function OrbiOverlay() {
             <Bot className="size-4" />
           </span>
           <span className="pr-1">{T.orbi.following}</span>
+          {orbiAskOn() && (
+            <button
+              type="button"
+              onClick={openOrbiAsk}
+              className="rounded-full px-2.5 py-1 text-xs text-offwhite/85 transition-colors hover:bg-offwhite/10 hover:text-offwhite"
+            >
+              {T.orbi.ask}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => sendAct(ORBI_ID, "dismiss")}

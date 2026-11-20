@@ -26,6 +26,12 @@ export const ORBI_PET_MS = 2800;
 export const ORBI_CALL_RANGE = 9;
 export const ORBI_PET_RANGE = 2.2;
 
+/** Perguntas ao Orbi (IA): atividade à parte, que só existe quando o servidor tem a chave da Anthropic. */
+export const ORBI_ASK_ID = "orbi-ia";
+export const ORBI_ASK_KIND = "orbi-ia";
+/** Tamanho máximo da pergunta. */
+export const ORBI_ASK_MAX = 300;
+
 export type OrbiMode = "wander" | "rest" | "follow" | "pet";
 
 export interface OrbiState {
