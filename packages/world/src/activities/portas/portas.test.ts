@@ -176,6 +176,27 @@ describe("audição com roda fechada", () => {
   });
 });
 
+describe("megafone", () => {
+  let gestora: AudiencePerson;
+  beforeAll(() => void (gestora = who("g", CORREDOR)));
+
+  it("chega a todas as áreas: salas de porta aberta, equipes, auditório e cabine", () => {
+    for (const p of [ECLIPSE_A, MARKETING, PLATEIA, PALCO, CABINE]) expect(hears(who("x", p), gestora, undefined, true), JSON.stringify(p)).toBe("clear");
+    // Sem o megafone, quem está na sala não ouve o corredor.
+    expect(hears(who("x", ECLIPSE_A), gestora)).toBe("none");
+  });
+
+  it("não interrompe sala de porta fechada, mas quem fala lá de dentro chega a todos", () => {
+    const p = doorsClosed("eclipse", ["ana", "g"]);
+    expect(hears(who("ana", ECLIPSE_A), gestora, p, true)).toBe("none");
+    expect(hears(who("x", MARKETING), gestora, p, true)).toBe("clear");
+    const dentro = who("g", ECLIPSE_B);
+    expect(hears(who("ana", ECLIPSE_A), dentro, p, true)).toBe("clear");
+    expect(hears(who("x", PLATEIA), dentro, p, true)).toBe("clear");
+    expect(hears(who("x", PLATEIA), dentro, p)).toBe("none");
+  });
+});
+
 describe("audição com sussurro", () => {
   const A = { x: 0, z: -5.5 };
   const B = { x: 1, z: -5.5 };

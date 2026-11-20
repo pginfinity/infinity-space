@@ -249,6 +249,13 @@ export function setPrivacyRules(fn: () => PrivacyRules | undefined): void {
   privacyRules = fn;
 }
 
+let megaphoneId: () => string | null = () => null;
+
+/** O megafone informa quem está falando para todos (a voz chega de qualquer lugar, no centro). */
+export function setMegaphone(fn: () => string | null): void {
+  megaphoneId = fn;
+}
+
 export async function setMic(on: boolean): Promise<void> {
   if (!room) return;
   try {
@@ -612,7 +619,7 @@ export function hearingOf(id: string): Hearing | null {
     map.walls,
     { pos: me, zone: zones.zoneAt(me), id: myId },
     { pos: { x: p.x, z: p.z }, zone: zones.zoneAt({ x: p.x, z: p.z }), id },
-    { privacy: privacyRules() },
+    { privacy: privacyRules(), megaphone: megaphoneId() === id },
   );
 }
 
@@ -649,7 +656,7 @@ function updateSpatial(): void {
       const dx = r.x - self.x;
       const dz = r.z - self.z;
       const d = Math.hypot(dx, dz) || 1;
-      const pan = h.mode === "clear" && d < 1.2 ? 0 : ((dx * right.x + dz * right.z) / d) * 0.75;
+      const pan = (h.mode === "clear" && d < 1.2) || megaphoneId() === p.identity ? 0 : ((dx * right.x + dz * right.z) / d) * 0.75;
       chain.pan.pan.setTargetAtTime(pan, c.currentTime, 0.1);
     }
   }

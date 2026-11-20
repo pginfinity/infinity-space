@@ -36,7 +36,7 @@ import { ActivitiesManager } from "./activities/manager.ts";
 import type { Activity } from "./activities/types.ts";
 import { DATA_DIR, Store } from "./store.ts";
 import { RecordingActivity } from "./recording/manager.ts";
-import { PORTAS_ID, audienceOf, type AudiencePerson, type Zone } from "@infinity/world";
+import { MEGAFONE_ID, PORTAS_ID, audienceOf, type AudiencePerson, type MegafoneState, type Zone } from "@infinity/world";
 import type { PrivacySource } from "./activities/portas/index.ts";
 
 interface Member {
@@ -420,8 +420,10 @@ export class OfficeRoom {
       privacy: this.privacy?.privacy(),
       recorderFor: (z: Zone) => (this.recording?.isRecording(recGroup(z)) ? recIdentity(recGroup(z)) : null),
     };
+    const mega = this.megaphoneId();
+    const megaOpts = { ...opts, megaphone: true };
     list.forEach((speaker, i) => {
-      const { voice, sight } = audienceOf(this.map.walls, people, people[i]!, opts);
+      const { voice, sight } = audienceOf(this.map.walls, people, people[i]!, speaker.info.id === mega ? megaOpts : opts);
       // Sussurro: a voz vai só para uma pessoa, mas o vídeo e a tela continuam para quem já via.
       // Vai antes da lista de voz, para o vídeo dos outros não piscar na troca.
       const sightKey = sight === voice ? "" : sight.join(",");
@@ -443,7 +445,12 @@ export class OfficeRoom {
     const people: AudiencePerson[] = list.map((m) => ({ id: m.info.id, pos: { x: m.x, z: m.z }, zone: this.zones.zoneAt({ x: m.x, z: m.z }) }));
     const speaker = people.find((p) => p.id === id);
     if (!speaker) return [];
-    return audienceOf(this.map.walls, people, speaker, { privacy: this.privacy?.privacy() }).voice;
+    return audienceOf(this.map.walls, people, speaker, { privacy: this.privacy?.privacy(), megaphone: id === this.megaphoneId() }).voice;
+  }
+
+  /** Quem está com o megafone do gestor ligado (a voz chega a todas as áreas). */
+  private megaphoneId(): string | undefined {
+    return (this.acts.get(MEGAFONE_ID)?.snapshot() as MegafoneState | undefined)?.speaker?.id;
   }
 
   /** Salto autorizado por uma atividade (ex.: chamado aceito): só para lugar andável e permitido. */

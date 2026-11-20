@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { MessageSquareText, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { Megaphone, MessageSquareText, UserPlus, Volume1, Volume2, VolumeX, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../net/auth.ts";
 import { InvitePanel } from "./InvitePanel.tsx";
@@ -14,6 +14,7 @@ import { STATUS_COLOR } from "../world/theme.ts";
 import { PersonActions } from "../presence/PersonActions.tsx";
 import { AvatarFace } from "./AvatarFace.tsx";
 import { openConv } from "../activities/chat/store.ts";
+import { DEV_ADMIN, openMegafone } from "../activities/escritorio/megafone.tsx";
 
 /** Quem está no escritório, onde está e um atalho para ir até a pessoa. */
 export function PeoplePanel() {
@@ -50,6 +51,12 @@ export function PeoplePanel() {
           <p className="mt-0.5 text-xs text-slate">{t("hud.online", { count: list.length })}</p>
         </div>
         <div className="flex items-center gap-1">
+          {(isAdmin || DEV_ADMIN) && (
+            <button type="button" onClick={openMegafone} className="flex items-center gap-1.5 rounded-lg border border-offwhite/10 px-2.5 py-1.5 text-xs hover:border-orange hover:text-orange">
+              <Megaphone className="size-3.5" />
+              Megafone
+            </button>
+          )}
           {isAdmin && (
             <button type="button" onClick={() => setInviting(true)} className="flex items-center gap-1.5 rounded-lg border border-offwhite/10 px-2.5 py-1.5 text-xs hover:border-signal hover:text-signal">
               <UserPlus className="size-3.5" />

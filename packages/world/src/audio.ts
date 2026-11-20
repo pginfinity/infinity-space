@@ -46,6 +46,7 @@ export interface Hearing {
 
 export const SILENT: Hearing = Object.freeze({ mode: "none", gain: 0, muffled: false });
 const FULL: Hearing = Object.freeze({ mode: "clear", gain: 1, muffled: false });
+const MEGAPHONE: Hearing = Object.freeze({ mode: "clear", gain: 0.9, muffled: false });
 
 const CLOSED_KINDS = new Set<Zone["kind"]>(["meeting", "office", "focus"]);
 
@@ -90,7 +91,7 @@ export interface PrivacyRules {
 }
 
 export interface HearingOptions {
-  /** O falante está usando o megafone: chega a todas as áreas abertas (menos às rodas fechadas). */
+  /** O falante está com o megafone ligado: chega a todas as áreas, menos às salas de porta fechada e às rodas fechadas. */
   megaphone?: boolean;
   privacy?: PrivacyRules;
 }
@@ -122,10 +123,8 @@ function conversation(walls: readonly Wall[], listener: HearingInput, speaker: H
     if (lc !== undefined || sc !== undefined) return lc === sc && lz.group === sz.group ? FULL : SILENT;
   }
 
-  if (lz.group !== sz.group) {
-    if (opts.megaphone && lz.group === "open" && sz.group === "open") return { mode: "clear", gain: 0.9, muffled: false };
-    return SILENT;
-  }
+  // Megafone: chega a todas as áreas, menos às salas de porta fechada (não interrompe a reunião).
+  if (lz.group !== sz.group) return opts.megaphone && !p?.doors?.has(lz.id) ? MEGAPHONE : SILENT;
 
   // Sala fechada: todos dentro se ouvem com volume cheio.
   if (CLOSED_KINDS.has(lz.kind)) return FULL;
@@ -133,7 +132,7 @@ function conversation(walls: readonly Wall[], listener: HearingInput, speaker: H
   // Auditório: quem está no palco é ouvido por todos.
   if (sz.kind === "stage") return FULL;
 
-  if (opts.megaphone) return { mode: "clear", gain: 0.9, muffled: false };
+  if (opts.megaphone) return MEGAPHONE;
 
   return spatial(walls, listener.pos, speaker.pos);
 }
