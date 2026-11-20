@@ -15,6 +15,9 @@ import { LookRig } from "./look/LookRig.tsx";
 import { LOOK } from "./look/looks.ts";
 import { useQuality } from "./quality.ts";
 import { perfFrame, perfStart } from "./perfWatch.ts";
+import { IDLE_MS, frameInterval } from "./frameRate.ts";
+import { currentEmote, remoteIds, sampleRemote, self, type Pose } from "../world/registry.ts";
+import { useMedia } from "../media/rtc.ts";
 import { patchShadowFade, SHADOW_FADE, snapToTexels, stepSize, viewFootprint, type Footprint } from "./sunShadow.ts";
 
 /** O mundo: luzes, espaço, estação e pessoas. A lente só muda a câmera e o tratamento da imagem. */
@@ -59,14 +62,26 @@ function DevProbe() {
   return null;
 }
 
+/** Alguém andando ou fazendo um gesto: a cena precisa de todos os quadros. */
+const probe: Pose = { x: 0, z: 0, yaw: 0, anim: "idle" };
+function moving(): boolean {
+  if (self.anim === "walk" || self.anim === "run") return true;
+  const now = performance.now();
+  for (const id of remoteIds()) {
+    const p = sampleRemote(id, now, probe);
+    if ((p && (p.anim === "walk" || p.anim === "run")) || currentEmote(id, now)) return true;
+  }
+  return false;
+}
+
 /**
- * O escritório fica aberto o dia todo: com a janela em segundo plano (outra janela em foco),
- * desenha a ~8 quadros por segundo em vez de 60, poupando CPU, placa de vídeo e bateria.
- * Voz, vídeo e movimento não dependem do desenho e seguem normais. Aba escondida já para sozinha.
+ * Freio para o dia inteiro (ver frameRate.ts): menos quadros parado ou em segundo plano, poupando CPU,
+ * placa de vídeo e bateria. Voz, vídeo e movimento não dependem do desenho e seguem normais.
  */
 function BackgroundThrottle() {
   const setFrameloop = useThree((s) => s.setFrameloop);
   const invalidate = useThree((s) => s.invalidate);
+  const get = useThree((s) => s.get);
   useEffect(() => {
     // Testes automatizados (desenvolvimento, Chrome sem placa de vídeo, várias janelas ao mesmo tempo):
     // a cena desenha a ~12 quadros por segundo e sobra CPU para a interface responder no tempo do teste.
@@ -79,24 +94,49 @@ function BackgroundThrottle() {
         setFrameloop("always");
       };
     }
+    let focused = document.hasFocus();
+    let lastInput = performance.now();
+    let current = 0;
     let timer = 0;
-    const slow = () => {
-      setFrameloop("demand");
+    const apply = () => {
+      // Shaders ainda compilando (WarmUp, na lente 3D): desenhar agora travaria a página.
+      if (get().frameloop === "never") return;
+      const ms = frameInterval({ focused, idleFor: performance.now() - lastInput, moving: moving(), sharing: Object.keys(useMedia.getState().screens).length > 0 });
+      if (ms === current) return;
+      current = ms;
       window.clearInterval(timer);
-      timer = window.setInterval(() => invalidate(), 125);
+      if (ms) {
+        setFrameloop("demand");
+        timer = window.setInterval(() => invalidate(), ms);
+      } else setFrameloop("always");
     };
-    const fast = () => {
+    const input = () => {
+      lastInput = performance.now();
+      if (current === IDLE_MS) apply();
+    };
+    const blur = () => {
+      focused = false;
+      apply();
+    };
+    const focus = () => {
+      focused = true;
+      input();
+      apply();
+    };
+    const INPUT = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"] as const;
+    for (const e of INPUT) window.addEventListener(e, input, { passive: true, capture: true });
+    window.addEventListener("blur", blur);
+    window.addEventListener("focus", focus);
+    const check = window.setInterval(apply, 1000);
+    return () => {
+      for (const e of INPUT) window.removeEventListener(e, input, { capture: true });
+      window.removeEventListener("blur", blur);
+      window.removeEventListener("focus", focus);
+      window.clearInterval(check);
       window.clearInterval(timer);
       setFrameloop("always");
     };
-    window.addEventListener("blur", slow);
-    window.addEventListener("focus", fast);
-    return () => {
-      window.removeEventListener("blur", slow);
-      window.removeEventListener("focus", fast);
-      fast();
-    };
-  }, [setFrameloop, invalidate]);
+  }, [setFrameloop, invalidate, get]);
   return null;
 }
 
