@@ -152,7 +152,7 @@ export function CheckersLost({ s, seat }: { s: CheckersState; seat: number }) {
   return (
     <span className="flex items-center gap-1" aria-label={`${S.captured}: ${n}`}>
       <CheckerArt piece={seat === 0 ? 3 : 1} size={14} />
-      <span className="text-[11px] font-medium tabular-nums text-slate">×{n}</span>
+      <span className="text-xs font-medium tabular-nums text-slate">×{n}</span>
     </span>
   );
 }

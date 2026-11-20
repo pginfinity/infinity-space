@@ -18,6 +18,10 @@ const startedAt = Date.now();
 const room = new OfficeRoom();
 await room.init();
 room.start();
+// Sala de treino do tutorial (/ws?sala=treino): o mesmo mapa, sem afetar o escritório.
+const training = new OfficeRoom(true);
+await training.init();
+training.start();
 
 const app = new Hono();
 const accounts = new Accounts(room.store);
@@ -27,7 +31,15 @@ if (seed && process.env.SEED_ADMIN_PASSWORD && !accounts.hasPassword(seed)) {
   accounts.ensureUser(seed, undefined, "admin");
   accounts.setPassword(seed, process.env.SEED_ADMIN_PASSWORD);
 }
-app.route("/api", authRoutes(accounts, { removed: (email) => room.disconnectEmail(email) }));
+app.route(
+  "/api",
+  authRoutes(accounts, {
+    removed: (email) => {
+      room.disconnectEmail(email);
+      training.disconnectEmail(email);
+    },
+  }),
+);
 // Mural de fotos da copa: envio da foto da cabine e as imagens (ver activities/escritorio/photowall-http.ts).
 app.route(
   PHOTOWALL_API,
@@ -76,12 +88,14 @@ server.on("upgrade", (req, socket, head) => {
     }
   }
   const auth = email ? { email, name: accounts.user(email)?.name ?? email } : undefined;
-  wss.handleUpgrade(req, socket, head, (ws) => room.accept(ws, auth));
+  const target = url.searchParams.get("sala") === "treino" ? training : room;
+  wss.handleUpgrade(req, socket, head, (ws) => target.accept(ws, auth));
 });
 
 function shutdown(): void {
   console.log("[servidor] desligando…");
   room.stop();
+  training.stop();
   wss.close();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 2000).unref();

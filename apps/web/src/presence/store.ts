@@ -38,6 +38,8 @@ interface PresenceUi {
   callOut: (ChamadoCalling & Timed) | null;
   /** Até quando (performance.now) não dá para chamar de novo. */
   callBlockedUntil: number;
+  /** Chamados que chegaram em Foco ou Não perturbe (ou que expiraram): aviso discreto para depois. Só na memória. */
+  missedCalls: Array<{ from: string; name: string }>;
   /** Indo até quem chamou. */
   travel: Travel | null;
   /** Pedidos para te seguir. */
@@ -56,6 +58,7 @@ export const usePresence = create<PresenceUi>(() => ({
   callsIn: [],
   callOut: null,
   callBlockedUntil: 0,
+  missedCalls: [],
   travel: null,
   followIn: [],
   followOut: null,

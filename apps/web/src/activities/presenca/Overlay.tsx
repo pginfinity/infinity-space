@@ -1,16 +1,21 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BellRing, Footprints, Route, Sparkles, Users } from "lucide-react";
+import { BellRing, Footprints, MessageCircle, Route, Sparkles, Users, X } from "lucide-react";
 import type { ChamadoInvite, SeguirAsk } from "@infinity/world";
 import { useApp } from "../../state/store.ts";
+import { sfx } from "../../audio/sfx.ts";
 import { AvatarFace } from "../../ui/AvatarFace.tsx";
 import { InStack } from "../../ui/HudStack.tsx";
 import {
   acceptCall,
   acceptFollow,
+  answerInChat,
+  callHere,
+  callPerson,
   cancelCall,
   cancelFollowAsk,
   declineCall,
+  forgetCall,
   declineFollow,
   dismissFollower,
   requestTeleport,
@@ -20,11 +25,12 @@ import {
 import { usePresence, type Timed, type Travel } from "../../presence/store.ts";
 import { T } from "../../presence/strings.ts";
 import { Countdown, Kbd, cardMotion, chipMotion, useKey } from "../../presence/ui.tsx";
+import { callsQuiet } from "./events.ts";
 
 /**
  * Interface da presença por cima do mundo:
- * - embaixo, no meio (onde ficam os convites): chamados e pedidos para seguir recebidos, e o
- *   "indo até" com o teleporte;
+ * - chamado recebido: toma a tela até a pessoa escolher (ou o pedido expirar);
+ * - embaixo, no meio (onde ficam os convites): pedidos para seguir recebidos e o "indo até" com o teleporte;
  * - no alto, à esquerda (embaixo do status): o que está valendo agora (chamando, seguindo,
  *   sendo seguido), sempre com um jeito de parar.
  */
@@ -32,14 +38,13 @@ export function PresenceOverlay() {
   const callsIn = usePresence((s) => s.callsIn);
   const followIn = usePresence((s) => s.followIn);
   const travel = usePresence((s) => s.travel);
+  const call = callsIn.at(-1);
   useTabTitle(callsIn);
   return (
     <>
+      <AnimatePresence>{call && <CallTakeover key={`c-${call.from}-${call.start}`} call={call} more={callsIn.length - 1} />}</AnimatePresence>
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+178px)] flex flex-col items-center gap-2 px-3">
         <AnimatePresence>
-          {callsIn.map((c, i) => (
-            <IncomingCall key={`c-${c.from}-${c.start}`} call={c} hotkey={i === callsIn.length - 1} />
-          ))}
           {followIn.map((a) => (
             <FollowRequest key={`f-${a.from}-${a.start}`} ask={a} />
           ))}
@@ -75,33 +80,78 @@ function Face({ id, size = 34 }: { id: string; size?: number }) {
   return <AvatarFace look={look} size={size} className="shrink-0 rounded-full" />;
 }
 
-const primary = "flex shrink-0 items-center gap-1.5 rounded-xl bg-orange py-1.5 pl-1.5 pr-3 text-sm font-semibold text-offwhite transition hover:brightness-110";
-const primaryPlain = "shrink-0 rounded-xl bg-orange px-3 py-1.5 text-sm font-semibold text-offwhite transition hover:brightness-110";
 const ghost = "shrink-0 rounded-xl px-2.5 py-1.5 text-xs text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite";
 
-function IncomingCall({ call, hotkey }: { call: ChamadoInvite & Timed; hotkey: boolean }) {
-  useKey("KeyI", () => acceptCall(call), hotkey);
+const secondary = "flex items-center justify-center gap-1.5 rounded-xl bg-offwhite/10 px-3 py-2.5 text-sm font-medium text-offwhite transition hover:bg-offwhite/16";
+
+/**
+ * Chamado recebido: a tela inteira avisa, com o rosto de quem chamou. Fecha só por uma escolha
+ * (ou quando o pedido expira): vou aí, chama aqui, agora não (com recado rápido) ou responder no chat.
+ */
+function CallTakeover({ call, more }: { call: ChamadoInvite & Timed; more: number }) {
+  useKey("KeyI", () => acceptCall(call));
+  // Aba em segundo plano: a tela tomada não aparece ali, então o toque se repete.
+  useEffect(() => {
+    const t = window.setInterval(() => document.hidden && sfx("presenca-chamado", { volume: 0.45 }), 6000);
+    return () => window.clearInterval(t);
+  }, []);
   return (
-    <RequestCard
-      id={call.from}
-      label={T.call.incoming(call.name)}
-      title={
-        <>
-          <span className="font-semibold">{call.name}</span> está te chamando
-        </>
-      }
-      sub={call.place ? T.call.where(call.place) : undefined}
-      start={call.start}
-      ms={call.ms}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="pointer-events-auto fixed inset-0 z-[65] grid place-items-center overflow-y-auto bg-space/80 p-4 backdrop-blur-md"
     >
-      <button type="button" onClick={() => acceptCall(call)} className={hotkey ? primary : primaryPlain}>
-        {hotkey && <Kbd light>I</Kbd>}
-        {T.call.go}
-      </button>
-      <button type="button" onClick={() => declineCall(call)} className={ghost}>
-        {T.call.notNow}
-      </button>
-    </RequestCard>
+      <motion.div
+        {...cardMotion}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={T.call.incoming(call.name)}
+        className="relative flex w-full max-w-sm flex-col items-center rounded-3xl border border-offwhite/10 bg-deep/95 px-5 pb-6 pt-8 text-center shadow-2xl"
+      >
+        <span className="relative grid place-items-center">
+          <motion.span
+            aria-hidden
+            className="absolute inset-0 rounded-full ring-2 ring-signal"
+            animate={{ scale: [1, 1.3], opacity: [0.8, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
+          />
+          <Face id={call.from} size={112} />
+        </span>
+        <h2 className="mt-5 text-xl text-offwhite">
+          <span className="font-semibold">{call.name}</span> está te chamando
+        </h2>
+        {call.place && <p className="mt-1 text-sm text-slate">{T.call.where(call.place)}</p>}
+        {more > 0 && <p className="mt-1 text-xs text-slate">{T.call.more(more)}</p>}
+        <div className="mt-6 grid w-full grid-cols-2 gap-2">
+          <button type="button" autoFocus onClick={() => acceptCall(call)} className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-orange px-3 py-3 text-base font-semibold text-offwhite transition hover:brightness-110">
+            <Kbd light>I</Kbd>
+            {T.call.go}
+          </button>
+          <button type="button" onClick={() => callHere(call)} className={secondary}>
+            <BellRing className="size-4 text-signal" aria-hidden />
+            {T.call.here}
+          </button>
+          <button type="button" onClick={() => answerInChat(call)} className={secondary}>
+            <MessageCircle className="size-4 text-signal" aria-hidden />
+            {T.call.chat}
+          </button>
+          <button type="button" onClick={() => declineCall(call)} className="col-span-2 rounded-xl px-3 py-2 text-sm text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite">
+            {T.call.notNow}
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-slate">{T.call.quickLabel}</p>
+        <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+          {T.call.quick.map((q) => (
+            <button key={q} type="button" onClick={() => declineCall(call, q)} className="rounded-full border border-offwhite/12 px-3 py-1.5 text-xs text-offwhite/85 transition-colors hover:border-offwhite/30 hover:text-offwhite">
+              {q}
+            </button>
+          ))}
+        </div>
+        <Countdown start={call.start} ms={call.ms} />
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -192,6 +242,8 @@ function StateChips() {
   const following = usePresence((s) => s.following);
   const followers = usePresence((s) => s.followers);
   const names = Object.values(followers);
+  const missed = usePresence((s) => s.missedCalls);
+  const quiet = useQuiet(missed.length > 0);
   useKey("Escape", stopFollowing, !!following);
   return (
     <InStack side="top-left" order={0}>
@@ -220,6 +272,25 @@ function StateChips() {
         {names.length > 0 && (
           <Chip key="fb" icon={<Users className="size-3.5 text-signal" aria-hidden />} text={T.follow.followedBy(joinNames(names), names.length)} action={T.stop} onAction={() => dismissFollower()} />
         )}
+        {/* Lembrete discreto de quem chamou em Foco ou Não perturbe: só aparece depois de sair do modo. */}
+        {!quiet &&
+          missed.map((m) => (
+            <Chip
+              key={`mc-${m.from}`}
+              icon={<BellRing className="size-3.5 text-slate" aria-hidden />}
+              text={T.call.missed(m.name)}
+              hint={T.call.missedHint}
+              action={T.call.callBack}
+              onAction={() => {
+                forgetCall(m.from);
+                callPerson(m.from);
+              }}
+            >
+              <button type="button" onClick={() => forgetCall(m.from)} aria-label={T.call.dismiss} title={T.call.dismiss} className="grid size-6 shrink-0 place-items-center rounded-full text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite">
+                <X className="size-3.5" />
+              </button>
+            </Chip>
+          ))}
       </AnimatePresence>
     </div>
     </InStack>
@@ -240,6 +311,18 @@ function Chip({ icon, text, hint, action, onAction, children }: { icon: ReactNod
       {children}
     </motion.div>
   );
+}
+
+/** Em Foco ou Não perturbe agora? A posição não passa pelo React: confere a cada segundo enquanto houver lembrete. */
+function useQuiet(active: boolean): boolean {
+  const [quiet, setQuiet] = useState(callsQuiet);
+  useEffect(() => {
+    if (!active) return;
+    setQuiet(callsQuiet());
+    const t = window.setInterval(() => setQuiet(callsQuiet()), 1000);
+    return () => window.clearInterval(t);
+  }, [active]);
+  return quiet;
 }
 
 function joinNames(names: string[]): string {

@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 export class Store {
   private readonly cache = new Map<string, unknown>();
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  /** Só leitura (sala de treino): lê os dados de verdade, mas o que muda fica só na memória. */
+  readOnly = false;
 
   constructor(readonly dir: string) {
     mkdirSync(dir, { recursive: true });
@@ -34,6 +36,7 @@ export class Store {
   /** Guarda o valor (em memória na hora; em disco em até `delayMs`). */
   set<T>(key: string, value: T, delayMs = 1000): void {
     this.cache.set(key, value);
+    if (this.readOnly) return;
     clearTimeout(this.timers.get(key));
     this.timers.set(
       key,

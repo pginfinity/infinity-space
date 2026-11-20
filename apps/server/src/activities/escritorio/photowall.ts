@@ -62,8 +62,9 @@ export class PhotoWallActivity implements Activity {
     opts: { dir?: string | null; now?: () => number } = {},
   ) {
     this.now = opts.now ?? Date.now;
-    const storeDir = (host.store as { dir?: unknown }).dir;
-    this.dir = opts.dir !== undefined ? opts.dir : typeof storeDir === "string" ? join(storeDir, PHOTOWALL_DIR) : null;
+    const { dir: storeDir, readOnly } = host.store as { dir?: unknown; readOnly?: unknown };
+    // Sala de treino (só leitura): tirar uma foto do mural de treino não apaga o arquivo de verdade.
+    this.dir = opts.dir !== undefined ? opts.dir : typeof storeDir === "string" && !readOnly ? join(storeDir, PHOTOWALL_DIR) : null;
     const o = host.objects("photo-wall")[0];
     this.at = o?.interact?.point ?? o?.pos ?? { x: 0, z: 0 };
     const saved = host.store.get<PhotoWallState>(KEY, { photos: [] });

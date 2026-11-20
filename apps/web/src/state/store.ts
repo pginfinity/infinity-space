@@ -23,8 +23,11 @@ interface AppState {
   games: Record<string, GameSnapshot>;
   /** Mesa de jogo aberta na tela (painel do jogo), se houver. */
   activeGame: string | null;
+  /** Estúdio do avatar aberto por cima do escritório (Editar avatar, sem sair). */
+  avatarEdit: boolean;
 
   setProfile(p: Partial<Profile>): void;
+  editAvatar(open: boolean): void;
   setGames(list: GameSnapshot[]): void;
   setGame(g: GameSnapshot): void;
   openGame(table: string | null): void;
@@ -98,21 +101,24 @@ export const useApp = create<AppState>((set, get) => ({
   peopleOpen: false,
   games: {},
   activeGame: null,
+  avatarEdit: false,
 
+  editAvatar: (avatarEdit) => set({ avatarEdit }),
   setGames: (list) => set({ games: Object.fromEntries(list.map((g) => [g.table, g])) }),
   setGame: (g) => set((s) => ({ games: { ...s.games, [g.table]: g } })),
   openGame: (activeGame) => set({ activeGame }),
   setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p, look: { ...s.profile.look, ...p.look } } })),
   setLens: (lens) => {
     set({ lens });
-    save({ profile: get().profile, lens });
+    // Na tela de criação o nome ainda não foi confirmado: guardar agora faria a próxima visita pular a criação.
+    save({ profile: get().phase === "world" ? get().profile : (load()?.profile ?? { name: "", look: get().profile.look }), lens });
   },
   enter: () => {
     const { profile, lens } = get();
     save({ profile, lens });
     set({ phase: "world" });
   },
-  leave: () => set({ phase: "entry", conn: "idle", selfId: null, players: {}, peopleOpen: false, games: {}, activeGame: null }),
+  leave: () => set({ phase: "entry", conn: "idle", selfId: null, players: {}, peopleOpen: false, games: {}, activeGame: null, avatarEdit: false }),
   setConn: (conn, error = null) => set({ conn, error }),
   welcome: (selfId, players) => set({ selfId, players: Object.fromEntries(players.map((p) => [p.id, p])) }),
   addPlayer: (p) => set((s) => ({ players: { ...s.players, [p.id]: p } })),

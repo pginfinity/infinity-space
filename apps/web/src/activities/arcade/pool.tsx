@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { Eye, Flag, LoaderCircle, LogOut, X } from "lucide-react";
+import { Eye, Flag, LoaderCircle, LogOut } from "lucide-react";
 import { POOL, POOL_KIND, poolLeft, poolPockets, poolRack, poolSimulate, rtTableToWorld, type Lens, type MapObject, type PoolBalls, type PoolState, type Vec2 } from "@infinity/world";
 import { useApp } from "../../state/store.ts";
 import { world } from "../../world/world.ts";
@@ -13,6 +13,7 @@ import { actState, sendAct, useAct, type ActivityClient, type DynamicTarget } fr
 import { STATUS_COLOR } from "../../world/theme.ts";
 import { requestDuelSeat, cancelDuelSeat, useDuelUi } from "./rt/ui.ts";
 import { T as TT } from "./strings.ts";
+import { GAME_WINDOW, GameLayout, WindowButtons, gameWindowMotion } from "../../games/GameWindow.tsx";
 
 /**
  * Sinuca: E na mesa abre o painel. Na sua vez, mire com o mouse (a linha mostra a primeira bola que a
@@ -182,11 +183,8 @@ function PoolPanel({ id }: { id: string }) {
     <motion.aside
       role="dialog"
       aria-label={T.title}
-      initial={{ opacity: 0, x: -18 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -18 }}
-      transition={{ duration: 0.28, ease: EASE }}
-      className="glass pointer-events-auto absolute inset-x-2 bottom-2 z-30 flex max-h-[calc(100dvh-72px)] flex-col overflow-hidden rounded-[var(--radius-panel)] text-offwhite sm:inset-x-auto sm:bottom-auto sm:left-3 sm:top-16 sm:h-[calc(100dvh-64px-84px)] sm:max-h-[860px] sm:w-[400px]"
+      {...gameWindowMotion}
+      className={clsx(GAME_WINDOW, "sm:w-[min(480px,calc(100vw-32px))] lg:w-[min(calc(100vw-32px),calc(50dvh+260px))]")}
       data-pool-panel={id}
     >
       <header className="flex items-start gap-3 px-4 pb-2 pt-3.5">
@@ -195,19 +193,24 @@ function PoolPanel({ id }: { id: string }) {
           <h2 className="font-display text-[15px] font-bold uppercase leading-tight tracking-[0.1em]">{T.title}</h2>
           {st && <Status st={st} seat={seat} />}
         </div>
-        <button type="button" onClick={() => usePoolUi.setState({ open: null })} className="-mr-1.5 rounded-lg p-2 text-slate hover:bg-offwhite/8 hover:text-offwhite" aria-label={TT.close} title={TT.close}>
-          <X className="size-4" />
-        </button>
+        <WindowButtons title={T.title} close={() => usePoolUi.setState({ open: null })} restore={() => usePoolUi.setState({ open: id })} />
       </header>
       {st ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 pb-3.5">
-          <Seat id={id} st={st} seat={seat === 1 ? 0 : 1} me={seat} />
-          <Felt id={id} st={st} seat={seat} />
-          <Seat id={id} st={st} seat={seat === 1 ? 1 : 0} me={seat} />
-          <Notice />
-          <AnimatePresence mode="wait" initial={false}>
-            {st.phase === "finished" ? <End key={`end-${st.round}`} id={id} st={st} seat={seat} /> : <Foot key="foot" id={id} st={st} seat={seat} />}
-          </AnimatePresence>
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-3.5">
+          <GameLayout
+            fill
+            top={<Seat id={id} st={st} seat={seat === 1 ? 0 : 1} me={seat} />}
+            board={<Felt id={id} st={st} seat={seat} />}
+            bottom={<Seat id={id} st={st} seat={seat === 1 ? 1 : 0} me={seat} />}
+            side={
+              <>
+                <Notice />
+                <AnimatePresence mode="wait" initial={false}>
+                  {st.phase === "finished" ? <End key={`end-${st.round}`} id={id} st={st} seat={seat} /> : <Foot key="foot" id={id} st={st} seat={seat} />}
+                </AnimatePresence>
+              </>
+            }
+          />
         </div>
       ) : null}
     </motion.aside>
@@ -272,7 +275,7 @@ function Seat({ id, st, seat, me }: { id: string; st: PoolState; seat: number; m
         ) : (
           <p className="text-sm text-slate">{TT.duel.emptySeat}</p>
         )}
-        <p className="text-[11px] uppercase tracking-[0.12em] text-slate">{group ? T.groupLeft(T.group[group], poolLeft(st.balls, group)) : T.open}</p>
+        <p className="text-xs uppercase tracking-[0.12em] text-slate">{group ? T.groupLeft(T.group[group], poolLeft(st.balls, group)) : T.open}</p>
       </div>
       {canSit &&
         (walking ? (
@@ -292,7 +295,7 @@ function Seat({ id, st, seat, me }: { id: string; st: PoolState; seat: number; m
             {T.sitSide(seat)}
           </button>
         ))}
-      {active && <span className="shrink-0 rounded-full bg-signal/15 px-2.5 py-1 text-[11px] font-medium text-signal">{isMe ? T.yourTurn : T.turnShort}</span>}
+      {active && <span className="shrink-0 rounded-full bg-signal/15 px-2.5 py-1 text-xs font-medium text-signal">{isMe ? T.yourTurn : T.turnShort}</span>}
     </div>
   );
 }

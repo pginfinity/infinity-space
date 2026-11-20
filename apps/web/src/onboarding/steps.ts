@@ -1,22 +1,24 @@
 /**
- * Primeiros passos: a lista do que a pessoa aprende fazendo e o progresso salvo neste navegador.
+ * Primeiros passos: a lista do que a pessoa pratica na sala de treino e o progresso salvo neste navegador.
  * Só regras puras aqui (testadas em `steps.test.ts`); quem observa o que a pessoa faz é `watch.ts`.
  *
  * Presença, não vigilância: o progresso fica só no navegador da pessoa e não sai dele.
  */
 
-export type StepKey = "andar" | "usar" | "mic" | "chat" | "pessoas" | "mapa" | "lente";
+export type StepKey = "andar" | "mic" | "chat" | "emote" | "sentar" | "status" | "chamar" | "tela" | "jogo" | "lente";
 
 /** Ordem sugerida (a pessoa pode fazer em qualquer ordem; o "atual" é o primeiro que falta). */
-export const STEPS: readonly StepKey[] = ["andar", "usar", "mic", "chat", "pessoas", "mapa", "lente"];
+export const STEPS: readonly StepKey[] = ["andar", "mic", "chat", "emote", "sentar", "status", "chamar", "tela", "jogo", "lente"];
 
 /** Teclas mostradas ao lado de cada passo (só em computador). */
 export const STEP_KEYS: Partial<Record<StepKey, string[]>> = {
   andar: ["W", "A", "S", "D"],
-  usar: ["E"],
   mic: ["M"],
   chat: ["C"],
-  pessoas: ["Ctrl", "K"],
+  emote: ["1–8"],
+  sentar: ["E"],
+  chamar: ["Ctrl", "K"],
+  jogo: ["E"],
   lente: ["L"],
 };
 
@@ -24,14 +26,23 @@ export const STEP_KEYS: Partial<Record<StepKey, string[]>> = {
 export const STEP_TARGET: Partial<Record<StepKey, string>> = {
   mic: "mic",
   chat: "chat",
-  pessoas: "pessoas",
-  mapa: "mapa",
+  emote: "emote",
+  status: "status",
+  chamar: "pessoas",
+  tela: "tela",
+  jogo: "mapa",
   lente: "lente",
 };
 
-/** No celular o escritório é 2D e sem teclado: a troca de lente sai da lista. */
+/** No celular o escritório é 2D, sem teclado e sem compartilhar tela: lente e tela saem da lista. */
 export function stepsFor(touch: boolean): StepKey[] {
-  return touch ? STEPS.filter((s) => s !== "lente") : [...STEPS];
+  return touch ? STEPS.filter((s) => s !== "lente" && s !== "tela") : [...STEPS];
+}
+
+/** O passo vizinho na lista (`-1` = o anterior, `1` = o seguinte), ou null na ponta. */
+export function stepBeside(list: readonly StepKey[], key: StepKey, delta: -1 | 1): StepKey | null {
+  const i = list.indexOf(key);
+  return i < 0 ? null : (list[i + delta] ?? null);
 }
 
 /**

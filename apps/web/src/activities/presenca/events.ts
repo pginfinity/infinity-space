@@ -1,5 +1,6 @@
 import {
   CHAMADO_GAP,
+  PORTAS_ID,
   SEGUIR_ID,
   CHAMADO_WALK_MAX,
   chamadoPathLength,
@@ -12,19 +13,20 @@ import {
   type ChamadoTravel,
   type ChamadoWait,
   type ChamadoWarp,
+  type PortasState,
   type SeguirAsk,
   type SeguirAsking,
   type SeguirEnd,
   type SeguirStart,
 } from "@infinity/world";
-import { sendAct, type ActEvent } from "../registry.ts";
+import { actState, sendAct, type ActEvent } from "../registry.ts";
 import { sfx } from "../../audio/sfx.ts";
 import { avatarEffect, setAvatarEffect } from "../../avatar/effects.ts";
 import { useApp } from "../../state/store.ts";
 import { toast } from "../../ui/toasts.ts";
 import { sampleRemote, self } from "../../world/registry.ts";
 import { world } from "../../world/world.ts";
-import { dropCallIn, dropFollowIn, nameOf } from "../../presence/actions.ts";
+import { dropCallIn, dropFollowIn, nameOf, quietCall, rememberCall } from "../../presence/actions.ts";
 import { setFace, startApproach, startDash, startFollow, stopControl, type ControlEnd } from "../../presence/controller.ts";
 import { myStatus } from "../../presence/status.ts";
 import { usePresence } from "../../presence/store.ts";
@@ -36,14 +38,31 @@ const me = (): string | null => useApp.getState().selfId;
 
 // ---- chamado ------------------------------------------------------------------------------
 
+/** Em Foco, ou dentro de uma sala com Não perturbe: chamado não toma a tela, vira um lembrete para depois. */
+export function callsQuiet(): boolean {
+  if (myStatus() === "focus") return true;
+  const zone = world().zones.zoneAt(self)?.id;
+  return !!zone && actState<PortasState>(PORTAS_ID)?.doors[zone]?.state === "locked";
+}
+
+let callNotifier: ((inv: ChamadoInvite) => void) | null = null;
+/** Gancho para a notificação do sistema (próxima etapa): roda a cada chamado que toma a tela. */
+export function setCallNotifier(fn: ((inv: ChamadoInvite) => void) | null): void {
+  callNotifier = fn;
+}
+
 export function onCallEvent(e: ActEvent): void {
   const now = performance.now();
   switch (e.ev) {
     case "call": {
       const d = e.data as ChamadoInvite;
+      if (callsQuiet()) {
+        quietCall(d);
+        break;
+      }
       usePresence.setState((s) => ({ callsIn: [...s.callsIn.filter((c) => c.from !== d.from).slice(-2), { ...d, start: now }] }));
-      // Em Foco o cartão aparece, mas sem som.
-      if (myStatus() !== "focus") sfx("presenca-chamado", { volume: 0.45 });
+      sfx("presenca-chamado", { volume: 0.45 });
+      callNotifier?.(d);
       break;
     }
     case "calling":
@@ -58,25 +77,36 @@ export function onCallEvent(e: ActEvent): void {
     case "end": {
       const d = e.data as ChamadoEnd;
       if (d.to === me()) {
-        const had = usePresence.getState().callsIn.some((c) => c.from === d.from);
+        const had = usePresence.getState().callsIn.find((c) => c.from === d.from);
         dropCallIn(d.from);
         if (had && d.reason === "cancel") toast(T.call.canceled(nameOf(d.from)));
+        // Ninguém respondeu (longe do teclado): sobra o lembrete de quem chamou.
+        if (had && d.reason === "expired") rememberCall(had);
       }
       if (d.from === me()) {
         const out = usePresence.getState().callOut;
         if (out?.to === d.to) {
           usePresence.setState({ callOut: null });
           const name = out.name;
-          if (d.reason === "declined") toast(T.call.declined(name));
+          if (d.reason === "declined") toast(d.note ? T.call.declinedNote(name, d.note) : T.call.declined(name), d.note ? 7000 : undefined);
+          else if (d.reason === "chat") toast(T.call.chatReply(name));
+          else if (d.reason === "quiet") toast(T.call.quiet(name), 6000);
           else if (d.reason === "expired") toast(T.call.expired(name));
           else if (d.reason === "left") toast(T.call.left(name));
         }
       }
       break;
     }
-    case "go":
-      startTravel(e.data as ChamadoGo);
+    case "go": {
+      const d = e.data as ChamadoGo;
+      // "Chama aqui": quem você chamou pediu para você ir até lá.
+      if (d.here) {
+        if (usePresence.getState().callOut?.to === d.from) usePresence.setState({ callOut: null });
+        toast(T.call.hereGo(d.name));
+      }
+      startTravel(d);
       break;
+    }
     case "travel":
       onTravel(e.data as ChamadoTravel);
       break;

@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { currentStep, doneCount, markDone, parseProgress, serializeProgress, shouldAutoStart, STEPS, stepsFor, walked } from "./steps.ts";
+import { currentStep, doneCount, markDone, parseProgress, serializeProgress, shouldAutoStart, stepBeside, STEPS, stepsFor, walked } from "./steps.ts";
 
 describe("primeiros passos", () => {
-  it("no celular a troca de lente sai da lista", () => {
+  it("no celular a troca de lente e o compartilhar tela saem da lista", () => {
     expect(stepsFor(false)).toEqual([...STEPS]);
     expect(stepsFor(true)).not.toContain("lente");
-    expect(stepsFor(true)).toHaveLength(STEPS.length - 1);
+    expect(stepsFor(true)).not.toContain("tela");
+    expect(stepsFor(true)).toHaveLength(STEPS.length - 2);
+  });
+
+  it("voltar e seguir andam pela lista e param nas pontas", () => {
+    const list = stepsFor(true);
+    expect(stepBeside(list, "andar", -1)).toBeNull();
+    expect(stepBeside(list, "chat", -1)).toBe("mic");
+    expect(stepBeside(list, "chamar", 1)).toBe("jogo");
+    expect(stepBeside(list, "jogo", 1)).toBeNull();
+    expect(stepBeside(list, "lente", 1)).toBeNull();
   });
 
   it("o passo da vez é o primeiro que falta, em qualquer ordem que a pessoa fizer", () => {
@@ -15,7 +25,7 @@ describe("primeiros passos", () => {
     expect(currentStep(list, done)).toBe("andar");
     done = markDone(done, "andar");
     expect(done).toEqual(["andar", "mic"]);
-    expect(currentStep(list, done)).toBe("usar");
+    expect(currentStep(list, done)).toBe("chat");
     expect(markDone(done, "mic")).toEqual(done);
     for (const s of list) done = markDone(done, s);
     expect(currentStep(list, done)).toBeNull();

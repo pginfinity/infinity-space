@@ -78,7 +78,9 @@ test("paleta: Ctrl+K, busca sem acento, setas, Enter e Esc", async ({ browser })
   await a.keyboard.press("Enter");
   const settings = a.getByRole("dialog", { name: "Áudio e vídeo" });
   await expect(settings).toBeVisible();
-  await expect(settings.getByRole("radiogroup", { name: "Ficar Ausente sozinho" })).toBeInViewport({ timeout: 5000 });
+  // O painel rola sozinho em até 2 s; com a CPU cheia (dois navegadores com WebGL por software) o
+  // timer da página atrasa e a rolagem chegou a levar 9 s. A posição final está certa.
+  await expect(settings.getByRole("radiogroup", { name: "Ficar Ausente sozinho" })).toBeInViewport({ timeout: 20_000 });
   await expect(settings.getByRole("radio", { name: "Foco" })).toHaveAttribute("aria-checked", "true");
   await a.keyboard.press("Escape");
   await expect(settings).toBeHidden();

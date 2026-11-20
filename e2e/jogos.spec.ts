@@ -183,3 +183,57 @@ test("Xadrez: lances legais por clique e xeque-mate", async ({ browser }) => {
   await ana.context().close();
   await bruno.context().close();
 });
+
+test("janela do jogo: grande e no meio no computador, tela toda no celular, minimizar e voltar", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const ctx = await browser.newContext();
+  const ana = await ctx.newPage();
+  await ana.goto("/?nome=Ana&lente=3d");
+  await ana.waitForFunction(() => !!(window as any).__infinity?.store.getState().selfId, null, { timeout: 30_000 });
+  const id = (await findTable(ana, "chess"))!;
+  await openGame(ana, id);
+  const win = ana.getByRole("dialog", { name: "Xadrez" });
+  await expect(win).toBeVisible();
+  await ana.waitForTimeout(600);
+  // Ocupa a maior parte da tela e fica no meio (antes abria pequena no canto).
+  const box = (await win.boundingBox())!;
+  expect(box.height).toBeGreaterThan(900 * 0.7);
+  expect(Math.abs(box.x + box.width / 2 - 1440 / 2)).toBeLessThan(4);
+  await ana.screenshot({ path: `${SHOTS}/jogos-janela-3d.png` });
+
+  // Minimizar: a janela some, o botão de voltar fica; voltar reabre a mesma mesa.
+  await win.getByRole("button", { name: "Minimizar" }).click();
+  await expect(win).toBeHidden();
+  const back = ana.getByRole("button", { name: "Voltar ao jogo · Xadrez" });
+  await expect(back).toBeVisible();
+  await ana.screenshot({ path: `${SHOTS}/jogos-janela-minimizada.png` });
+  await back.click();
+  await expect(win).toBeVisible();
+  await expect(back).toBeHidden();
+  await win.getByRole("button", { name: "Fechar (Esc)" }).click();
+  await expect(win).toBeHidden();
+  await expect(back).toBeHidden();
+  await ctx.close();
+
+  // Celular (390 × 844): a janela é a tela toda e o tabuleiro cabe na largura.
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const bia = await phone.newPage();
+  await bia.goto("/?nome=Bia&lente=2d");
+  await bia.waitForFunction(() => !!(window as any).__infinity?.store.getState().selfId, null, { timeout: 30_000 });
+  await openGame(bia, (await findTable(bia, "chess"))!);
+  const winB = bia.getByRole("dialog", { name: "Xadrez" });
+  await expect(winB).toBeVisible();
+  await bia.waitForTimeout(600);
+  const boxB = (await winB.boundingBox())!;
+  expect(boxB.width).toBeGreaterThanOrEqual(389);
+  expect(boxB.height).toBeGreaterThanOrEqual(843);
+  const board = (await winB.getByRole("grid").boundingBox())!;
+  expect(board.x).toBeGreaterThanOrEqual(0);
+  expect(board.x + board.width).toBeLessThanOrEqual(390);
+  expect(board.width).toBeGreaterThan(240);
+  await bia.screenshot({ path: `${SHOTS}/jogos-janela-celular.png` });
+  await winB.getByRole("button", { name: "Minimizar" }).click();
+  await expect(bia.getByRole("button", { name: "Voltar ao jogo · Xadrez" })).toBeVisible();
+  await bia.screenshot({ path: `${SHOTS}/jogos-janela-celular-minimizada.png` });
+  await phone.close();
+});

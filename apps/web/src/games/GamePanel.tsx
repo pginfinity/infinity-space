@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Eye, Flag, LoaderCircle, LogOut, Trophy, X } from "lucide-react";
+import { Eye, Flag, LoaderCircle, LogOut, Trophy } from "lucide-react";
 import { GAMES, canAct, gamePlayerCounts, winnersOf, type CheckersState, type ChessState, type Connect4State, type DominoState, type TicTacToeState, type TrucoState } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { STATUS_COLOR } from "../world/theme.ts";
-import { closeGame, leaveSeat, mySeat, seatPlayerName, sendGame, tableKind, useGamesUi, useTable, type Table } from "./api.ts";
+import { closeGame, leaveSeat, mySeat, openGame, seatPlayerName, sendGame, tableKind, useGamesUi, useTable, type Table } from "./api.ts";
+import { GAME_WINDOW, GameLayout, WindowButtons, gameWindowMotion } from "./GameWindow.tsx";
 import { ChessBoard, Captured } from "./ChessBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
@@ -36,19 +37,15 @@ export function GamePanel({ table }: { table: string }) {
     <motion.aside
       role="dialog"
       aria-label={title}
-      initial={{ opacity: 0, x: -18 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -18 }}
-      transition={{ duration: 0.28, ease: EASE }}
+      {...gameWindowMotion}
       className={clsx(
-        "glass pointer-events-auto absolute z-30 flex flex-col overflow-hidden rounded-[var(--radius-panel)] text-offwhite",
-        // Celular: folha de baixo, largura toda. Telas maiores: coluna à esquerda.
-        "inset-x-2 bottom-2 max-h-[calc(100dvh-72px)]",
-        "sm:inset-x-auto sm:bottom-auto sm:left-3 sm:top-16 sm:w-[420px] sm:max-h-[calc(100dvh-64px-84px)]",
+        GAME_WINDOW,
+        // Tabuleiro quadrado: a largura acompanha a altura da tela, com a coluna dos lugares ao lado.
+        isMulti(kind) ? "sm:w-[min(960px,calc(100vw-32px))]" : "sm:w-[min(640px,calc(100vw-32px))] lg:w-[min(1120px,calc(100vw-32px),calc(100dvh+120px))]",
       )}
       data-game-panel={table}
     >
-      <Header title={title} kind={kind} t={t} seat={seat} />
+      <Header title={title} kind={kind} t={t} seat={seat} table={table} />
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1 sm:pb-4">
         {t ? isMulti(kind) ? <MultiBody t={t} kind={kind} seat={seat} /> : <Body t={t} kind={kind} seat={seat} /> : <p className="py-10 text-center text-sm text-slate">{S.noTable}</p>}
       </div>
@@ -56,7 +53,7 @@ export function GamePanel({ table }: { table: string }) {
   );
 }
 
-function Header({ title, kind, t, seat }: { title: string; kind: string; t: Table | null; seat: number }) {
+function Header({ title, kind, t, seat, table }: { title: string; kind: string; t: Table | null; seat: number; table: string }) {
   return (
     <header className="flex items-start gap-3 px-4 pb-2 pt-3.5">
       <GameIcon kind={kind} className="mt-0.5 size-8 shrink-0" />
@@ -64,9 +61,7 @@ function Header({ title, kind, t, seat }: { title: string; kind: string; t: Tabl
         <h2 className="font-display text-[15px] font-bold uppercase leading-tight tracking-[0.1em]">{title}</h2>
         {t && <StatusLine t={t} seat={seat} kind={kind} />}
       </div>
-      <button type="button" onClick={closeGame} className="-mr-1.5 rounded-lg p-2 text-slate transition-colors hover:bg-offwhite/8 hover:text-offwhite" aria-label={S.closeHint} title={S.closeHint}>
-        <X className="size-4" />
-      </button>
+      <WindowButtons title={title} close={closeGame} restore={() => openGame(table)} />
     </header>
   );
 }
@@ -124,24 +119,31 @@ function Body({ t, kind, seat }: { t: Table; kind: string; seat: number }) {
   const freeSeats = t.seats.filter((x) => x === null).length;
 
   return (
-    <>
-      <SeatStrip t={t} kind={kind} seat={top} me={seat} primary={freeSeats === 1} />
-      <div className="mx-auto w-full" style={{ maxWidth: "max(240px, calc(100dvh - 400px))" }}>
-        {kind === "chess" && <ChessBoard t={t as Table<ChessState>} seat={seat} canMove={canMove} />}
-        {kind === "connect4" && <Connect4Board t={t as Table<Connect4State>} seat={seat} canMove={canMove} />}
-        {kind === "tictactoe" && <TicTacToeBoard t={t as Table<TicTacToeState>} seat={seat} canMove={canMove} />}
-        {kind === "checkers" && <CheckersBoard t={t as Table<CheckersState>} seat={seat} canMove={canMove} />}
-      </div>
-      <SeatStrip t={t} kind={kind} seat={bottom} me={seat} primary={freeSeats === 1} />
-      {notice && (
-        <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
-          {notice}
-        </p>
-      )}
-      <AnimatePresence mode="wait" initial={false}>
-        {t.phase === "finished" ? <EndBanner key={`end-${t.state.round}`} t={t} kind={kind} seat={seat} /> : <Footer key="footer" t={t} seat={seat} />}
-      </AnimatePresence>
-    </>
+    <GameLayout
+      top={<SeatStrip t={t} kind={kind} seat={top} me={seat} primary={freeSeats === 1} />}
+      board={
+        // O maior quadrado que cabe na altura (celular, telas médias com os lugares em cima e embaixo, telas largas com a coluna ao lado).
+        <div className="mx-auto w-full max-w-[max(240px,calc(100dvh-290px))] sm:max-w-[max(240px,calc(100dvh-430px))] lg:max-w-[max(300px,calc(100dvh-250px))]">
+          {kind === "chess" && <ChessBoard t={t as Table<ChessState>} seat={seat} canMove={canMove} />}
+          {kind === "connect4" && <Connect4Board t={t as Table<Connect4State>} seat={seat} canMove={canMove} />}
+          {kind === "tictactoe" && <TicTacToeBoard t={t as Table<TicTacToeState>} seat={seat} canMove={canMove} />}
+          {kind === "checkers" && <CheckersBoard t={t as Table<CheckersState>} seat={seat} canMove={canMove} />}
+        </div>
+      }
+      bottom={<SeatStrip t={t} kind={kind} seat={bottom} me={seat} primary={freeSeats === 1} />}
+      side={
+        <>
+          {notice && (
+            <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn" role="status">
+              {notice}
+            </p>
+          )}
+          <AnimatePresence mode="wait" initial={false}>
+            {t.phase === "finished" ? <EndBanner key={`end-${t.state.round}`} t={t} kind={kind} seat={seat} /> : <Footer key="footer" t={t} seat={seat} />}
+          </AnimatePresence>
+        </>
+      }
+    />
   );
 }
 
@@ -150,7 +152,8 @@ function MultiBody({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
   const canMove = t.phase === "playing" && canAct(t.state, seat);
   const notice = useGamesUi((s) => s.notice);
   return (
-    <>
+    // A mesa do truco é 16:11: a largura acompanha a altura da tela para caber com a mão e os botões.
+    <div className="mx-auto flex w-full max-w-[max(320px,calc((100dvh-420px)*1.45))] flex-col gap-2.5">
       {/* No truco, durante a partida, os lugares aparecem em volta da mesa (nome, cartas e vez). */}
       {!(kind === "truco" && t.phase === "playing") && <SeatGrid t={t} kind={kind} me={seat} />}
       {kind === "domino" && <DominoBoard t={t as Table<DominoState>} seat={seat} canMove={canMove} />}
@@ -163,7 +166,7 @@ function MultiBody({ t, kind, seat }: { t: Table; kind: string; seat: number }) 
       <AnimatePresence mode="wait" initial={false}>
         {t.phase === "finished" ? <EndBanner key={`end-${t.state.round}`} t={t} kind={kind} seat={seat} /> : <Footer key="footer" t={t} seat={seat} kind={kind} />}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
 
@@ -200,12 +203,12 @@ function SeatGrid({ t, kind, me }: { t: Table; kind: string; me: number }) {
                 <p className="flex min-w-0 items-center gap-1 text-[13px] font-medium">
                   <span className="size-1.5 shrink-0 rounded-full" style={{ background: player ? STATUS_COLOR[player.status] : "#8A93A3" }} aria-hidden />
                   <span className="truncate">{name}</span>
-                  {isMe && <span className="shrink-0 text-[11px] font-normal text-slate">({S.you})</span>}
+                  {isMe && <span className="shrink-0 text-xs font-normal text-slate">({S.you})</span>}
                 </p>
               ) : (
                 <p className="text-[13px] text-slate">{S.emptySeat}</p>
               )}
-              <p className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[10px] uppercase tracking-[0.12em] text-slate">
+              <p className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs uppercase tracking-[0.12em] text-slate">
                 <span className="shrink-0">{teams ? S.team(seat % 2) : seatName}</span>
                 {count !== undefined && <span className="truncate normal-case tracking-normal">· {kind === "truco" ? S.cards(count) : S.tiles(count)}</span>}
               </p>
@@ -219,7 +222,7 @@ function SeatGrid({ t, kind, me }: { t: Table; kind: string; me: number }) {
             )}
             {canSit &&
               (walking ? (
-                <button type="button" onClick={cancelSeat} className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-offwhite/80 ring-1 ring-offwhite/15 hover:bg-offwhite/8" title={S.cancel} aria-label={S.walking}>
+                <button type="button" onClick={cancelSeat} className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-offwhite/80 ring-1 ring-offwhite/15 hover:bg-offwhite/8" title={S.cancel} aria-label={S.walking}>
                   <LoaderCircle className="size-3.5 animate-spin" />
                 </button>
               ) : (
@@ -227,7 +230,7 @@ function SeatGrid({ t, kind, me }: { t: Table; kind: string; me: number }) {
                   type="button"
                   onClick={() => requestSeat(t.table, seat)}
                   aria-label={S.sitAt(seatName)}
-                  className="shrink-0 rounded-lg bg-offwhite/8 px-2.5 py-1.5 text-[11px] font-semibold text-offwhite ring-1 ring-offwhite/15 transition-colors hover:bg-signal hover:text-space hover:ring-signal"
+                  className="shrink-0 rounded-lg bg-offwhite/8 px-2.5 py-1.5 text-xs font-semibold text-offwhite ring-1 ring-offwhite/15 transition-colors hover:bg-signal hover:text-space hover:ring-signal"
                 >
                   {S.sitShort}
                 </button>
@@ -272,7 +275,7 @@ function SeatStrip({ t, kind, seat, me, primary }: { t: Table; kind: string; sea
         ) : (
           <p className="text-sm text-slate">{S.emptySeat}</p>
         )}
-        <p className="mt-0.5 flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate">
+        <p className="mt-0.5 flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate">
           <span>{seatName}</span>
           {kind === "chess" && id && <Captured s={t.state as unknown as ChessState} color={seat === 0 ? "w" : "b"} />}
           {kind === "checkers" && id && <CheckersLost s={t.state as unknown as CheckersState} seat={seat} />}
@@ -280,12 +283,12 @@ function SeatStrip({ t, kind, seat, me, primary }: { t: Table; kind: string; sea
       </div>
 
       {active && (
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-signal/15 px-2.5 py-1 text-[11px] font-medium text-signal">
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-signal/15 px-2.5 py-1 text-xs font-medium text-signal">
           <span className="size-1.5 animate-pulse rounded-full bg-signal" />
           {isMe ? S.yourTurn : S.turnShort}
         </span>
       )}
-      {winner && <span className="shrink-0 rounded-full bg-offwhite/10 px-2.5 py-1 text-[11px] font-medium text-offwhite">{S.winnerTag}</span>}
+      {winner && <span className="shrink-0 rounded-full bg-offwhite/10 px-2.5 py-1 text-xs font-medium text-offwhite">{S.winnerTag}</span>}
 
       {canSit &&
         (walking ? (

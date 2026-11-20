@@ -64,7 +64,11 @@ const STATUSES: ReadonlySet<Status> = new Set(["available", "listening", "focus"
 const SIT = ANIMS.indexOf("sit");
 const HELD_SET: ReadonlySet<string> = new Set(HELD_ITEMS);
 
-/** A sala única do escritório. Guarda quem está onde e retransmite as poses. */
+/**
+ * A sala do escritório. Guarda quem está onde e retransmite as poses.
+ * `training`: a sala de treino do tutorial (o mesmo mapa, outra sala): lê os dados de verdade sem gravar,
+ * sem gravador de reunião e com voz e vídeo numa sala própria do LiveKit. Quem treina não aparece no escritório.
+ */
 export class OfficeRoom {
   readonly map: MapDef = buildStationMap();
   readonly nav = NavGrid.fromMap(this.map);
@@ -140,12 +144,18 @@ export class OfficeRoom {
   private tickTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
 
+  constructor(readonly training = false) {
+    this.store.readOnly = training;
+  }
+
   /** Carrega os pacotes de atividades. Chame antes de `start`. */
   async init(): Promise<void> {
     await this.acts.load();
     // Gravação de reuniões: precisa da sala (quem está em cada grupo de salas e as listas de áudio).
-    const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
-    this.recording = rec as RecordingActivity;
+    if (!this.training) {
+      const [rec] = this.acts.add((host) => [new RecordingActivity(host, { membersIn: (g) => this.membersIn(g) })], "gravacao");
+      this.recording = rec as RecordingActivity;
+    }
     // Portas, roda fechada e sussurro: entram na audição e na validação de pose.
     const portas = this.acts.get(PORTAS_ID) as Partial<PrivacySource> | undefined;
     if (portas?.privacy && portas.mayStand && portas.exitOf && portas.onPrivacyChange) {
@@ -324,7 +334,7 @@ export class OfficeRoom {
         this.onEmote(m, msg.e);
         break;
       case "rtc":
-        void rtcToken(m.info.id, m.info.name).then((token) => this.sendTo(m, { t: "rtc", url: RTC.publicUrl, token }));
+        void rtcToken(m.info.id, m.info.name, this.training ? `${RTC.room}-treino` : RTC.room).then((token) => this.sendTo(m, { t: "rtc", url: RTC.publicUrl, token }));
         break;
       case "game":
         if (typeof msg.table === "string" && typeof msg.op === "string") this.games.handle(m.info.id, msg.table, msg.op, msg.data);

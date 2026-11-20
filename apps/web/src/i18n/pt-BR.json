@@ -20,7 +20,11 @@
     "lens3dHint": "Imersivo. Melhor em PC com placa de vídeo.",
     "enter": "Entrar",
     "remember": "Suas escolhas ficam salvas neste dispositivo.",
-    "nameRequired": "Digite seu nome para entrar."
+    "nameRequired": "Digite seu nome para entrar.",
+    "editTitle": "Editar avatar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "you": "Você no escritório"
   },
   "hud": {
     "online_one": "{{count}} pessoa online",
@@ -55,7 +59,7 @@
     "title": "Primeiros passos",
     "progress": "{{done}} de {{total}}",
     "hello": "Oi, {{name}}! Eu sou o Orbi.",
-    "helloBody": "Moro aqui na estação. Em um minuto te mostro o essencial, e você vai fazendo junto.",
+    "helloBody": "Moro aqui na estação. Vamos para a sala de treino: o mesmo escritório, onde ninguém do time te vê nem ouve, e você pratica o essencial.",
     "start": "Vamos lá",
     "later": "Agora não",
     "laterToast": "Quando quiser, aperte ? ou busque \"Primeiros passos\" no Ctrl+K.",
@@ -66,36 +70,54 @@
     "expand": "Abrir primeiros passos",
     "close": "Fechar",
     "stepDone": "Feito",
+    "back": "Voltar",
+    "next": "Próximo",
+    "training": "Sala de treino",
+    "trainingHint": "quem está no escritório não te vê nem ouve",
+    "backToOffice": "Voltar ao escritório",
     "steps": {
       "andar": {
         "label": "Ande pela estação",
         "say": "WASD ou setas para andar. Clique no chão para ir direto; com Shift você corre.",
         "sayTouch": "Toque no chão para ir até lá."
       },
-      "usar": {
-        "label": "Use algo com E",
-        "say": "Estou indo até você! Quando eu chegar, aperte E para um carinho. O E também serve café, abre jogos e bate em portas.",
-        "sayTouch": "Estou indo até você! Quando eu chegar, toque no botão que aparece embaixo da tela.",
-        "labelTouch": "Use algo que está perto"
-      },
       "mic": {
-        "label": "Ligue o microfone",
-        "say": "Quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some. M liga e desliga.",
-        "sayTouch": "Quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some."
+        "label": "Fale com quem está perto",
+        "say": "Ligue o microfone: quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some. M liga e desliga.",
+        "sayTouch": "Ligue o microfone: quem está perto te ouve, como no escritório de verdade. Se afastou, a voz some."
       },
       "chat": {
         "label": "Abra o chat",
         "say": "Perto fala com quem está ao seu redor, Geral com todo mundo, e dá para mandar mensagem direta."
       },
-      "pessoas": {
-        "label": "Encontre alguém",
-        "say": "Veja quem está online, ou use Ctrl+K, para ir até a pessoa, chamar ou seguir.",
-        "sayTouch": "Veja quem está online, ou use a busca, para ir até a pessoa, chamar ou seguir."
+      "emote": {
+        "label": "Mande um emote",
+        "say": "Aperte de 1 a 8, ou abra os emotes: acenar, rir, aplaudir. Quem está ao redor vê.",
+        "sayTouch": "Abra os emotes e escolha um: acenar, rir, aplaudir. Quem está ao redor vê."
       },
-      "mapa": {
-        "label": "Abra o mapa",
-        "say": "Amplie o mapa: o guia mostra jogos, copa, jukebox e mural, com um botão para ir até lá.",
-        "sayTouch": "Na busca, escolha \"Mapa da estação\": o guia mostra jogos, copa, jukebox e mural."
+      "sentar": {
+        "label": "Sente numa cadeira",
+        "say": "Chegue perto de uma cadeira e aperte E. Para levantar, é só andar. O E também serve café, abre jogos e bate em portas.",
+        "sayTouch": "Chegue perto de uma cadeira e toque no botão que aparece embaixo da tela. Para levantar, é só andar."
+      },
+      "status": {
+        "label": "Entre em foco",
+        "say": "Em Áudio e vídeo, escolha Foco: chamados viram um aviso discreto para depois. Ao voltar ao escritório você fica disponível de novo.",
+        "sayTouch": "Em Mais › Áudio e vídeo, escolha Foco: chamados viram um aviso discreto para depois."
+      },
+      "chamar": {
+        "label": "Chame alguém",
+        "say": "Em Pessoas ou Ctrl+K, escolha alguém e Chamar: a pessoa recebe na tela e responde. Se só você está treinando, pule este.",
+        "sayTouch": "Em Pessoas, escolha alguém e Chamar: a pessoa recebe na tela e responde. Se só você está treinando, pule este."
+      },
+      "tela": {
+        "label": "Compartilhe a tela",
+        "say": "O botão de tela mostra uma janela ou o monitor para quem está perto. Aqui, só quem treina vê."
+      },
+      "jogo": {
+        "label": "Abra um jogo",
+        "say": "Vá até uma mesa de jogos e aperte E. No mapa, o guia mostra onde ficam e leva você até lá.",
+        "sayTouch": "Vá até uma mesa de jogos e toque no botão que aparece. Na busca, \"Mapa da estação\" mostra onde ficam."
       },
       "lente": {
         "label": "Veja em 2D e 3D",
