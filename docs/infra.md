@@ -98,6 +98,14 @@ Cada pessoa conecta a própria Google Agenda em *Áudio e vídeo → Agenda* (s�
 
 O acesso de cada pessoa fica cifrado em `DATA_DIR/agenda/tokens.json` (chave tirada do secret). Trocar o secret desconecta todo mundo, que precisa conectar de novo. O servidor relê as agendas conectadas a cada 3 minutos; os eventos ficam só na memória. A sala é reconhecida pelo nome (ex.: local "Sala Eclipse", "Suíte 2", "Auditório").
 
+## 9. Painel do time (o que subiu para produção)
+
+O painel do Átrio mostra metas da semana, avisos do gestor e aniversariantes (editados ali mesmo por quem está em `ADMIN_EMAILS`) e, com esta configuração, quantos deploys foram ao ar nos últimos 7 dias por cliente, com confete para todos quando um cliente sobe. Os números vêm do Supremacy (`GET /api/deploys/por-cliente`, o mesmo que o Hub usa), contados por cliente, sem nome de quem subiu. Sem esta configuração, o quadro do que subiu não aparece e o resto do painel funciona igual.
+
+1. No `.env` de produção: `SUPREMACY_URL=<endereço do Supremacy>` e `SUPREMACY_SERVICE_TOKEN=<token de serviço só de leitura>` (o mesmo token de serviço do Hub; vai pelo `.env`, nunca por chat). Reiniciar o app.
+
+O servidor pergunta a cada 2 minutos. A lista inteira de aniversários fica só com quem administra; o time vê só os próximos 7 dias.
+
 ## O que eu preciso receber
 
 1. IP e especificações da VPS.
@@ -108,3 +116,4 @@ O acesso de cada pessoa fica cifrado em `DATA_DIR/agenda/tokens.json` (chave tir
 6. Os e-mails de quem vai administrar o escritório (`ADMIN_EMAILS`).
 7. Para as gravações: o JSON da conta de serviço e o id da pasta no Drive compartilhado (seção 7).
 8. Para a Google Agenda: o Client ID e o secret do app OAuth (seção 8).
+9. Para o painel do time: o endereço do Supremacy e o token de serviço no `.env` (seção 9).

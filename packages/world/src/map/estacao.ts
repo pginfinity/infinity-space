@@ -346,6 +346,12 @@ export function buildStationMap(): MapDef {
     label: "Mural de recados",
     interact: { point: { x: -2.95, z: -3.1 }, yaw: N, radius: 1.9, action: "use", label: "Ver mural" },
   });
+  // Painel do time na parede oeste, entre a porta e o mapa: metas, avisos, aniversários e o que subiu.
+  b.onWall("lobby-panel", -5, 4.6, E, {
+    zoneId: "atrio",
+    label: "Painel do time",
+    interact: { point: { x: -4.0, z: 4.6 }, yaw: W, radius: 2.0, action: "use", label: "Ver painel" },
+  });
   // pacote vivo: estação de rega (regadores e a plaquinha das plantas felizes)
   b.put("watering-station", 6.45, 5.6, W, { zoneId: "atrio", label: "Estação de rega" });
   for (const [x, z] of [

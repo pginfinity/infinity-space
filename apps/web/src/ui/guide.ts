@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, Bot, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Images, MessageCircleMore, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Timer, Trash2, Trophy, Tv } from "lucide-react";
+import { Bell, Bot, LayoutDashboard, Camera, Coffee, Crown, Disc3, Droplets, Gamepad2, Grid3x3, Images, MessageCircleMore, Mic, Music, PenTool, Rocket, Rows3, Search, StickyNote, Telescope, Timer, Trash2, Trophy, Tv } from "lucide-react";
 import { TV_SCREEN, type MapObject, type ObjectType, type Vec2 } from "@infinity/world";
 import { world } from "../world/world.ts";
 
@@ -37,6 +37,7 @@ const DEFS: GuideDef[] = [
   { key: "gongo", label: "Gongo", hint: "Comemore uma venda", group: "Escritório", icon: Bell, types: ["gong"] },
   { key: "deploy", label: "Botão de deploy", hint: "Lança um foguete", group: "Escritório", icon: Rocket, types: ["big-button"] },
   { key: "mural", label: "Mural de recados", hint: "Post-its para o time", group: "Escritório", icon: StickyNote, types: ["notice-board"] },
+  { key: "painel", label: "Painel do time", hint: "Metas, avisos, aniversários e o que subiu", group: "Escritório", icon: LayoutDashboard, types: ["lobby-panel"] },
   { key: "cabine", label: "Cabine de fotos", hint: "Foto da turma", group: "Escritório", icon: Camera, types: ["camera-tripod"] },
   { key: "mural-fotos", label: "Mural de fotos", hint: "As fotos da cabine, na copa", group: "Escritório", icon: Images, types: ["photo-wall"] },
   { key: "foco", label: "Mesa de foco", hint: "Pomodoro em grupo, em silêncio", group: "Escritório", icon: Timer, types: ["focus-table"] },

@@ -126,6 +126,7 @@ export const MODELS: Partial<Record<ObjectType, ModelFn>> = {
   // pacote escritorio
   "notice-board": escritorio.noticeBoard,
   "photo-wall": escritorio.photoWall,
+  "lobby-panel": escritorio.lobbyPanel,
   telescope: vivo.telescope,
   chalkboard: vivo.chalkboard,
   "watering-station": vivo.wateringStation,

@@ -19,6 +19,8 @@ Escopo da V1 e da V2 conforme as decisões de 15/11/2026. IA, integrações, gra
 
 Gravação de reuniões (prevista para a V2) entrou na V1 a pedido do time: grava a sala e envia ao Google Drive. Desde 20/11 vai junto a transcrição das falas, que o Portal de Reuniões transforma em ata, aviso e tarefas na Gestão.
 
+Painel do time no Átrio (20/11): metas da semana, avisos do gestor, aniversariantes e o que subiu para produção (puxado do Supremacy), com confete quando um cliente sobe.
+
 ## Etapa 0: Fundação
 - Monorepo, tokens da marca (cores, NORD, Geist), CLAUDE.md.
 - `packages/world`: formato do mapa, planta do Círculo de Evolução, colisão, rotas, regra de audição, com testes.

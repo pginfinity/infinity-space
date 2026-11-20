@@ -139,6 +139,7 @@ export type ObjectType =
   | "gong"
   // pacote escritorio
   | "notice-board"
+  | "lobby-panel"
   | "photo-wall"
   // auditório
   | "lectern"

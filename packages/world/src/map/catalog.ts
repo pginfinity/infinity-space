@@ -83,6 +83,7 @@ export const CATALOG: Record<ObjectType, CatalogEntry> = {
   gong: { w: 1.0, d: 0.5, h: 1.8, blocks: true, action: "use", label: "Tocar o gongo", look: "Gongo dourado pendurado numa moldura de madeira." },
   // pacote escritorio
   "notice-board": { w: 2.0, d: 0.08, h: 1.25, blocks: false, action: "use", label: "Ver mural", wallMounted: 1.5, look: "Mural de cortiça com moldura de madeira e post-its coloridos (os recados reais vêm por cima, em textura)." },
+  "lobby-panel": { w: 2.0, d: 0.08, h: 1.15, blocks: false, action: "use", label: "Ver painel", wallMounted: 1.5, look: "Painel do time: tela larga acesa de moldura escura com filete de luz embaixo (metas, avisos, aniversários e o que subiu vêm por cima, em textura)." },
   "photo-wall": { w: 1.7, d: 0.06, h: 1.1, blocks: false, action: "use", label: "Ver fotos", wallMounted: 1.55, look: "Mural de fotos da copa: painel de feltro azul-marinho numa moldura de madeira clara, plaquinha no topo e três varais de barbante (as fotos reais da cabine, com pregadores, vêm por cima em textura)." },
   // auditório
   lectern: { w: 0.7, d: 0.5, h: 1.15, blocks: true, action: "use", label: "Ir ao púlpito", look: "Púlpito de palestra com microfone." },

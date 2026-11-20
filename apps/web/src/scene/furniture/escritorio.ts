@@ -38,6 +38,25 @@ export const noticeBoard: ModelFn = ({ b }) => {
   b.box("#8FD3F4", 0.1, 0.02, 0.1, -0.36, 0.025, 0.05, { r: 0.004, ry: 0.3 });
 };
 
+/** Medidas do painel do time (a textura com metas, avisos e o que subiu cobre a tela, ver LOBBY_SCREEN). */
+export const LOBBY_W = 2.0;
+export const LOBBY_H = 1.15;
+/** Tela no espaço do modelo: centro (x, y, z da face) e tamanho. */
+export const LOBBY_SCREEN = { x: 0, y: LOBBY_H / 2, z: 0.032, w: LOBBY_W - 0.12, h: LOBBY_H - 0.12 };
+/** Cor de fundo da tela (a textura começa desta cor, para não piscar quando ela chega). */
+export const LOBBY_SCREEN_COLOR = "#0A2547";
+
+/** Painel do time no Átrio: moldura escura, tela acesa e um filete de luz embaixo. */
+export const lobbyPanel: ModelFn = ({ b }) => {
+  const W = LOBBY_W;
+  const H = LOBBY_H;
+  const k = LOBBY_SCREEN;
+  b.box(C.graphite, 0.6, 0.35, 0.03, 0, H / 2, -0.025, { r: 0.01 });
+  b.box(C.ink, W, H, 0.05, 0, H / 2, 0, { r: 0.022 });
+  b.box(lit(LOBBY_SCREEN_COLOR), k.w, k.h, 0.004, k.x, k.y, k.z - 0.006, { r: 0 });
+  b.box(lit(C.signal), W - 0.3, 0.014, 0.008, 0, 0.02, 0.026, { r: 0 });
+};
+
 /** Medidas do mural de fotos da copa (a textura com as fotos reais cobre a área de feltro, ver PHOTOWALL_FELT). */
 export const PHOTOWALL_W = 1.7;
 export const PHOTOWALL_H = 1.1;

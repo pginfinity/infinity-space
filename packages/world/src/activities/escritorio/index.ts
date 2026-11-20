@@ -11,3 +11,4 @@ export * from "./plane.ts";
 export * from "./greet.ts";
 export * from "./photo.ts";
 export * from "./photowall.ts";
+export * from "./painel.ts";

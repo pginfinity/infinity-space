@@ -283,7 +283,7 @@ function hash(s: string): number {
 }
 
 /** Quebra o texto em linhas que cabem na largura (com reticências na última). */
-function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, maxLines: number): string[] {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, maxLines: number): string[] {
   const words = text.replace(/\s+/g, " ").split(" ");
   const lines: string[] = [];
   let cur = "";
