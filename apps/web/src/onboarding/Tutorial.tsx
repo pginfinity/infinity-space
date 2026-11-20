@@ -2,23 +2,27 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import { clsx } from "clsx";
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, DoorOpen, X } from "lucide-react";
+import { ORBI_ID } from "@infinity/world";
 import { useApp } from "../state/store.ts";
 import { setMic, useMedia } from "../media/rtc.ts";
 import { setChatOpen } from "../activities/chat/store.ts";
+import { sendAct } from "../activities/registry.ts";
+import { doEmote } from "../engine/emotes.ts";
 import { toast } from "../ui/toasts.ts";
 import { InStack } from "../ui/HudStack.tsx";
 import { OrbiFace } from "./OrbiFace.tsx";
 import { Kbd } from "./Shortcuts.tsx";
 import { useTourWatch } from "./watch.ts";
-import { beginSteps, closeTour, openShortcuts, resumeTour, saved, setMinimized, skipStep, startTour, STEP_LIST, TOUCH, useTour } from "./store.ts";
-import { currentStep, doneCount, shouldAutoStart, STEP_KEYS, STEP_TARGET, type StepKey } from "./steps.ts";
+import { beginSteps, closeTour, openShortcuts, pauseTour, resumeTour, saved, selectStep, setMinimized, skipStep, startTour, STEP_LIST, TOUCH, useTour } from "./store.ts";
+import { currentStep, doneCount, shouldAutoStart, stepBeside, STEP_KEYS, STEP_TARGET, type StepKey } from "./steps.ts";
 
 /**
- * Primeiros passos: o Orbi se apresenta na primeira entrada e acompanha uma lista curta que se marca
- * sozinha conforme a pessoa faz cada coisa (andar, usar com E, microfone, chat, achar alguém, mapa,
- * 2D/3D). O controle do passo da vez fica destacado na tela. Dá para pular, minimizar e rever depois
- * (tecla ?, busca Ctrl+K ou ajustes).
+ * Primeiros passos: o Orbi se apresenta na primeira entrada (dá para dizer "agora não") e leva a pessoa
+ * para a sala de treino, o mesmo escritório numa sala à parte, onde ninguém do escritório vê nem ouve.
+ * Lá ela pratica de verdade (andar, falar com quem está perto, chat, emotes, sentar, foco, chamar,
+ * compartilhar tela, jogos, 2D/3D) e cada passo se marca sozinho. Dá para pular, voltar a um passo,
+ * minimizar e retomar depois (tecla ?, busca Ctrl+K, ajustes ou menu Mais).
  */
 
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -39,10 +43,13 @@ export function Tutorial() {
   const phase = useTour((s) => s.phase);
   const minimized = useTour((s) => s.minimized);
   const done = useTour((s) => s.done);
+  const training = useTour((s) => s.training);
+  const selected = useTour((s) => s.selected);
   const conn = useApp((s) => s.conn);
   const selfId = useApp((s) => s.selfId);
   const ready = conn === "open" && !!selfId;
   const current = currentStep(STEP_LIST, done);
+  const shown = selected ?? current;
 
   // Primeira entrada (ou voltou no meio): abre quando o mundo está pronto, uma vez por visita.
   const opened = useRef(false);
@@ -60,10 +67,16 @@ export function Tutorial() {
     if (saved.phase === "steps" && !DEV_SHORTCUT) resumeTour();
   }, [ready]);
 
-  useTourWatch(phase === "steps");
+  // Chegou na sala de treino: o Orbi vem dar boas-vindas.
+  useEffect(() => {
+    if (training && ready) sendAct(ORBI_ID, "welcome");
+  }, [training, ready]);
+
+  // Os passos só se marcam na sala de treino, com ela já aberta (a posição de partida é a de lá).
+  useTourWatch(phase === "steps" && training && ready);
 
   // Destaque do controle do passo da vez (regras em styles.css, por `data-tour` no <html>).
-  const target = phase === "steps" && !minimized && current ? STEP_TARGET[current] : undefined;
+  const target = phase === "steps" && !minimized && training && shown ? STEP_TARGET[shown] : undefined;
   useEffect(() => {
     if (!target) return;
     document.documentElement.dataset.tour = target;
@@ -73,14 +86,46 @@ export function Tutorial() {
   }, [target]);
 
   return (
-    <InStack side="top-left" order={3} className="w-[min(340px,calc(100vw-24px))]">
-      <AnimatePresence mode="wait">
-        {phase === "intro" && <Intro key="intro" />}
-        {phase === "steps" && !minimized && <Steps key="steps" current={current} done={done} />}
-        {phase === "steps" && minimized && <Pill key="pill" count={doneCount(STEP_LIST, done)} />}
-        {phase === "done" && <Done key="done" />}
-      </AnimatePresence>
-    </InStack>
+    <>
+      <AnimatePresence>{training && <TrainingBanner key="treino" finished={phase !== "steps"} />}</AnimatePresence>
+      <InStack side="top-left" order={3} className="w-[min(340px,calc(100vw-24px))]">
+        <AnimatePresence mode="wait">
+          {phase === "intro" && <Intro key="intro" />}
+          {phase === "steps" && !minimized && <Steps key="steps" shown={shown} current={current} done={done} />}
+          {phase === "steps" && minimized && <Pill key="pill" count={doneCount(STEP_LIST, done)} />}
+          {phase === "done" && <Done key="done" training={training} />}
+        </AnimatePresence>
+      </InStack>
+    </>
+  );
+}
+
+/** Faixa no alto enquanto a pessoa treina: onde ela está e o caminho de volta. */
+function TrainingBanner({ finished }: { finished: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+      className="pointer-events-none absolute inset-x-0 top-[68px] z-20 flex justify-center px-3"
+    >
+      <div role="status" className="glass pointer-events-auto flex max-w-full items-center gap-3 rounded-full py-1.5 pl-4 pr-1.5 text-sm text-offwhite">
+        <span className="min-w-0 truncate">
+          <span className="font-semibold text-signal">{t("tour.training")}</span>
+          <span className="hidden text-offwhite/75 md:inline"> · {t("tour.trainingHint")}</span>
+        </span>
+        <button
+          type="button"
+          onClick={finished ? closeTour : pauseTour}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-offwhite/10 px-3 py-1 font-medium transition-colors hover:bg-offwhite/16"
+        >
+          <DoorOpen className="size-4" aria-hidden />
+          {t("tour.backToOffice")}
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -121,16 +166,20 @@ function Intro() {
   );
 }
 
-/** Clicar num passo da lista também faz a ação (para quem prefere o mouse ou usa leitor de tela). */
+/** Clicar num passo da lista também faz a ação, quando dá (para quem prefere o mouse ou usa leitor de tela). */
 function assist(key: StepKey): (() => void) | undefined {
   switch (key) {
     case "mic":
       return useMedia.getState().status === "on" ? () => void setMic(true) : undefined;
     case "chat":
       return () => setChatOpen(true);
-    case "pessoas":
+    case "emote":
+      return () => doEmote("wave");
+    case "status":
+      return () => window.dispatchEvent(new Event("infinity:settings"));
+    case "chamar":
       return () => useApp.getState().togglePeople(true);
-    case "mapa":
+    case "jogo":
       return () => window.dispatchEvent(new Event("infinity:map"));
     case "lente":
       return () => {
@@ -147,10 +196,13 @@ function keysOf(key: StepKey): string[] {
   return MAC ? keys.map((k) => (k === "Ctrl" ? "⌘" : k)) : keys;
 }
 
-function Steps({ current, done }: { current: StepKey | null; done: StepKey[] }) {
+function Steps({ shown, current, done }: { shown: StepKey | null; current: StepKey | null; done: StepKey[] }) {
   const { t } = useTranslation();
   const count = doneCount(STEP_LIST, done);
-  const say = current ? t(TOUCH ? `tour.steps.${current}.sayTouch` : `tour.steps.${current}.say`, { defaultValue: t(`tour.steps.${current}.say`) }) : "";
+  const say = shown ? t(TOUCH ? `tour.steps.${shown}.sayTouch` : `tour.steps.${shown}.say`, { defaultValue: t(`tour.steps.${shown}.say`) }) : "";
+  const prev = shown ? stepBeside(STEP_LIST, shown, -1) : null;
+  const next = shown ? stepBeside(STEP_LIST, shown, 1) : null;
+  const navBtn = "rounded-md px-1.5 py-0.5 text-xs text-slate transition-colors hover:text-offwhite disabled:opacity-40 disabled:hover:text-slate";
   return (
     <Card label={t("tour.title")}>
       <header className="flex items-center gap-2.5">
@@ -167,17 +219,26 @@ function Steps({ current, done }: { current: StepKey | null; done: StepKey[] }) 
         </button>
       </header>
 
-      {/* A fala do Orbi sobre o passo da vez. */}
-      {current && (
+      {/* A fala do Orbi sobre o passo escolhido (ou o da vez), com voltar, pular e seguir. */}
+      {shown && (
         <div className="relative mt-2.5 rounded-xl bg-card/80 px-3 py-2.5">
           <span className="absolute -top-1.5 left-4 size-3 rotate-45 bg-card/80" aria-hidden />
           <p className="relative text-[13px] leading-relaxed text-offwhite/90" aria-live="polite">
             {say}
           </p>
-          <div className="relative mt-1.5 flex justify-end">
-            <button type="button" onClick={() => skipStep(current)} className="rounded-md px-1.5 py-0.5 text-xs text-slate transition-colors hover:text-offwhite">
-              {t("tour.skipStep")}
+          <div className="relative mt-1.5 flex items-center justify-between">
+            <button type="button" onClick={() => selectStep(prev)} disabled={!prev} className={navBtn}>
+              {t("tour.back")}
             </button>
+            {done.includes(shown) ? (
+              <button type="button" onClick={() => selectStep(next ?? current)} className={navBtn}>
+                {t("tour.next")}
+              </button>
+            ) : (
+              <button type="button" onClick={() => skipStep(shown)} className={navBtn}>
+                {t("tour.skipStep")}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -185,42 +246,41 @@ function Steps({ current, done }: { current: StepKey | null; done: StepKey[] }) 
       <ol className="mt-2 space-y-0.5">
         {STEP_LIST.map((key) => {
           const isDone = done.includes(key);
-          const isCurrent = key === current;
+          const isShown = key === shown;
           const run = !isDone ? assist(key) : undefined;
           const keys = TOUCH ? [] : keysOf(key);
-          const body = (
-            <>
-              <span
-                className={clsx(
-                  "grid size-5 shrink-0 place-items-center rounded-full",
-                  isDone ? "bg-signal text-space" : isCurrent ? "ring-2 ring-signal" : "ring-1 ring-offwhite/25",
-                )}
-                aria-hidden
-              >
-                {isDone && <Check className="size-3" strokeWidth={3} />}
-              </span>
-              <span className={clsx("min-w-0 flex-1 truncate text-left text-[13px]", isDone ? "text-slate" : isCurrent ? "font-medium text-offwhite" : "text-offwhite/80")}>
-                {TOUCH ? t(`tour.steps.${key}.labelTouch`, { defaultValue: t(`tour.steps.${key}.label`) }) : t(`tour.steps.${key}.label`)}
-                {isDone && <span className="sr-only"> · {t("tour.stepDone")}</span>}
-              </span>
-              {keys.length > 0 && (
-                <span className={clsx("flex shrink-0 gap-0.5", isDone && "opacity-50")}>
-                  {keys.map((k) => (
-                    <Kbd key={k}>{k}</Kbd>
-                  ))}
-                </span>
-              )}
-            </>
-          );
           return (
             <li key={key}>
-              {run ? (
-                <button type="button" onClick={run} className={clsx("flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-offwhite/6", isCurrent && "bg-offwhite/5")}>
-                  {body}
-                </button>
-              ) : (
-                <div className={clsx("flex items-center gap-2.5 rounded-lg px-1.5 py-1.5", isCurrent && "bg-offwhite/5")}>{body}</div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  selectStep(key);
+                  run?.();
+                }}
+                aria-current={isShown ? "step" : undefined}
+                className={clsx("flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-offwhite/6", isShown && "bg-offwhite/5")}
+              >
+                <span
+                  className={clsx(
+                    "grid size-5 shrink-0 place-items-center rounded-full",
+                    isDone ? "bg-signal text-space" : isShown ? "ring-2 ring-signal" : "ring-1 ring-offwhite/25",
+                  )}
+                  aria-hidden
+                >
+                  {isDone && <Check className="size-3" strokeWidth={3} />}
+                </span>
+                <span className={clsx("min-w-0 flex-1 truncate text-left text-[13px]", isShown ? "font-medium text-offwhite" : isDone ? "text-slate" : "text-offwhite/80")}>
+                  {TOUCH ? t(`tour.steps.${key}.labelTouch`, { defaultValue: t(`tour.steps.${key}.label`) }) : t(`tour.steps.${key}.label`)}
+                  {isDone && <span className="sr-only"> · {t("tour.stepDone")}</span>}
+                </span>
+                {keys.length > 0 && (
+                  <span className={clsx("flex shrink-0 gap-0.5", isDone && "opacity-50")}>
+                    {keys.map((k) => (
+                      <Kbd key={k}>{k}</Kbd>
+                    ))}
+                  </span>
+                )}
+              </button>
             </li>
           );
         })}
@@ -252,13 +312,14 @@ function Pill({ count }: { count: number }) {
   );
 }
 
-function Done() {
+function Done({ training }: { training: boolean }) {
   const { t } = useTranslation();
-  // Some sozinho depois de um tempo, se a pessoa não fechar.
+  // Fora do treino, some sozinho depois de um tempo; no treino, espera a pessoa escolher voltar.
   useEffect(() => {
+    if (training) return;
     const id = window.setTimeout(closeTour, 20_000);
     return () => window.clearTimeout(id);
-  }, []);
+  }, [training]);
   return (
     <Card label={t("tour.title")}>
       <div className="flex gap-3">
@@ -272,7 +333,7 @@ function Done() {
           <p className="mt-1 text-sm leading-relaxed text-offwhite/75">{t(TOUCH ? "tour.doneBodyTouch" : "tour.doneBody")}</p>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-end gap-1.5">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
         {!TOUCH && (
           <button
             type="button"
@@ -285,9 +346,15 @@ function Done() {
             {t("tour.seeShortcuts")} <Kbd>?</Kbd>
           </button>
         )}
-        <button type="button" onClick={closeTour} className="rounded-xl bg-offwhite/10 px-4 py-2 text-sm font-medium text-offwhite transition-colors hover:bg-offwhite/16">
-          {t("tour.close")}
-        </button>
+        {training ? (
+          <button type="button" onClick={closeTour} className="rounded-xl bg-orange px-4 py-2 text-sm font-semibold text-offwhite transition-[filter] hover:brightness-110">
+            {t("tour.backToOffice")}
+          </button>
+        ) : (
+          <button type="button" onClick={closeTour} className="rounded-xl bg-offwhite/10 px-4 py-2 text-sm font-medium text-offwhite transition-colors hover:bg-offwhite/16">
+            {t("tour.close")}
+          </button>
+        )}
       </div>
     </Card>
   );

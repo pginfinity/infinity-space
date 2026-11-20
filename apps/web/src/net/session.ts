@@ -17,6 +17,10 @@ let retryTimer: number | undefined;
 let pingTimer: number | undefined;
 let everConnected = false;
 let welcomed = false;
+/** Na sala de treino do tutorial (outra sala no servidor: quem está no escritório não vê). */
+let training = false;
+/** Onde a pessoa estava no escritório antes de ir treinar: volta para o mesmo lugar. */
+let backAt: { x: number; z: number } | null = null;
 
 /** Diferença entre o relógio do servidor e o daqui (ms). Refinada a cada ping. */
 let clockOffset = 0;
@@ -38,6 +42,11 @@ function wsUrl(): string {
   if (env) return env;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${location.host}/ws`;
+}
+
+function roomUrl(): string {
+  const url = wsUrl();
+  return training ? `${url}${url.includes("?") ? "&" : "?"}sala=treino` : url;
 }
 
 export function send(msg: ClientMsg): void {
@@ -64,6 +73,8 @@ export function connect(): void {
 export function disconnect(): void {
   wanted = false;
   welcomed = false;
+  training = false;
+  backAt = null;
   window.clearTimeout(retryTimer);
   window.clearInterval(pingTimer);
   socket?.close(1000, "leave");
@@ -72,22 +83,43 @@ export function disconnect(): void {
   clearRemote();
 }
 
+/** Vai para a sala de treino (ou volta ao escritório) sem sair do app: troca a conexão e a sala de voz. */
+export function switchRoom(toTraining: boolean): void {
+  if (toTraining === training || !wanted) return;
+  if (toTraining) backAt = { x: self.x, z: self.z };
+  training = toTraining;
+  window.clearTimeout(retryTimer);
+  window.clearInterval(pingTimer);
+  const old = socket;
+  socket = null;
+  welcomed = false;
+  everConnected = false;
+  attempt = 0;
+  old?.close(1000, "switch");
+  void leaveRtc();
+  clearRemote();
+  // A mesa aberta é da outra sala.
+  useApp.getState().openGame(null);
+  open();
+}
+
 function open(): void {
   const app = useApp.getState();
   app.setConn(everConnected ? "reconnecting" : "connecting");
-  const ws = new WebSocket(wsUrl());
+  const ws = new WebSocket(roomUrl());
   ws.binaryType = "arraybuffer";
   socket = ws;
 
   ws.onopen = () => {
     const { profile, lens } = useApp.getState();
+    const at = everConnected ? { x: self.x, z: self.z } : training ? null : backAt;
     send({
       t: "hello",
       v: PROTOCOL_VERSION,
       name: profile.name,
       look: profile.look,
       lens,
-      ...(everConnected ? { at: { x: self.x, z: self.z } } : {}),
+      ...(at ? { at } : {}),
     });
     window.clearInterval(pingTimer);
     pingTimer = window.setInterval(() => send({ t: "ping", at: performance.now() }), 10_000);
@@ -130,6 +162,7 @@ function handle(msg: ServerMsg): void {
       bestRtt = Infinity;
       everConnected = true;
       attempt = 0;
+      if (!training) backAt = null;
       clearRemote();
       const now = performance.now();
       for (const [id, x, z, yaw, anim] of msg.poses) {

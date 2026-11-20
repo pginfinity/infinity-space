@@ -138,7 +138,7 @@ export function Hud() {
           <LensSwitch lens={lens} onChange={setLens} label={t("hud.lensHint")} />
           <span className="mx-1 h-6 w-px bg-offwhite/12" />
         </div>
-        <DockButton label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
+        <DockButton tour="emote" label="Emotes (1 a 8)" onClick={() => setEmotesOpen((v) => !v)} active={emotesOpen}>
           <Smile className="size-[18px]" />
         </DockButton>
         <PresenceDock />
@@ -160,7 +160,7 @@ export function Hud() {
           <Users className="size-[18px]" />
         </DockButton>
         <div className="hidden sm:contents">
-          <DockButton label="Áudio e vídeo" onClick={() => openSettings(!settingsOpen)} active={settingsOpen}>
+          <DockButton tour="status" label="Áudio e vídeo" onClick={() => openSettings(!settingsOpen)} active={settingsOpen}>
             <Settings2 className="size-[18px]" />
           </DockButton>
           <DockButton label={t("hud.leave")} onClick={leave}>

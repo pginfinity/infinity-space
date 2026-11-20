@@ -128,6 +128,7 @@ function ShareButton({ ready }: { ready: boolean }) {
         onClick={() => (screen ? void stopShare() : setOpen((o) => !o))}
         aria-pressed={screen}
         aria-expanded={open}
+        data-tour-target="tela"
         aria-label={screen ? "Parar de compartilhar a tela" : "Compartilhar a tela"}
         title={screen ? "Parar de compartilhar a tela" : "Compartilhar a tela"}
         className={clsx("grid size-10 place-items-center rounded-xl transition-colors disabled:opacity-40", screen ? "bg-signal/20 text-signal hover:bg-signal/30" : "text-offwhite/70 hover:bg-offwhite/8 hover:text-offwhite")}

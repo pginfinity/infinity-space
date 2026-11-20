@@ -17,10 +17,10 @@ export const RTC = {
 };
 
 /** Token de quem já está dentro do escritório (a identidade é o id da pessoa na sala do mundo). */
-export async function rtcToken(identity: string, name: string): Promise<string> {
+export async function rtcToken(identity: string, name: string, room = RTC.room): Promise<string> {
   const at = new AccessToken(RTC.apiKey, RTC.apiSecret, { identity, name, ttl: "8h" });
   at.addGrant({
-    room: RTC.room,
+    room,
     roomJoin: true,
     canPublish: true,
     canSubscribe: true,

@@ -70,7 +70,10 @@
 :root[data-tour="chat"] [data-tour-target~="chat"],
 :root[data-tour="pessoas"] [data-tour-target~="pessoas"],
 :root[data-tour="mapa"] [data-tour-target~="mapa"],
-:root[data-tour="lente"] [data-tour-target~="lente"] {
+:root[data-tour="lente"] [data-tour-target~="lente"],
+:root[data-tour="emote"] [data-tour-target~="emote"],
+:root[data-tour="status"] [data-tour-target~="status"],
+:root[data-tour="tela"] [data-tour-target~="tela"] {
   animation: tour-ring 1.8s ease-in-out infinite;
 }
 

@@ -2,18 +2,21 @@ import { devices } from "@playwright/test";
 import { expect, test, type Page } from "./setup.ts";
 
 /**
- * Primeiros passos: o Orbi se apresenta, vem até a pessoa e a lista se marca sozinha conforme ela faz
- * cada coisa (andar, E, microfone, chat, busca, mapa, 2D/3D). A tecla ? abre os atalhos.
+ * Primeiros passos na sala de treino: o Orbi se apresenta, leva a pessoa para uma sala à parte (o mesmo
+ * mapa; quem está no escritório não vê nem ouve) e a lista se marca sozinha conforme ela pratica
+ * (andar, microfone, chat, emote, sentar, foco, chamar, tela, jogo, 2D/3D). Dá para pular, voltar a um
+ * passo, sair e retomar. Ao voltar, a pessoa reaparece onde estava, disponível. A tecla ? abre os atalhos.
  * O atalho de desenvolvimento (?nome=) não abre o tutorial sozinho; &tutorial=1 força.
  */
 
 interface Hook {
-  store: { getState(): { selfId: string | null } };
-  self: { x: number; z: number };
+  store: { getState(): { selfId: string | null; players: Record<string, { name: string; status: string }>; games: Record<string, { kind: string; table: string }>; openGame(t: string | null): void } };
+  self: { x: number; z: number; anim: string };
   walkTo(p: { x: number; z: number }): boolean;
   interact: { getState(): { target: { label: string } | null } };
   acts: { state: { getState(): { acts: Record<string, { state: unknown }> } } };
   media: { state: { getState(): { status: string; mic: boolean } } };
+  world(): { map: { desks: Array<{ seat: { x: number; z: number } }> } };
 }
 type W = { __infinity: Hook };
 
@@ -27,90 +30,159 @@ async function open(page: Page, query: string): Promise<void> {
 
 const card = (p: Page) => p.getByRole("region", { name: "Primeiros passos" });
 const progress = (p: Page) => card(p).getByText(/^\d+ de \d+$/);
+const banner = (p: Page) => p.getByRole("status").filter({ hasText: "Sala de treino" });
 /** Abre a busca (Ctrl+K) e espera o foco no campo. */
 async function palette(p: Page): Promise<void> {
   await p.keyboard.press("Control+KeyK");
   await expect(p.getByRole("dialog", { name: "Buscar e comandos" }).getByRole("combobox")).toBeFocused();
 }
 const saved = (p: Page) => p.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null") as { phase: string; done: string[] } | null, KEY);
+/** Quem mais esta pessoa vê na sala. */
+const others = (p: Page) =>
+  p.evaluate(() => {
+    const s = (window as unknown as W).__infinity.store.getState();
+    return Object.values(s.players)
+      .filter((x) => x !== s.players[s.selfId ?? ""])
+      .map((x) => x.name);
+  });
+const pos = (p: Page) => p.evaluate(() => ({ x: (window as unknown as W).__infinity.self.x, z: (window as unknown as W).__infinity.self.z }));
+const tourTarget = (p: Page) => p.locator("html");
 
-test("primeiros passos: o Orbi apresenta, vem até a pessoa e a lista se marca sozinha", async ({ browser }) => {
-  test.setTimeout(180_000);
+test("sala de treino: pratica de verdade, sem atrapalhar o escritório, e volta para o mesmo lugar", async ({ browser }) => {
+  test.setTimeout(300_000);
+  // Bruno fica no escritório o tempo todo.
+  const b = await (await browser.newContext()).newPage();
+  await open(b, "nome=Bruno&lente=2d");
   const ctx = await browser.newContext();
   await ctx.grantPermissions(["microphone", "camera"]);
   const a = await ctx.newPage();
   await open(a, "nome=Ana&lente=2d&tutorial=1");
+  await expect.poll(() => others(b), { timeout: 15_000 }).toContain("Ana");
 
-  // Apresentação.
+  // Apresentação (oferecida, não forçada).
   await expect(card(a).getByText("Oi, Ana! Eu sou o Orbi.")).toBeVisible({ timeout: 10_000 });
   await a.waitForTimeout(500);
   await a.screenshot({ path: `${SHOTS}/tutorial-intro-2d.png` });
+  const office = await pos(a);
   await card(a).getByRole("button", { name: "Vamos lá" }).click();
-  await expect(progress(a)).toHaveText("0 de 7");
+  await expect(progress(a)).toHaveText("0 de 10");
   expect((await saved(a))?.phase).toBe("steps");
 
-  // O Orbi vem dar boas-vindas (segue a Ana).
+  // Na sala de treino: a faixa avisa, e Ana e Bruno não se veem.
+  await expect(banner(a)).toBeVisible();
+  await expect.poll(() => others(b), { timeout: 15_000 }).not.toContain("Ana");
+  await expect.poll(() => others(a), { timeout: 15_000 }).not.toContain("Bruno");
+
+  // O Orbi vem dar boas-vindas (segue a Ana, na sala de treino).
   await expect
     .poll(() => a.evaluate(() => ((window as unknown as W).__infinity.acts.state.getState().acts.orbi?.state as { follow: { name: string } | null } | undefined)?.follow?.name ?? null), { timeout: 10_000 })
     .toBe("Ana");
 
   // Andar 4 m.
-  const from = await a.evaluate(() => ({ x: (window as unknown as W).__infinity.self.x, z: (window as unknown as W).__infinity.self.z }));
+  const from = await pos(a);
   await a.evaluate((p) => (window as unknown as W).__infinity.walkTo({ x: p.x + 4, z: p.z }), from);
-  await expect(progress(a)).toHaveText("1 de 7", { timeout: 15_000 });
+  await expect(progress(a)).toHaveText("1 de 10", { timeout: 15_000 });
 
-  // Usar com E: quando o Orbi chega, aparece "Fazer carinho no Orbi".
-  await expect
-    .poll(() => a.evaluate(() => (window as unknown as W).__infinity.interact.getState().target?.label ?? ""), { timeout: 40_000 })
-    .toMatch(/Orbi/);
-  await a.screenshot({ path: `${SHOTS}/tutorial-orbi-chegou-2d.png` });
-  await a.keyboard.press("KeyE");
-  await expect(progress(a)).toHaveText("2 de 7");
+  // Sair no meio e retomar: volta ao escritório (Bruno vê de novo) e a pílula leva de volta ao treino.
+  await banner(a).getByRole("button", { name: "Voltar ao escritório" }).click();
+  await expect(banner(a)).toBeHidden();
+  await expect(a.getByRole("button", { name: "Abrir primeiros passos" })).toBeVisible();
+  await expect.poll(() => others(b), { timeout: 15_000 }).toContain("Ana");
+  await a.getByRole("button", { name: "Abrir primeiros passos" }).click();
+  await expect(banner(a)).toBeVisible();
+  await expect(progress(a)).toHaveText("1 de 10");
+  await expect.poll(() => others(b), { timeout: 15_000 }).not.toContain("Ana");
 
   // Microfone: o botão fica destacado; M liga.
-  await expect(a.locator("html")).toHaveAttribute("data-tour", "mic");
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "mic");
   await expect.poll(() => a.evaluate(() => (window as unknown as W).__infinity.media.state.getState().status), { timeout: 30_000 }).toBe("on");
-  await a.screenshot({ path: `${SHOTS}/tutorial-destaque-mic-2d.png` });
+  await a.screenshot({ path: `${SHOTS}/tutorial-sala-treino-2d.png` });
   await a.keyboard.press("KeyM");
-  await expect(progress(a)).toHaveText("3 de 7", { timeout: 20_000 });
+  await expect(progress(a)).toHaveText("2 de 10", { timeout: 20_000 });
 
-  // Chat (C) e busca (Ctrl+K).
-  await expect(a.locator("html")).toHaveAttribute("data-tour", "chat");
+  // Chat (C).
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "chat");
   await a.keyboard.press("KeyC");
-  await expect(progress(a)).toHaveText("4 de 7");
+  await expect(progress(a)).toHaveText("3 de 10");
   await a.keyboard.press("Escape");
-  await palette(a);
-  await expect(progress(a)).toHaveText("5 de 7");
-  await a.keyboard.press("Escape");
-  await expect(a.getByRole("dialog", { name: "Buscar e comandos" })).toBeHidden();
 
-  // Mapa: o botão de ampliar fica destacado.
-  await expect(a.locator("html")).toHaveAttribute("data-tour", "mapa");
-  await a.waitForTimeout(400);
-  await a.screenshot({ path: `${SHOTS}/tutorial-destaque-mapa-2d.png` });
-  await a.getByRole("button", { name: "Ampliar mapa" }).click();
-  await expect(progress(a)).toHaveText("6 de 7");
-  await a.getByRole("button", { name: "Diminuir mapa" }).click();
+  // Emote (1).
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "emote");
+  await a.keyboard.press("Digit1");
+  await expect(progress(a)).toHaveText("4 de 10", { timeout: 10_000 });
 
-  // 2D/3D (L): terminou.
+  // Sentar: anda até a cadeira mais perto e aperta E.
+  const seat = await a.evaluate(() => {
+    const h = (window as unknown as W).__infinity;
+    const seats = h.world().map.desks.map((d) => d.seat);
+    const s = seats.sort((p, q) => Math.hypot(p.x - h.self.x, p.z - h.self.z) - Math.hypot(q.x - h.self.x, q.z - h.self.z))[0]!;
+    h.walkTo(s);
+    return s;
+  });
+  await expect.poll(() => a.evaluate((s) => Math.hypot((window as unknown as W).__infinity.self.x - s.x, (window as unknown as W).__infinity.self.z - s.z), seat), { timeout: 30_000 }).toBeLessThan(0.8);
+  await expect.poll(() => a.evaluate(() => (window as unknown as W).__infinity.interact.getState().target?.label ?? ""), { timeout: 10_000 }).toBe("Sentar");
+  await a.keyboard.press("KeyE");
+  await expect(progress(a)).toHaveText("5 de 10", { timeout: 10_000 });
+
+  // Foco: em Áudio e vídeo, o status Foco.
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "status");
+  await a.getByRole("button", { name: "Áudio e vídeo" }).click();
+  await a.getByRole("radio", { name: "Foco" }).click();
+  await expect(progress(a)).toHaveText("6 de 10", { timeout: 10_000 });
+  await a.getByRole("button", { name: "Áudio e vídeo" }).click();
+
+  // Chamar: sozinha no treino, volta um passo, segue e pula.
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "pessoas");
+  await expect(card(a).getByText(/Se só você está treinando, pule este/)).toBeVisible();
+  await card(a).getByRole("button", { name: "Voltar", exact: true }).click();
+  await expect(card(a).getByText(/escolha Foco/)).toBeVisible();
+  await expect(card(a).getByRole("button", { name: "Pular este" })).toHaveCount(0);
+  await card(a).getByRole("button", { name: "Próximo" }).click();
+  await expect(card(a).getByText(/Se só você está treinando, pule este/)).toBeVisible();
+  await card(a).getByRole("button", { name: "Pular este" }).click();
+  await expect(progress(a)).toHaveText("7 de 10");
+
+  // Tela: pula (o navegador de teste não escolhe janela).
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "tela");
+  await card(a).getByRole("button", { name: "Pular este" }).click();
+  await expect(progress(a)).toHaveText("8 de 10");
+
+  // Jogo: abre uma mesa da sala de treino.
+  await expect(tourTarget(a)).toHaveAttribute("data-tour", "mapa");
+  await a.evaluate(() => {
+    const s = (window as unknown as W).__infinity.store.getState();
+    s.openGame(Object.values(s.games).find((g) => g.kind === "connect4")!.table);
+  });
+  await expect(progress(a)).toHaveText("9 de 10", { timeout: 10_000 });
+  await a.getByRole("dialog", { name: "Lig 4" }).getByRole("button", { name: "Fechar (Esc)" }).click();
+
+  // 2D/3D (L): terminou, ainda na sala de treino.
   await a.keyboard.press("KeyL");
   await expect(a.getByText("Pronto! Você já sabe o essencial.")).toBeVisible();
   expect((await saved(a))?.phase).toBe("done");
   await a.waitForSelector('[role="application"][data-ready="true"]', { timeout: 60_000 });
+  await expect(banner(a)).toBeVisible();
   await a.waitForTimeout(600);
   await a.screenshot({ path: `${SHOTS}/tutorial-pronto-3d.png` });
 
-  // Atalhos: pelo botão do parabéns, e pela tecla ?.
-  await card(a).getByRole("button", { name: /Ver atalhos/ }).click();
+  // Volta ao escritório: no mesmo lugar, disponível de novo, e o Bruno vê a Ana.
+  await card(a).getByRole("button", { name: "Voltar ao escritório" }).click();
+  await expect(banner(a)).toBeHidden();
+  await expect(card(a)).toBeHidden();
+  await expect.poll(() => others(b), { timeout: 15_000 }).toContain("Ana");
+  const back = await pos(a);
+  expect(Math.hypot(back.x - office.x, back.z - office.z)).toBeLessThan(1.5);
+  await expect
+    .poll(() => b.evaluate(() => Object.values((window as unknown as W).__infinity.store.getState().players).find((p) => p.name === "Ana")?.status ?? null), { timeout: 10_000 })
+    .toBe("available");
+
+  // Atalhos pela tecla ?.
   const sheet = a.getByRole("dialog", { name: "Atalhos" });
+  await a.keyboard.press("?");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText("Sussurrar para quem está mais perto (segure)")).toBeVisible();
   await a.waitForTimeout(300);
   await a.screenshot({ path: `${SHOTS}/tutorial-atalhos.png` });
-  await a.keyboard.press("Escape");
-  await expect(sheet).toBeHidden();
-  await a.keyboard.press("?");
-  await expect(sheet).toBeVisible();
   await a.keyboard.press("?");
   await expect(sheet).toBeHidden();
 
@@ -126,6 +198,7 @@ test("agora não: some, avisa como rever e volta pela busca", async ({ browser }
   await expect(card(a).getByText("Oi, Bia! Eu sou o Orbi.")).toBeVisible({ timeout: 10_000 });
   await card(a).getByRole("button", { name: "Agora não" }).click();
   await expect(card(a)).toBeHidden();
+  await expect(banner(a)).toHaveCount(0);
   await expect(a.getByText(/Quando quiser, aperte\s\?/)).toBeVisible();
   expect((await saved(a))?.phase).toBe("done");
 
@@ -142,14 +215,16 @@ test("agora não: some, avisa como rever e volta pela busca", async ({ browser }
   await expect(a.getByRole("dialog", { name: "Atalhos" })).toBeVisible();
 });
 
-test("no celular: sem a troca de lente, sem teclas, e o cartão cabe acima da doca", async ({ browser }) => {
+test("no celular: sem lente e sem tela, sem teclas, e o cartão cabe acima da doca", async ({ browser }) => {
   const ctx = await browser.newContext({ ...devices["Pixel 7"] });
   const a = await ctx.newPage();
   await open(a, "nome=Caio&lente=2d&tutorial=1");
   await expect(card(a).getByText("Oi, Caio! Eu sou o Orbi.")).toBeVisible({ timeout: 10_000 });
   await card(a).getByRole("button", { name: "Vamos lá" }).click();
-  await expect(progress(a)).toHaveText("0 de 6");
+  await expect(progress(a)).toHaveText("0 de 8");
+  await expect(banner(a)).toBeVisible();
   await expect(card(a).getByText("Veja em 2D e 3D")).toHaveCount(0);
+  await expect(card(a).getByText("Compartilhe a tela")).toHaveCount(0);
   await expect(card(a).locator("kbd")).toHaveCount(0);
   await expect(card(a).getByText("Toque no chão para ir até lá.")).toBeVisible();
   const vw = a.viewportSize()!;
@@ -158,11 +233,14 @@ test("no celular: sem a troca de lente, sem teclas, e o cartão cabe acima da do
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(vw.width);
   expect(box.y + box.height).toBeLessThan(dock.y);
+  const strip = (await banner(a).boundingBox())!;
+  expect(strip.x).toBeGreaterThanOrEqual(0);
+  expect(strip.x + strip.width).toBeLessThanOrEqual(vw.width);
   await a.waitForTimeout(400);
   await a.screenshot({ path: `${SHOTS}/tutorial-celular.png` });
   // Minimiza e volta.
   await card(a).getByRole("button", { name: "Minimizar" }).click();
   await expect(a.getByRole("button", { name: "Abrir primeiros passos" })).toBeVisible();
   await a.getByRole("button", { name: "Abrir primeiros passos" }).click();
-  await expect(progress(a)).toHaveText("0 de 6");
+  await expect(progress(a)).toHaveText("0 de 8");
 });
