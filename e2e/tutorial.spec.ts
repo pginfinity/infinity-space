@@ -133,7 +133,8 @@ test("sala de treino: pratica de verdade, sem atrapalhar o escritório, e volta 
   await expect(tourTarget(a)).toHaveAttribute("data-tour", "status");
   await a.getByRole("button", { name: "Áudio e vídeo" }).click();
   await a.getByRole("radio", { name: "Foco" }).click();
-  await expect(a.getByRole("radio", { name: "Foco" })).toHaveAttribute("aria-checked", "true");
+  // O status só muda com o eco do servidor; com a CPU cheia a página chegou a levar mais de 5 s.
+  await expect(a.getByRole("radio", { name: "Foco" })).toHaveAttribute("aria-checked", "true", { timeout: 15_000 });
   await expect(progress(a)).toHaveText("6 de 10", { timeout: 10_000 });
   await a.getByRole("button", { name: "Áudio e vídeo" }).click();
 
